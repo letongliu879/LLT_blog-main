@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allen's Blog - 极简优雅风格</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Manrope:wght@200;300;400;500&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Cormorant Garamond', 'Noto Serif SC', 'serif'],
+            'body': ['Manrope', 'sans-serif'],
+            'chinese': ['Noto Serif SC', 'serif'],
+          },
+          colors: {
+            'warm-white': '#fdfcfb',
+            'soft-black': '#1a1a1a',
+            'muted-gray': '#6b6b6b',
+            'accent': '#c9a87c',
+            'accent-dark': '#b8956d',
+          },
+          animation: {
+            'fade-up': 'fadeUp 1s ease-out forwards',
+            'fade-in': 'fadeIn 1.5s ease-out forwards',
+            'reveal': 'reveal 1.2s ease-out forwards',
+            'line-grow': 'lineGrow 1.5s ease-out forwards',
+            'float-gentle': 'floatGentle 8s ease-in-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes reveal {
+      from {
+        clip-path: inset(0 100% 0 0);
+      }
+      to {
+        clip-path: inset(0 0 0 0);
+      }
+    }
+
+    @keyframes lineGrow {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes floatGentle {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-15px) rotate(1deg); }
+    }
+
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+    .stagger-3 { animation-delay: 0.4s; }
+    .stagger-4 { animation-delay: 0.6s; }
+    .stagger-5 { animation-delay: 0.8s; }
+    .stagger-6 { animation-delay: 1s; }
+
+    .elegant-link {
+      position: relative;
+      display: inline-block;
+    }
+
+    .elegant-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: currentColor;
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .elegant-link:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+
+    .blend-text {
+      mix-blend-mode: difference;
+    }
+
+    /* 优雅的滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c9a87c;
+      border-radius: 3px;
+    }
+
+    .grain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    .dark .grain {
+      opacity: 0.05;
+    }
+
+    .hover-lift {
+      transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-8px);
+    }
+
+    .btn-elegant {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .btn-elegant::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: currentColor;
+      transform: translateY(100%);
+      transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+      z-index: -1;
+    }
+
+    .btn-elegant:hover::before {
+      transform: translateY(0);
+    }
+
+    .btn-elegant:hover {
+      color: white;
+    }
+
+    .dark .btn-elegant:hover {
+      color: #1a1a1a;
+    }
+  </style>
+</head>
+<body class="bg-warm-white dark:bg-soft-black transition-colors duration-700">
+  <!-- 纹理覆盖层 -->
+  <div class="grain"></div>
+
+  <div class="min-h-screen relative">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 px-8 md:px-16 py-8">
+      <div class="flex justify-between items-center max-w-7xl mx-auto">
+        <a href="#" class="font-display text-2xl text-soft-black dark:text-warm-white tracking-wide opacity-0 animate-fade-in stagger-1">
+          Allen Wang
+        </a>
+        <div class="hidden md:flex items-center gap-12 font-body text-sm tracking-widest uppercase">
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white transition-colors opacity-0 animate-fade-in stagger-2">博客</a>
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white transition-colors opacity-0 animate-fade-in stagger-3">项目</a>
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white transition-colors opacity-0 animate-fade-in stagger-4">标签</a>
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white transition-colors opacity-0 animate-fade-in stagger-5">关于</a>
+        </div>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="w-10 h-10 rounded-full border border-soft-black/20 dark:border-warm-white/20 flex items-center justify-center opacity-0 animate-fade-in stagger-6 hover:border-accent transition-colors">
+          <svg class="w-5 h-5 text-soft-black dark:text-warm-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path class="dark:hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            <path class="hidden dark:block" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="min-h-screen flex items-center px-8 md:px-16 pt-32 pb-24">
+      <div class="max-w-7xl mx-auto w-full">
+        <div class="grid lg:grid-cols-12 gap-16 items-center">
+          <!-- 左侧主文字区 -->
+          <div class="lg:col-span-7 space-y-12">
+            <!-- 小标题 -->
+            <div class="overflow-hidden">
+              <p class="font-body text-sm tracking-[0.3em] uppercase text-accent opacity-0 animate-fade-up stagger-1">
+                RPA Developer & Tech Explorer
+              </p>
+            </div>
+
+            <!-- 主标题 -->
+            <div class="space-y-4">
+              <div class="overflow-hidden">
+                <h1 class="font-display text-6xl md:text-8xl lg:text-9xl font-light text-soft-black dark:text-warm-white leading-none opacity-0 animate-fade-up stagger-2">
+                  思考
+                </h1>
+              </div>
+              <div class="overflow-hidden">
+                <h1 class="font-display text-6xl md:text-8xl lg:text-9xl font-light text-soft-black dark:text-warm-white leading-none opacity-0 animate-fade-up stagger-3 pl-12 md:pl-24">
+                  创造
+                </h1>
+              </div>
+              <div class="overflow-hidden">
+                <h1 class="font-display text-6xl md:text-8xl lg:text-9xl font-light text-soft-black dark:text-warm-white leading-none opacity-0 animate-fade-up stagger-4">
+                  分享
+                </h1>
+              </div>
+            </div>
+
+            <!-- 分隔线 -->
+            <div class="w-24 h-px bg-accent origin-left animate-line-grow stagger-5"></div>
+
+            <!-- 描述文字 -->
+            <div class="max-w-md">
+              <p class="font-chinese text-lg text-muted-gray leading-relaxed opacity-0 animate-fade-up stagger-5">
+                在代码与文字之间，探索技术的诗意。这里记录着关于机器学习、自动化与人工智能的思考与实践。
+              </p>
+            </div>
+
+            <!-- CTA 按钮 -->
+            <div class="flex gap-6 pt-4 opacity-0 animate-fade-up stagger-6">
+              <a href="#" class="btn-elegant px-8 py-4 border border-soft-black dark:border-warm-white text-soft-black dark:text-warm-white font-body text-sm tracking-widest uppercase z-10">
+                阅读文章
+              </a>
+              <a href="#" class="elegant-link font-body text-sm tracking-widest uppercase text-muted-gray hover:text-accent py-4 flex items-center gap-2">
+                了解更多
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- 右侧装饰区 -->
+          <div class="lg:col-span-5 relative">
+            <div class="relative aspect-[3/4] max-w-md mx-auto">
+              <!-- 背景装饰 -->
+              <div class="absolute -inset-8 border border-soft-black/10 dark:border-warm-white/10 opacity-0 animate-fade-in stagger-4"></div>
+              <div class="absolute -inset-4 border border-accent/30 opacity-0 animate-fade-in stagger-5"></div>
+
+              <!-- 主卡片 -->
+              <div class="relative h-full bg-gradient-to-br from-soft-black/5 to-soft-black/10 dark:from-warm-white/5 dark:to-warm-white/10 p-12 flex flex-col justify-between hover-lift opacity-0 animate-fade-up stagger-4">
+                <!-- 装饰图形 -->
+                <div class="absolute top-8 right-8 w-24 h-24 border border-accent/40 rounded-full animate-float-gentle"></div>
+                <div class="absolute bottom-12 left-8 w-16 h-16 bg-accent/10 animate-float-gentle" style="animation-delay: -4s;"></div>
+
+                <!-- 引用文字 -->
+                <div class="relative z-10">
+                  <p class="font-display text-3xl italic text-soft-black/70 dark:text-warm-white/70 leading-relaxed">
+                    "代码是诗，<br/>算法是韵律"
+                  </p>
+                </div>
+
+                <!-- 统计数据 -->
+                <div class="relative z-10 space-y-6">
+                  <div class="flex justify-between items-end border-b border-soft-black/10 dark:border-warm-white/10 pb-4">
+                    <span class="font-body text-xs tracking-widest uppercase text-muted-gray">文章</span>
+                    <span class="font-display text-4xl text-soft-black dark:text-warm-white">50+</span>
+                  </div>
+                  <div class="flex justify-between items-end border-b border-soft-black/10 dark:border-warm-white/10 pb-4">
+                    <span class="font-body text-xs tracking-widest uppercase text-muted-gray">项目</span>
+                    <span class="font-display text-4xl text-soft-black dark:text-warm-white">10+</span>
+                  </div>
+                  <div class="flex justify-between items-end">
+                    <span class="font-body text-xs tracking-widest uppercase text-muted-gray">标签</span>
+                    <span class="font-display text-4xl text-soft-black dark:text-warm-white">51</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部社交链接 -->
+    <footer class="fixed bottom-0 left-0 right-0 px-8 md:px-16 py-8">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div class="flex gap-8 opacity-0 animate-fade-in stagger-6">
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white text-sm font-body tracking-wide">GitHub</a>
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white text-sm font-body tracking-wide">LinkedIn</a>
+          <a href="#" class="elegant-link text-muted-gray hover:text-soft-black dark:hover:text-warm-white text-sm font-body tracking-wide">Email</a>
+        </div>
+        <p class="text-muted-gray text-xs font-body tracking-wide opacity-0 animate-fade-in stagger-6">
+          © 2026 Allen Wang
+        </p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer 矩阵乘法逐步可视化 — X × W_Q = Q</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.85rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+
+/* Card component */
+.card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent), var(--purple));
+}
+
+.phase-title {
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-title .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.phase-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.btn:hover {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  border-color: transparent;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn.active {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary);
+}
+
+/* Controls row */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Phase navigation */
+.phase-nav {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.phase-nav-btn {
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.phase-nav-btn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.phase-nav-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Matrix styles */
+.matrix-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.matrix-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.matrix-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.matrix-label.x-color { color: var(--text); }
+.matrix-label.q-color { color: var(--primary); }
+.matrix-label.k-color { color: var(--accent); }
+.matrix-label.v-color { color: var(--purple); }
+.matrix-label.score-color { color: var(--warn); }
+
+.operator {
+  font-size: 1.4rem;
+  color: var(--muted);
+  font-weight: 300;
+  padding: 0 4px;
+  align-self: center;
+}
+
+.matrix-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.row-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 0;
+}
+
+.row-label {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  white-space: nowrap;
+}
+
+.col-labels {
+  display: grid;
+  gap: 3px;
+  padding: 0 6px;
+  margin-bottom: 2px;
+}
+
+.col-label {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+.matrix {
+  display: inline-grid;
+  gap: 3px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.matrix::before,
+.matrix::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+}
+
+.matrix::before { left: 1px; }
+.matrix::after { right: 1px; }
+
+.matrix.x-border::before, .matrix.x-border::after { background: var(--text); opacity: 0.3; }
+.matrix.q-border::before, .matrix.q-border::after { background: var(--primary); opacity: 0.5; }
+.matrix.k-border::before, .matrix.k-border::after { background: var(--accent); opacity: 0.5; }
+.matrix.v-border::before, .matrix.v-border::after { background: var(--purple); opacity: 0.5; }
+.matrix.w-border::before, .matrix.w-border::after { background: var(--warn); opacity: 0.5; }
+.matrix.score-border::before, .matrix.score-border::after { background: var(--warn); opacity: 0.5; }
+
+.cell {
+  width: 44px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.cell.row-highlight {
+  background: rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.cell.col-highlight {
+  background: rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+}
+
+.cell.result-highlight {
+  background: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.5);
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.cell.multiply-a {
+  background: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.cell.multiply-b {
+  background: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.cell.pulse {
+  animation: cellPulse 0.6s ease;
+}
+
+@keyframes cellPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); box-shadow: 0 0 16px rgba(139, 92, 246, 0.6); }
+  100% { transform: scale(1); }
+}
+
+.cell.filled {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.result-cell {
+  cursor: pointer;
+}
+
+.result-cell:hover {
+  transform: scale(1.12);
+  z-index: 10;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+}
+
+/* Computation detail panel */
+.detail-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+  min-height: 100px;
+  transition: all 0.3s ease;
+}
+
+.detail-panel .detail-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+
+.detail-panel .computation-line {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 2;
+  color: var(--text);
+}
+
+.computation-line .val-a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.computation-line .val-b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.computation-line .val-result {
+  color: var(--purple);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.computation-line .op {
+  color: var(--muted);
+}
+
+.detail-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* Speed control */
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.speed-control input[type="range"] {
+  width: 100px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Three-matrix comparison */
+.triple-matrix {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.triple-matrix .matrix-block {
+  flex: 0 0 auto;
+}
+
+/* Weight matrix selector tabs */
+.weight-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.weight-tab {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-weight: 500;
+}
+
+.weight-tab:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.weight-tab.active-q {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.weight-tab.active-k {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.weight-tab.active-v {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+/* Attention preview */
+.attention-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(4, 1fr);
+  gap: 3px;
+  max-width: 360px;
+  margin: 16px auto;
+}
+
+.attention-cell {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  transition: all 0.3s ease;
+}
+
+.attention-header {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.attention-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Formula box */
+.formula-box {
+  text-align: center;
+  font-size: 1.05rem;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  font-family: "Cambria Math", "Times New Roman", serif;
+  color: var(--primary);
+  letter-spacing: 0.5px;
+}
+
+.formula-box .q { color: var(--primary); }
+.formula-box .k { color: var(--accent); }
+.formula-box .v { color: var(--purple); }
+.formula-box .x { color: var(--text); }
+.formula-box .w { color: var(--warn); }
+
+/* Explanation callout */
+.callout {
+  background: rgba(56, 189, 248, 0.06);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.callout strong {
+  color: var(--text);
+}
+
+/* Animation for flying numbers */
+@keyframes flyIn {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fly-in {
+  animation: flyIn 0.4s ease forwards;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container { padding: 20px 12px 36px; }
+  h1 { font-size: 1.4rem; }
+  .cell { width: 36px; height: 34px; font-size: 0.68rem; }
+  .matrix-group { gap: 10px; }
+  .operator { font-size: 1.1rem; }
+  .detail-panel { padding: 14px; }
+  .triple-matrix { gap: 16px; }
+  .controls { gap: 8px; }
+  .btn { padding: 8px 14px; font-size: 0.82rem; }
+}
+
+@media (max-width: 480px) {
+  .cell { width: 30px; height: 28px; font-size: 0.62rem; }
+  .row-label { font-size: 0.62rem; height: 28px; }
+  .matrix { gap: 2px; padding: 4px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Transformer 矩阵乘法：逐步拆解</h1>
+  <p class="subtitle">交互式探索 X x W = Q / K / V 的计算过程</p>
+
+  <!-- Phase Navigation -->
+  <div class="phase-nav">
+    <button class="phase-nav-btn active" onclick="showPhase(1)">阶段一：认识输入</button>
+    <button class="phase-nav-btn" onclick="showPhase(2)">阶段二：矩阵乘法</button>
+    <button class="phase-nav-btn" onclick="showPhase(3)">阶段三：Q / K / V 对比</button>
+    <button class="phase-nav-btn" onclick="showPhase(4)">阶段四：注意力分数</button>
+  </div>
+
+  <!-- ==================== PHASE 1 ==================== -->
+  <div id="phase1" class="card">
+    <div class="phase-title">
+      <span class="badge" style="background: linear-gradient(135deg, var(--primary), var(--accent));">1</span>
+      认识输入矩阵
+    </div>
+    <p class="phase-desc">
+      在 Transformer 的自注意力机制中，输入序列的每个词首先被转换为一个嵌入向量（embedding）。
+      这些向量组成输入矩阵 <strong>X</strong>，然后分别乘以三个不同的权重矩阵
+      <strong style="color:var(--primary)">W<sub>Q</sub></strong>、
+      <strong style="color:var(--accent)">W<sub>K</sub></strong>、
+      <strong style="color:var(--purple)">W<sub>V</sub></strong>，
+      得到查询（Query）、键（Key）、值（Value）三组表示。
+    </p>
+
+    <div class="formula-box">
+      <span class="q">Q</span> = <span class="x">X</span> <span class="w">W<sub>Q</sub></span> , &nbsp;
+      <span class="k">K</span> = <span class="x">X</span> <span class="w">W<sub>K</sub></span> , &nbsp;
+      <span class="v">V</span> = <span class="x">X</span> <span class="w">W<sub>V</sub></span>
+    </div>
+
+    <div class="matrix-group">
+      <!-- X matrix -->
+      <div class="matrix-block">
+        <div class="matrix-label x-color">X (输入, 4x3)</div>
+        <div class="matrix-wrapper">
+          <div class="row-labels">
+            <div class="row-label">"I"</div>
+            <div class="row-label">"love"</div>
+            <div class="row-label">"deep"</div>
+            <div class="row-label">"learning"</div>
+          </div>
+          <div class="matrix x-border" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="cell">1.0</div><div class="cell">0.0</div><div class="cell">1.0</div>
+            <div class="cell">0.0</div><div class="cell">1.0</div><div class="cell">1.0</div>
+            <div class="cell">1.0</div><div class="cell">1.0</div><div class="cell">0.0</div>
+            <div class="cell">0.0</div><div class="cell">1.0</div><div class="cell">0.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weight matrices -->
+      <div class="matrix-block">
+        <div class="matrix-label q-color">W<sub>Q</sub> (权重, 3x3)</div>
+        <div class="matrix x-border" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="cell">1</div><div class="cell">0</div><div class="cell">1</div>
+          <div class="cell">0</div><div class="cell">1</div><div class="cell">0</div>
+          <div class="cell">1</div><div class="cell">0</div><div class="cell">0</div>
+        </div>
+      </div>
+
+      <div class="matrix-block">
+        <div class="matrix-label k-color">W<sub>K</sub> (权重, 3x3)</div>
+        <div class="matrix x-border" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="cell">0</div><div class="cell">1</div><div class="cell">0</div>
+          <div class="cell">1</div><div class="cell">0</div><div class="cell">1</div>
+          <div class="cell">0</div><div class="cell">1</div><div class="cell">1</div>
+        </div>
+      </div>
+
+      <div class="matrix-block">
+        <div class="matrix-label v-color">W<sub>V</sub> (权重, 3x3)</div>
+        <div class="matrix x-border" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="cell">1</div><div class="cell">1</div><div class="cell">0</div>
+          <div class="cell">0</div><div class="cell">0</div><div class="cell">1</div>
+          <div class="cell">1</div><div class="cell">0</div><div class="cell">1</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>每个词的嵌入向量</strong>是一行（如 "I" = [1.0, 0.0, 1.0]）。
+      乘以不同权重矩阵后，同一个词会得到不同的 Query、Key、Value 表示 ——
+      这正是注意力机制的核心："同一个输入，不同的角色"。
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 2 ==================== -->
+  <div id="phase2" class="card" style="display:none;">
+    <div class="phase-title">
+      <span class="badge" style="background: linear-gradient(135deg, var(--primary), var(--purple));">2</span>
+      交互式矩阵乘法
+    </div>
+    <p class="phase-desc">
+      点击结果矩阵中的任意单元格，查看对应的逐元素计算过程。
+      或者使用<strong>自动播放</strong>功能，逐个观察每个位置的计算。
+    </p>
+
+    <!-- Weight tab selector -->
+    <div class="weight-tabs">
+      <button class="weight-tab active-q" id="tab-q" onclick="switchWeight('Q')">Q = X x W<sub>Q</sub></button>
+      <button class="weight-tab" id="tab-k" onclick="switchWeight('K')">K = X x W<sub>K</sub></button>
+      <button class="weight-tab" id="tab-v" onclick="switchWeight('V')">V = X x W<sub>V</sub></button>
+    </div>
+
+    <div class="formula-box" id="phase2-formula">
+      <span class="q">Q</span> = <span class="x">X</span> x <span class="w">W<sub>Q</sub></span> &nbsp;&nbsp;
+      (4x3) x (3x3) = (4x3)
+    </div>
+
+    <div class="matrix-group" id="multiply-area">
+      <!-- X matrix (interactive) -->
+      <div class="matrix-block">
+        <div class="matrix-label x-color">X (输入)</div>
+        <div class="matrix-wrapper">
+          <div class="row-labels" id="x-row-labels">
+            <div class="row-label">"I"</div>
+            <div class="row-label">"love"</div>
+            <div class="row-label">"deep"</div>
+            <div class="row-label">"learning"</div>
+          </div>
+          <div class="matrix x-border" style="grid-template-columns: repeat(3, 1fr);" id="x-matrix"></div>
+        </div>
+      </div>
+
+      <div class="operator">x</div>
+
+      <!-- W matrix (interactive) -->
+      <div class="matrix-block">
+        <div class="matrix-label" id="w-label" style="color:var(--primary)">W<sub>Q</sub> (权重)</div>
+        <div class="matrix w-border" style="grid-template-columns: repeat(3, 1fr);" id="w-matrix"></div>
+      </div>
+
+      <div class="operator">=</div>
+
+      <!-- Result matrix (interactive) -->
+      <div class="matrix-block">
+        <div class="matrix-label" id="r-label" style="color:var(--purple)">Q (结果)</div>
+        <div class="matrix-wrapper">
+          <div class="row-labels">
+            <div class="row-label">"I"</div>
+            <div class="row-label">"love"</div>
+            <div class="row-label">"deep"</div>
+            <div class="row-label">"learning"</div>
+          </div>
+          <div class="matrix q-border" style="grid-template-columns: repeat(3, 1fr);" id="r-matrix"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls" style="margin-top:16px;">
+      <button class="btn btn-primary" id="autoplay-btn" onclick="toggleAutoplay()">
+        <span id="autoplay-icon">&#9654;</span> 自动播放
+      </button>
+      <button class="btn" onclick="resetHighlights()">&#8635; 重置</button>
+      <div class="speed-control">
+        <span>速度：</span>
+        <input type="range" id="speed-slider" min="1" max="5" value="3" oninput="updateSpeed()">
+        <span id="speed-label">中</span>
+      </div>
+    </div>
+
+    <!-- Computation detail panel -->
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-hint" id="detail-hint">
+        &#128161; 点击右侧结果矩阵中的任意单元格，查看逐步计算过程
+      </div>
+      <div id="detail-content" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 3 ==================== -->
+  <div id="phase3" class="card" style="display:none;">
+    <div class="phase-title">
+      <span class="badge" style="background: linear-gradient(135deg, var(--accent), var(--purple));">3</span>
+      Q、K、V 结果对比
+    </div>
+    <p class="phase-desc">
+      相同的输入矩阵 X 乘以不同的权重矩阵，产生三种不同的表示。
+      观察同一个词（同一行）在 Q、K、V 中的值如何不同 —— 这正是注意力机制赋予每个词不同"角色"的方式。
+    </p>
+
+    <div class="triple-matrix" id="triple-display">
+      <!-- Will be populated by JS -->
+    </div>
+
+    <div class="callout">
+      <strong>Query（查询）</strong>：代表"我在找什么？" &nbsp;
+      <strong style="color:var(--accent)">Key（键）</strong>：代表"我有什么信息？" &nbsp;
+      <strong style="color:var(--purple)">Value（值）</strong>：代表"我实际要传递的内容"。
+      <br><br>
+      相同输入 X，不同权重矩阵 W<sub>Q</sub>、W<sub>K</sub>、W<sub>V</sub> 产生不同的结果，
+      这让每个词在注意力计算中能够同时扮演"提问者"和"被查询者"的角色。
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 4 ==================== -->
+  <div id="phase4" class="card" style="display:none;">
+    <div class="phase-title">
+      <span class="badge" style="background: linear-gradient(135deg, var(--warn), var(--danger));">4</span>
+      注意力分数预览
+    </div>
+    <p class="phase-desc">
+      有了 Q 和 K，就可以计算注意力分数矩阵 —— 它告诉我们每个词应该"关注"其他哪些词。
+    </p>
+
+    <div class="formula-box">
+      Attention Score = <span class="q">Q</span> x <span class="k">K<sup>T</sup></span> &nbsp;&nbsp;
+      (4x3) x (3x4) = (4x4)
+    </div>
+
+    <div class="callout" style="margin-bottom: 16px;">
+      注意力分数矩阵是一个 4x4 的方阵，每个位置 [i][j] 表示第 i 个词对第 j 个词的原始关注程度。
+      在实际 Transformer 中，这些分数还会除以 sqrt(d<sub>k</sub>) 并经过 Softmax 归一化。
+    </div>
+
+    <div id="attention-display" style="display:flex; justify-content:center; flex-wrap:wrap; gap:20px; align-items:center;">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="callout" style="margin-top:16px;">
+      <strong>颜色越亮</strong>表示该词对目标词的关注度越高。
+      注意对角线上的值通常较高 —— 每个词天然地更关注自身。
+      但更有趣的是非对角线上的值，它们揭示了词与词之间的语义关联。
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA
+// ============================================================
+
+const WORDS = ["I", "love", "deep", "learning"];
+
+const X = [
+  [1.0, 0.0, 1.0],
+  [0.0, 1.0, 1.0],
+  [1.0, 1.0, 0.0],
+  [0.0, 1.0, 0.0]
+];
+
+const WEIGHTS = {
+  Q: [[1, 0, 1], [0, 1, 0], [1, 0, 0]],
+  K: [[0, 1, 0], [1, 0, 1], [0, 1, 1]],
+  V: [[1, 1, 0], [0, 0, 1], [1, 0, 1]]
+};
+
+function matMul(a, b) {
+  const rows = a.length;
+  const cols = b[0].length;
+  const inner = b.length;
+  const result = [];
+  for (let i = 0; i < rows; i++) {
+    result[i] = [];
+    for (let j = 0; j < cols; j++) {
+      let sum = 0;
+      for (let k = 0; k < inner; k++) {
+        sum += a[i][k] * b[k][j];
+      }
+      result[i][j] = sum;
+    }
+  }
+  return result;
+}
+
+function transpose(m) {
+  const rows = m.length;
+  const cols = m[0].length;
+  const result = [];
+  for (let j = 0; j < cols; j++) {
+    result[j] = [];
+    for (let i = 0; i < rows; i++) {
+      result[j][i] = m[i][j];
+    }
+  }
+  return result;
+}
+
+const RESULTS = {
+  Q: matMul(X, WEIGHTS.Q),
+  K: matMul(X, WEIGHTS.K),
+  V: matMul(X, WEIGHTS.V)
+};
+
+// ============================================================
+//  STATE
+// ============================================================
+
+let currentPhase = 1;
+let currentWeight = 'Q';
+let autoplayTimer = null;
+let autoplayRunning = false;
+let autoplayRow = 0;
+let autoplayCol = 0;
+let speedMs = 1200;
+
+// ============================================================
+//  PHASE NAVIGATION
+// ============================================================
+
+function showPhase(n) {
+  currentPhase = n;
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('phase' + i);
+    el.style.display = i === n ? 'block' : 'none';
+  }
+  const navBtns = document.querySelectorAll('.phase-nav-btn');
+  navBtns.forEach(function(btn, idx) {
+    if (idx === n - 1) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  if (n === 2) {
+    buildInteractiveMatrices();
+  } else if (n === 3) {
+    buildTripleDisplay();
+  } else if (n === 4) {
+    buildAttentionPreview();
+  }
+
+  if (n !== 2) {
+    stopAutoplay();
+  }
+
+  reportHeight();
+}
+
+// ============================================================
+//  PHASE 2: Interactive multiplication
+// ============================================================
+
+function buildInteractiveMatrices() {
+  buildXMatrix();
+  buildWMatrix();
+  buildResultMatrix();
+  resetHighlights();
+}
+
+function buildXMatrix() {
+  const container = document.getElementById('x-matrix');
+  container.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 3; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'x-' + i + '-' + j;
+      cell.textContent = X[i][j].toFixed(1);
+      container.appendChild(cell);
+    }
+  }
+}
+
+function buildWMatrix() {
+  const container = document.getElementById('w-matrix');
+  container.innerHTML = '';
+  const W = WEIGHTS[currentWeight];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'w-' + i + '-' + j;
+      cell.textContent = W[i][j];
+      container.appendChild(cell);
+    }
+  }
+
+  // Update label
+  const label = document.getElementById('w-label');
+  const rLabel = document.getElementById('r-label');
+  const colorMap = { Q: 'var(--primary)', K: 'var(--accent)', V: 'var(--purple)' };
+  label.style.color = colorMap[currentWeight];
+  label.innerHTML = 'W<sub>' + currentWeight + '</sub> (权重)';
+  rLabel.style.color = colorMap[currentWeight];
+  rLabel.textContent = currentWeight + ' (结果)';
+
+  // Update border class on result matrix
+  const rMatrix = document.getElementById('r-matrix');
+  rMatrix.className = 'matrix ' + currentWeight.toLowerCase() + '-border';
+  rMatrix.style.gridTemplateColumns = 'repeat(3, 1fr)';
+}
+
+function buildResultMatrix() {
+  const container = document.getElementById('r-matrix');
+  container.innerHTML = '';
+  const R = RESULTS[currentWeight];
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 3; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell result-cell';
+      cell.id = 'r-' + i + '-' + j;
+      cell.textContent = R[i][j].toFixed(1);
+      cell.setAttribute('data-row', i);
+      cell.setAttribute('data-col', j);
+      cell.addEventListener('click', function() { highlightComputation(i, j); });
+      cell.addEventListener('mouseenter', function() { highlightComputation(i, j); });
+      container.appendChild(cell);
+    }
+  }
+}
+
+function switchWeight(type) {
+  currentWeight = type;
+  stopAutoplay();
+
+  // Update tabs
+  document.querySelectorAll('.weight-tab').forEach(function(tab) {
+    tab.className = 'weight-tab';
+  });
+  const activeTab = document.getElementById('tab-' + type.toLowerCase());
+  activeTab.classList.add('active-' + type.toLowerCase());
+
+  // Update formula
+  const formulaEl = document.getElementById('phase2-formula');
+  const nameMap = { Q: ['q', 'Q'], K: ['k', 'K'], V: ['v', 'V'] };
+  const m = nameMap[type];
+  formulaEl.innerHTML =
+    '<span class="' + m[0] + '">' + m[1] + '</span> = <span class="x">X</span> x <span class="w">W<sub>' + m[1] + '</sub></span> &nbsp;&nbsp;(4x3) x (3x3) = (4x3)';
+
+  buildWMatrix();
+  buildResultMatrix();
+  resetHighlights();
+}
+
+function highlightComputation(row, col) {
+  clearCellHighlights();
+
+  // Highlight row in X
+  for (let j = 0; j < 3; j++) {
+    document.getElementById('x-' + row + '-' + j).classList.add('row-highlight');
+  }
+
+  // Highlight column in W
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('w-' + i + '-' + col).classList.add('col-highlight');
+  }
+
+  // Highlight result cell
+  const resultCell = document.getElementById('r-' + row + '-' + col);
+  resultCell.classList.add('result-highlight');
+
+  // Highlight the row label
+  const labels = document.querySelectorAll('#x-row-labels .row-label');
+  labels.forEach(function(l, idx) {
+    if (idx === row) {
+      l.style.color = 'var(--primary)';
+      l.style.fontWeight = '700';
+    } else {
+      l.style.color = 'var(--muted)';
+      l.style.fontWeight = '400';
+    }
+  });
+
+  // Show computation detail
+  showComputationDetail(row, col);
+}
+
+function showComputationDetail(row, col) {
+  const hint = document.getElementById('detail-hint');
+  const content = document.getElementById('detail-content');
+  hint.style.display = 'none';
+  content.style.display = 'block';
+
+  const W = WEIGHTS[currentWeight];
+  const R = RESULTS[currentWeight];
+  const word = WORDS[row];
+
+  const nameMap = { Q: 'Q', K: 'K', V: 'V' };
+  const typeName = nameMap[currentWeight];
+
+  let html = '<div class="detail-title">' +
+    typeName + '[' + row + '][' + col + '] 的计算过程 ' +
+    '（词：<span style="color:var(--primary)">"' + word + '"</span> 的第 ' + col + ' 维）' +
+    '</div>';
+
+  // Line 1: formula
+  let formulaParts = [];
+  for (let k = 0; k < 3; k++) {
+    formulaParts.push(
+      '<span class="val-a">X[' + row + '][' + k + ']</span>' +
+      '<span class="op"> x </span>' +
+      '<span class="val-b">W[' + k + '][' + col + ']</span>'
+    );
+  }
+  html += '<div class="computation-line fly-in">' + formulaParts.join('<span class="op"> + </span>') + '</div>';
+
+  // Line 2: substituted values
+  let valParts = [];
+  for (let k = 0; k < 3; k++) {
+    valParts.push(
+      '<span class="val-a">' + X[row][k].toFixed(1) + '</span>' +
+      '<span class="op"> x </span>' +
+      '<span class="val-b">' + W[k][col] + '</span>'
+    );
+  }
+  html += '<div class="computation-line fly-in" style="animation-delay:0.1s">' +
+    '<span class="op">= </span>' + valParts.join('<span class="op"> + </span>') + '</div>';
+
+  // Line 3: products
+  let products = [];
+  for (let k = 0; k < 3; k++) {
+    const p = X[row][k] * W[k][col];
+    products.push(p);
+  }
+  html += '<div class="computation-line fly-in" style="animation-delay:0.2s">' +
+    '<span class="op">= </span>' +
+    products.map(function(p) { return '<span style="color:var(--warn)">' + p.toFixed(1) + '</span>'; }).join('<span class="op"> + </span>') +
+    '</div>';
+
+  // Line 4: result
+  html += '<div class="computation-line fly-in" style="animation-delay:0.3s">' +
+    '<span class="op">= </span><span class="val-result">' + R[row][col].toFixed(1) + '</span></div>';
+
+  content.innerHTML = html;
+  reportHeight();
+}
+
+function clearCellHighlights() {
+  document.querySelectorAll('#x-matrix .cell').forEach(function(c) {
+    c.classList.remove('row-highlight', 'multiply-a');
+  });
+  document.querySelectorAll('#w-matrix .cell').forEach(function(c) {
+    c.classList.remove('col-highlight', 'multiply-b');
+  });
+  document.querySelectorAll('#r-matrix .cell').forEach(function(c) {
+    c.classList.remove('result-highlight', 'pulse');
+  });
+  // Reset row labels
+  document.querySelectorAll('#x-row-labels .row-label').forEach(function(l) {
+    l.style.color = 'var(--muted)';
+    l.style.fontWeight = '400';
+  });
+}
+
+function resetHighlights() {
+  clearCellHighlights();
+  const hint = document.getElementById('detail-hint');
+  const content = document.getElementById('detail-content');
+  hint.style.display = 'block';
+  content.style.display = 'none';
+  stopAutoplay();
+  reportHeight();
+}
+
+// ============================================================
+//  AUTOPLAY
+// ============================================================
+
+function toggleAutoplay() {
+  if (autoplayRunning) {
+    stopAutoplay();
+  } else {
+    startAutoplay();
+  }
+}
+
+function startAutoplay() {
+  autoplayRunning = true;
+  autoplayRow = 0;
+  autoplayCol = 0;
+  document.getElementById('autoplay-btn').classList.add('active');
+  document.getElementById('autoplay-icon').innerHTML = '&#9646;&#9646;';
+  autoplayStep();
+}
+
+function stopAutoplay() {
+  autoplayRunning = false;
+  if (autoplayTimer) {
+    clearTimeout(autoplayTimer);
+    autoplayTimer = null;
+  }
+  const btn = document.getElementById('autoplay-btn');
+  if (btn) {
+    btn.classList.remove('active');
+    document.getElementById('autoplay-icon').innerHTML = '&#9654;';
+  }
+}
+
+function autoplayStep() {
+  if (!autoplayRunning) return;
+
+  highlightComputation(autoplayRow, autoplayCol);
+
+  // Pulse effect on current result cell
+  const rc = document.getElementById('r-' + autoplayRow + '-' + autoplayCol);
+  if (rc) {
+    rc.classList.add('pulse');
+  }
+
+  // Advance
+  autoplayCol++;
+  if (autoplayCol >= 3) {
+    autoplayCol = 0;
+    autoplayRow++;
+  }
+  if (autoplayRow >= 4) {
+    // Loop or stop
+    autoplayRow = 0;
+    autoplayCol = 0;
+  }
+
+  autoplayTimer = setTimeout(autoplayStep, speedMs);
+}
+
+function updateSpeed() {
+  const val = parseInt(document.getElementById('speed-slider').value, 10);
+  const labels = ['很慢', '慢', '中', '快', '很快'];
+  const speeds = [2400, 1800, 1200, 700, 400];
+  speedMs = speeds[val - 1];
+  document.getElementById('speed-label').textContent = labels[val - 1];
+}
+
+// ============================================================
+//  PHASE 3: Triple display
+// ============================================================
+
+function buildTripleDisplay() {
+  const container = document.getElementById('triple-display');
+  container.innerHTML = '';
+
+  const configs = [
+    { key: 'Q', label: 'Q (查询)', color: 'var(--primary)', borderClass: 'q-border', labelClass: 'q-color' },
+    { key: 'K', label: 'K (键)', color: 'var(--accent)', borderClass: 'k-border', labelClass: 'k-color' },
+    { key: 'V', label: 'V (值)', color: 'var(--purple)', borderClass: 'v-border', labelClass: 'v-color' }
+  ];
+
+  configs.forEach(function(cfg) {
+    const R = RESULTS[cfg.key];
+    const block = document.createElement('div');
+    block.className = 'matrix-block';
+
+    const label = document.createElement('div');
+    label.className = 'matrix-label ' + cfg.labelClass;
+    label.textContent = cfg.label;
+    block.appendChild(label);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'matrix-wrapper';
+
+    const rowLabels = document.createElement('div');
+    rowLabels.className = 'row-labels';
+    WORDS.forEach(function(w) {
+      const rl = document.createElement('div');
+      rl.className = 'row-label';
+      rl.textContent = '"' + w + '"';
+      rowLabels.appendChild(rl);
+    });
+    wrapper.appendChild(rowLabels);
+
+    const matrix = document.createElement('div');
+    matrix.className = 'matrix ' + cfg.borderClass;
+    matrix.style.gridTemplateColumns = 'repeat(3, 1fr)';
+
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 3; j++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = R[i][j].toFixed(1);
+        cell.style.background = 'rgba(' + hexToRgb(cfg.color) + ', ' + (Math.abs(R[i][j]) / 3 * 0.25 + 0.05) + ')';
+        matrix.appendChild(cell);
+      }
+    }
+
+    wrapper.appendChild(matrix);
+    block.appendChild(wrapper);
+    container.appendChild(block);
+  });
+
+  reportHeight();
+}
+
+function hexToRgb(cssVar) {
+  const map = {
+    'var(--primary)': '56, 189, 248',
+    'var(--accent)': '34, 197, 94',
+    'var(--purple)': '139, 92, 246'
+  };
+  return map[cssVar] || '255, 255, 255';
+}
+
+// ============================================================
+//  PHASE 4: Attention preview
+// ============================================================
+
+function buildAttentionPreview() {
+  const container = document.getElementById('attention-display');
+  container.innerHTML = '';
+
+  const Q = RESULTS.Q;
+  const K = RESULTS.K;
+  const KT = transpose(K);
+  const scores = matMul(Q, KT);
+
+  // Find max for color scaling
+  let maxVal = 0;
+  scores.forEach(function(row) {
+    row.forEach(function(v) {
+      if (Math.abs(v) > maxVal) maxVal = Math.abs(v);
+    });
+  });
+
+  // Q matrix display
+  const qBlock = document.createElement('div');
+  qBlock.className = 'matrix-block';
+  qBlock.innerHTML = '<div class="matrix-label q-color">Q</div>';
+  const qMatrix = document.createElement('div');
+  qMatrix.className = 'matrix q-border';
+  qMatrix.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 3; j++) {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      c.textContent = Q[i][j].toFixed(1);
+      c.style.fontSize = '0.68rem';
+      qMatrix.appendChild(c);
+    }
+  }
+  qBlock.appendChild(qMatrix);
+  container.appendChild(qBlock);
+
+  // Operator
+  const op1 = document.createElement('div');
+  op1.className = 'operator';
+  op1.textContent = 'x';
+  container.appendChild(op1);
+
+  // K^T matrix display
+  const ktBlock = document.createElement('div');
+  ktBlock.className = 'matrix-block';
+  ktBlock.innerHTML = '<div class="matrix-label k-color">K<sup>T</sup></div>';
+  const ktMatrix = document.createElement('div');
+  ktMatrix.className = 'matrix k-border';
+  ktMatrix.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 4; j++) {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      c.textContent = KT[i][j].toFixed(1);
+      c.style.fontSize = '0.68rem';
+      ktMatrix.appendChild(c);
+    }
+  }
+  ktBlock.appendChild(ktMatrix);
+  container.appendChild(ktBlock);
+
+  // Operator
+  const op2 = document.createElement('div');
+  op2.className = 'operator';
+  op2.textContent = '=';
+  container.appendChild(op2);
+
+  // Attention score matrix
+  const scoreBlock = document.createElement('div');
+  scoreBlock.className = 'matrix-block';
+  scoreBlock.innerHTML = '<div class="matrix-label score-color">注意力分数</div>';
+
+  const scoreWrapper = document.createElement('div');
+  scoreWrapper.className = 'matrix-wrapper';
+
+  const rowLabels = document.createElement('div');
+  rowLabels.className = 'row-labels';
+  WORDS.forEach(function(w) {
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = '"' + w + '"';
+    rowLabels.appendChild(rl);
+  });
+  scoreWrapper.appendChild(rowLabels);
+
+  const scoreMatrix = document.createElement('div');
+  scoreMatrix.className = 'matrix score-border';
+  scoreMatrix.style.gridTemplateColumns = 'repeat(4, 1fr)';
+
+  // Column headers
+  // We add them above the matrix
+  const colHeader = document.createElement('div');
+  colHeader.style.cssText = 'display:grid; grid-template-columns: repeat(4, 1fr); gap:3px; padding:0 6px; margin-bottom:2px;';
+  WORDS.forEach(function(w) {
+    const ch = document.createElement('div');
+    ch.style.cssText = 'text-align:center; font-size:0.62rem; color:var(--muted); font-family:monospace;';
+    ch.textContent = '"' + w + '"';
+    colHeader.appendChild(ch);
+  });
+
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      c.textContent = scores[i][j].toFixed(0);
+      const intensity = Math.abs(scores[i][j]) / maxVal;
+      const alpha = intensity * 0.5 + 0.05;
+      c.style.background = 'rgba(245, 158, 11, ' + alpha + ')';
+      c.style.color = intensity > 0.6 ? '#fff' : 'var(--text)';
+      c.style.fontWeight = intensity > 0.5 ? '700' : '400';
+      scoreMatrix.appendChild(c);
+    }
+  }
+
+  const scoreInner = document.createElement('div');
+  scoreInner.appendChild(colHeader);
+  scoreInner.appendChild(scoreMatrix);
+  scoreWrapper.appendChild(scoreInner);
+  scoreBlock.appendChild(scoreWrapper);
+  container.appendChild(scoreBlock);
+
+  reportHeight();
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+
+showPhase(1);
+
+// ============================================================
+//  HEIGHT REPORTING
+// ============================================================
+
+function reportHeight() {
+  var height = document.documentElement.scrollHeight;
+  window.parent.postMessage({ type: 'iframeHeight', height: height }, '*');
+}
+
+window.addEventListener('load', function() {
+  reportHeight();
+  setTimeout(reportHeight, 500);
+});
+
+new ResizeObserver(reportHeight).observe(document.body);
+</script>
+</body>
+</html>

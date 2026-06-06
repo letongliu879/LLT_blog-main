@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>决策树生长过程</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:900px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    .row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    button{border:1px solid #334155;background:#111827;color:#e5e7eb;border-radius:8px;padding:8px 12px;cursor:pointer}
+    .tag{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#fbbf24}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>决策树逐层生长</h1>
+    <p>点击“下一步”依次展开根节点和子节点。这个过程对应训练中“选择最佳特征并递归分裂”的执行路径。</p>
+    <div class="row">
+      <button id="next">下一步</button>
+      <button id="reset">重置</button>
+      <span>当前深度：<span id="depth" class="tag">0</span></span>
+    </div>
+    <canvas id="tree" width="820" height="360"></canvas>
+  </div>
+  <script>
+    const c=document.getElementById('tree'),ctx=c.getContext('2d');
+    const depthEl=document.getElementById('depth');
+    let step=0;
+    function node(x,y,text,color='#38bdf8'){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x-62,y-20,124,40,10);ctx.fill();ctx.fillStyle='#0b1120';ctx.font='12px Segoe UI';ctx.fillText(text,x-52,y+5)}
+    function edge(x1,y1,x2,y2){ctx.strokeStyle='rgba(148,163,184,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+    function render(){
+      ctx.clearRect(0,0,c.width,c.height);
+      node(c.width/2,55,'Root: feature_2','#22c55e');
+      if(step>=1){edge(c.width/2,75,240,150);edge(c.width/2,75,580,150);node(240,150,'L: feature_0');node(580,150,'R: feature_1');}
+      if(step>=2){edge(240,170,140,265);edge(240,170,340,265);node(140,265,'leaf: edible','#38bdf8');node(340,265,'leaf: poison','#ef4444');}
+      if(step>=3){edge(580,170,480,265);edge(580,170,680,265);node(480,265,'leaf: edible','#38bdf8');node(680,265,'leaf: poison','#ef4444');}
+      depthEl.textContent=String(Math.min(step,3));
+      reportHeight();
+    }
+    document.getElementById('next').addEventListener('click',()=>{step=Math.min(3,step+1);render()});
+    document.getElementById('reset').addEventListener('click',()=>{step=0;render()});
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    window.addEventListener('load',()=>{render();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

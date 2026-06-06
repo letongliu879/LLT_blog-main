@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EXPLAIN 成本对比</title>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(180deg, #f3f8ff 0%, #eef5ff 100%);
+      color: #0f172a;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    .w {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #dbe5f4;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(30, 64, 175, 0.08);
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      color: #1d4ed8;
+      margin: 0 0 8px;
+    }
+
+    p {
+      color: #475569;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0 0 12px;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: #475569;
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+
+    input[type='range'] {
+      width: 100%;
+      accent-color: #1d4ed8;
+    }
+
+    .v {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #1e3a8a;
+    }
+
+    .box {
+      border: 1px solid #dbe5f4;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f8fbff;
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .ok {
+      color: #0f766e;
+    }
+
+    .bad {
+      color: #be123c;
+    }
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>全表扫描 vs 索引扫描</h1>
+    <p>拖动数据规模，观察 EXPLAIN 的 `rows` 估算差异。重点不是绝对值，而是数量级变化。</p>
+
+    <label>
+      表规模（万行）
+      <span id="nVal" class="v">100</span>
+    </label>
+    <input id="n" type="range" min="10" max="500" step="10" value="100" />
+
+    <div class="box">
+      <div>无索引（type=ALL）：<span id="allRows" class="bad"></span></div>
+      <div>有索引（type=ref/range）：<span id="idxRows" class="ok"></span></div>
+      <div>扫描减少比例：<span id="ratio" class="v"></span></div>
+    </div>
+  </div>
+
+  <script>
+    const n = document.getElementById('n');
+    const nVal = document.getElementById('nVal');
+    const allRows = document.getElementById('allRows');
+    const idxRows = document.getElementById('idxRows');
+    const ratio = document.getElementById('ratio');
+
+    function render() {
+      const w = Number(n.value);
+      nVal.textContent = String(w);
+
+      const fullScan = w * 10000;
+      const indexedScan = Math.max(20, Math.floor(fullScan * 0.004));
+      const reduce = Math.max(1, Math.round(fullScan / indexedScan));
+
+      allRows.textContent = `rows ≈ ${fullScan.toLocaleString('zh-CN')}`;
+      idxRows.textContent = `rows ≈ ${indexedScan.toLocaleString('zh-CN')}`;
+      ratio.textContent = `约 ${reduce} 倍`;
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const body = document.body;
+      const root = document.documentElement;
+      const card = document.querySelector('.w');
+      const bodyStyle = getComputedStyle(body);
+      const bodyPadding = (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0);
+
+      const cardHeight = card ? Math.ceil(card.getBoundingClientRect().height + bodyPadding) : 0;
+      const bodyHeight = Math.max(body.scrollHeight, body.offsetHeight);
+      const rootHeight = Math.max(root.scrollHeight, root.offsetHeight);
+      const viewportHeight = window.innerHeight || root.clientHeight || 0;
+      const rootContentHeight = Math.abs(rootHeight - viewportHeight) <= 24 ? 0 : rootHeight;
+
+      const h = Math.max(cardHeight, bodyHeight, rootContentHeight);
+      window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
+    }
+
+    n.addEventListener('input', render);
+
+    window.addEventListener('load', () => {
+      render();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+      setTimeout(reportHeight, 300);
+    });
+  </script>
+</body>
+</html>
+

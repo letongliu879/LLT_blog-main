@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoRA 低秩矩阵分解可视化</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --text: #e2e8f0;
+    --primary: #3b82f6;
+    --accent: #10b981;
+    --frozen: #64748b;
+    --trainable: #ef4444;
+    --lora: #8b5cf6;
+    --card-bg: rgba(30, 41, 59, 0.7);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 0;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 {
+    text-align: center; font-size: 1.6rem; font-weight: 700; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--lora), var(--primary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .subtitle { text-align: center; font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px; }
+  .formula-bar {
+    text-align: center; padding: 14px 20px; margin-bottom: 24px;
+    background: var(--card-bg); border-radius: 12px; font-size: 1.15rem;
+    border: 1px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px);
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+  }
+  .formula-bar .f-frozen { color: var(--frozen); }
+  .formula-bar .f-lora { color: var(--lora); font-weight: 600; }
+  .formula-bar .f-accent { color: var(--accent); }
+  .section {
+    background: var(--card-bg); border-radius: 14px; padding: 20px;
+    margin-bottom: 20px; border: 1px solid rgba(100, 116, 139, 0.2);
+    backdrop-filter: blur(10px); position: relative; overflow: hidden;
+  }
+  .section::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--lora), var(--primary), var(--accent));
+  }
+  .section-title {
+    font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before { content: ''; width: 4px; height: 18px; background: var(--lora); border-radius: 2px; }
+
+  /* Matrix Grid */
+  .matrix-row { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .matrix-block { text-align: center; }
+  .matrix-label {
+    font-size: 0.78rem; margin-bottom: 6px; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .matrix-grid {
+    display: grid; gap: 1px; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(100,116,139,0.3);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .matrix-grid.frozen { box-shadow: 0 0 0 1px rgba(100,116,139,0.4); }
+  .matrix-grid.lora {
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.35), 0 0 0 1px rgba(139, 92, 246, 0.5);
+    animation: glow-pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(139, 92, 246, 0.35), 0 0 0 1px rgba(139, 92, 246, 0.5); }
+    50% { box-shadow: 0 0 22px rgba(139, 92, 246, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.7); }
+  }
+  .matrix-cell {
+    width: 100%; aspect-ratio: 1; border-radius: 1px;
+    transition: background 0.4s ease;
+  }
+  .op-symbol {
+    font-size: 1.6rem; font-weight: 300; color: #94a3b8; align-self: center;
+    min-width: 24px; text-align: center;
+  }
+  .matrix-dims {
+    font-size: 0.65rem; color: #94a3b8; margin-top: 4px;
+    font-family: 'Cambria Math', serif;
+  }
+
+  /* Data Flow Canvas */
+  #flow-canvas { width: 100%; height: 260px; display: block; border-radius: 8px; }
+
+  /* Slider */
+  .slider-group { display: flex; align-items: center; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+  .slider-label { font-size: 0.85rem; color: #94a3b8; min-width: 60px; }
+  .rank-slider {
+    flex: 1; min-width: 200px; -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px; outline: none;
+    background: linear-gradient(90deg, var(--lora), var(--primary));
+  }
+  .rank-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--lora); cursor: pointer; border: 3px solid var(--bg);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    transition: box-shadow 0.2s;
+  }
+  .rank-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.8);
+  }
+  .rank-slider::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--lora);
+    cursor: pointer; border: 3px solid var(--bg);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  }
+  .rank-value {
+    font-size: 1.4rem; font-weight: 700; color: var(--lora);
+    min-width: 48px; text-align: center;
+    font-family: 'Cambria Math', serif;
+  }
+
+  /* Stats Grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stat-card {
+    background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 14px;
+    border: 1px solid rgba(100,116,139,0.2); text-align: center;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .stat-card:hover { border-color: var(--lora); transform: translateY(-2px); }
+  .stat-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 1.3rem; font-weight: 700; }
+  .stat-value.frozen-c { color: var(--frozen); }
+  .stat-value.lora-c { color: var(--lora); }
+  .stat-value.accent-c { color: var(--accent); }
+
+  /* Bar Chart */
+  .chart-area { display: flex; align-items: flex-end; gap: 12px; height: 160px; padding: 0 10px; margin-top: 12px; }
+  .chart-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .chart-bar {
+    width: 100%; border-radius: 6px 6px 2px 2px; position: relative; min-height: 4px;
+    transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .chart-bar .bar-val {
+    position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; white-space: nowrap; color: var(--text);
+  }
+  .chart-label { font-size: 0.7rem; color: #94a3b8; text-align: center; }
+  .chart-pct { font-size: 0.68rem; font-weight: 600; color: var(--accent); }
+
+  /* Insight Cards */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .insight-card {
+    background: rgba(15, 23, 42, 0.5); border-radius: 10px; padding: 16px;
+    border: 1px solid rgba(139, 92, 246, 0.15); position: relative;
+    backdrop-filter: blur(8px); transition: border-color 0.3s, transform 0.3s;
+  }
+  .insight-card:hover { border-color: var(--lora); transform: translateY(-2px); }
+  .insight-card h4 { font-size: 0.88rem; color: var(--lora); margin-bottom: 6px; }
+  .insight-card p { font-size: 0.78rem; color: #cbd5e1; line-height: 1.55; }
+  .insight-card code {
+    background: rgba(139, 92, 246, 0.15); padding: 1px 6px; border-radius: 4px;
+    font-family: 'Cambria Math', monospace; font-size: 0.82rem; color: var(--lora);
+  }
+
+  /* Merge animation */
+  .merge-demo { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .merge-box {
+    padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+    transition: all 0.6s ease;
+  }
+  .merge-box.w0 { background: rgba(100,116,139,0.25); border: 1px solid var(--frozen); color: var(--frozen); }
+  .merge-box.ba { background: rgba(139,92,246,0.2); border: 1px solid var(--lora); color: var(--lora); }
+  .merge-box.result { background: rgba(16,185,129,0.2); border: 1px solid var(--accent); color: var(--accent); }
+  .merge-arrow { color: #94a3b8; font-size: 1.1rem; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.3rem; }
+    .formula-bar { font-size: 0.95rem; padding: 10px 14px; }
+    .matrix-row { gap: 8px; }
+    .op-symbol { font-size: 1.2rem; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>LoRA 低秩矩阵分解</h1>
+  <p class="subtitle">Low-Rank Adaptation — 用极少参数实现大模型高效微调</p>
+
+  <!-- Formula Bar -->
+  <div class="formula-bar">
+    <span class="f-frozen">h</span> = <span class="f-frozen">W₀</span>x +
+    <span class="f-lora">α</span> · <span class="f-lora">B</span> · <span class="f-lora">A</span> · x
+    <span style="margin-left:16px;font-size:0.8rem;color:#94a3b8">其中</span>
+    <span class="f-lora">ΔW = B × A</span>
+  </div>
+
+  <!-- Matrix Decomposition Visualization -->
+  <div class="section">
+    <div class="section-title">矩阵分解可视化</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--frozen)"></div>冻结权重 W₀</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lora)"></div>可训练 LoRA 矩阵</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>低秩近似 ΔW</div>
+    </div>
+    <div class="matrix-row" id="matrix-row">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+
+  <!-- Interactive Rank Slider -->
+  <div class="section">
+    <div class="section-title">交互式秩调节</div>
+    <div class="slider-group">
+      <span class="slider-label">秩 r =</span>
+      <input type="range" class="rank-slider" id="rank-slider" min="0" max="6" value="2" step="1">
+      <span class="rank-value" id="rank-display">4</span>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:#64748b;margin-bottom:6px">
+      维度 d = 768（类似 BERT 隐藏层维度）
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">原始参数量</div>
+        <div class="stat-value frozen-c" id="stat-original">589,824</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">LoRA 参数量</div>
+        <div class="stat-value lora-c" id="stat-lora">6,144</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">节省比例</div>
+        <div class="stat-value accent-c" id="stat-savings">99.0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Flow Animation -->
+  <div class="section">
+    <div class="section-title">数据流动动画</div>
+    <canvas id="flow-canvas"></canvas>
+  </div>
+
+  <!-- Parameter Comparison Bar Chart -->
+  <div class="section">
+    <div class="section-title">不同秩的参数量对比</div>
+    <div class="chart-area" id="chart-area">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+
+  <!-- Key Insights -->
+  <div class="section">
+    <div class="section-title">核心设计思想</div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <h4>B 初始化为零矩阵</h4>
+        <p>矩阵 <code>B</code> 在训练开始时初始化为 <strong>全零</strong>，因此 <code>ΔW = B × A = 0</code>。
+        这意味着训练起始时模型行为与预训练模型完全一致，保证了训练稳定性。</p>
+      </div>
+      <div class="insight-card">
+        <h4>A 使用随机高斯初始化</h4>
+        <p>矩阵 <code>A</code> 使用随机高斯分布初始化，确保在 <code>B</code> 更新后梯度能有效传播。
+        两个矩阵的不对称初始化是 LoRA 成功的关键。</p>
+      </div>
+      <div class="insight-card">
+        <h4>推理时零额外延迟</h4>
+        <p>推理阶段可将 LoRA 权重合并回原始矩阵：</p>
+        <div class="merge-demo">
+          <span class="merge-box w0">W₀</span>
+          <span class="merge-arrow">+</span>
+          <span class="merge-box ba">α·B·A</span>
+          <span class="merge-arrow">=</span>
+          <span class="merge-box result">W</span>
+        </div>
+        <p style="margin-top:8px">合并后无需额外计算，推理延迟为零。</p>
+      </div>
+      <div class="insight-card">
+        <h4>低秩假设的数学直觉</h4>
+        <p>预训练模型在下游任务上的适应性变化 <code>ΔW</code> 通常具有<strong>低秩特性</strong>，
+        即可以用远少于 d×d 的参数来准确描述。LoRA 利用这一性质实现了极致的参数效率。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const D = 768;
+const RANKS = [1, 2, 4, 8, 16, 32, 64];
+const VISUAL_D = 12;
+
+// Color helpers
+function frozenColor(v) {
+  const b = 40 + v * 40;
+  return `rgb(${b}, ${b + 10}, ${b + 20})`;
+}
+function loraColor(v) {
+  const r = 80 + v * 100, g = 40 + v * 50, b = 160 + v * 90;
+  return `rgb(${Math.min(r,255)}, ${Math.min(g,255)}, ${Math.min(b,255)})`;
+}
+function accentColor(v) {
+  const r = 10 + v * 30, g = 130 + v * 70, b = 100 + v * 50;
+  return `rgb(${Math.min(r,255)}, ${Math.min(g,255)}, ${Math.min(b,255)})`;
+}
+
+// Seeded random for stable visuals
+let seed = 42;
+function sRand() { seed = (seed * 16807 + 0) % 2147483647; return (seed - 1) / 2147483646; }
+
+// Generate matrix cells HTML
+function matrixHTML(rows, cols, colorFn, cssClass, cellSize) {
+  const s = cellSize || 7;
+  let html = `<div class="matrix-grid ${cssClass}" style="grid-template-columns:repeat(${cols},${s}px);grid-template-rows:repeat(${rows},${s}px);">`;
+  seed = 42;
+  for (let i = 0; i < rows * cols; i++) {
+    html += `<div class="matrix-cell" style="background:${colorFn(sRand())}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+// Build matrix visualization
+function buildMatrices(rank) {
+  const vr = Math.max(2, Math.round(rank / (RANKS[6] / VISUAL_D)));
+  const cs = Math.max(5, Math.min(7, Math.round(84 / VISUAL_D)));
+  const row = document.getElementById('matrix-row');
+  row.innerHTML = `
+    <div class="matrix-block">
+      <div class="matrix-label" style="color:var(--frozen)">冻结权重 W₀</div>
+      ${matrixHTML(VISUAL_D, VISUAL_D, frozenColor, 'frozen', cs)}
+      <div class="matrix-dims">${D} × ${D}</div>
+    </div>
+    <div class="op-symbol">+</div>
+    <div class="matrix-block">
+      <div class="matrix-label" style="color:var(--lora)">升维矩阵 B</div>
+      ${matrixHTML(VISUAL_D, vr, loraColor, 'lora', cs)}
+      <div class="matrix-dims">${D} × ${rank}</div>
+    </div>
+    <div class="op-symbol">×</div>
+    <div class="matrix-block">
+      <div class="matrix-label" style="color:var(--lora)">降维矩阵 A</div>
+      ${matrixHTML(vr, VISUAL_D, loraColor, 'lora', cs)}
+      <div class="matrix-dims">${rank} × ${D}</div>
+    </div>
+    <div class="op-symbol">=</div>
+    <div class="matrix-block">
+      <div class="matrix-label" style="color:var(--accent)">低秩近似 ΔW</div>
+      ${matrixHTML(VISUAL_D, VISUAL_D, accentColor, 'lora', cs)}
+      <div class="matrix-dims">${D} × ${D}</div>
+    </div>
+  `;
+}
+
+// Update stats
+function updateStats(rank) {
+  const orig = D * D;
+  const lora = 2 * D * rank;
+  const pct = ((1 - lora / orig) * 100).toFixed(1);
+  document.getElementById('stat-original').textContent = orig.toLocaleString();
+  document.getElementById('stat-lora').textContent = lora.toLocaleString();
+  document.getElementById('stat-savings').textContent = pct + '%';
+}
+
+// Build bar chart (log scale for better visibility of small ranks)
+function buildChart(activeRank) {
+  const area = document.getElementById('chart-area');
+  const orig = D * D;
+  const maxH = 140;
+  const logMax = Math.log10(orig);
+  let html = '';
+  RANKS.forEach(r => {
+    const lora = 2 * D * r;
+    const pct = (lora / orig * 100).toFixed(1);
+    const logH = Math.log10(lora) / logMax;
+    const h = Math.max(10, logH * maxH);
+    const active = r === activeRank;
+    const bg = active
+      ? 'linear-gradient(180deg, rgba(139,92,246,0.9), rgba(59,130,246,0.7))'
+      : 'linear-gradient(180deg, rgba(139,92,246,0.45), rgba(59,130,246,0.3))';
+    const border = active ? '2px solid var(--lora)' : '2px solid transparent';
+    html += `
+      <div class="chart-bar-group">
+        <div class="chart-pct">${pct}%</div>
+        <div class="chart-bar" style="height:${h}px;background:${bg};border:${border}">
+          <span class="bar-val">${lora.toLocaleString()}</span>
+        </div>
+        <div class="chart-label">r=${r}</div>
+      </div>`;
+  });
+  // Add original for comparison
+  html += `
+    <div class="chart-bar-group">
+      <div class="chart-pct">100%</div>
+      <div class="chart-bar" style="height:${maxH}px;background:linear-gradient(180deg,rgba(100,116,139,0.7),rgba(100,116,139,0.4));border:1px solid var(--frozen)">
+        <span class="bar-val">${orig.toLocaleString()}</span>
+      </div>
+      <div class="chart-label">\u5168\u91cf</div>
+    </div>`;
+  area.innerHTML = html;
+}
+
+// Slider handler
+const slider = document.getElementById('rank-slider');
+const rankDisplay = document.getElementById('rank-display');
+function onSliderChange() {
+  const r = RANKS[parseInt(slider.value)];
+  rankDisplay.textContent = r;
+  buildMatrices(r);
+  updateStats(r);
+  buildChart(r);
+}
+slider.addEventListener('input', onSliderChange);
+
+// Data Flow Canvas Animation
+const canvas = document.getElementById('flow-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let animFrame;
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width - 40;
+  canvas.height = 260;
+}
+
+class Particle {
+  constructor(x, y, path, color, speed) {
+    this.x = x; this.y = y; this.path = path;
+    this.color = color; this.speed = speed || (0.4 + Math.random() * 0.5);
+    this.progress = 0; this.alpha = 1; this.size = 2 + Math.random() * 2;
+  }
+  update() {
+    this.progress += this.speed * 0.008;
+    if (this.progress >= 1) { this.progress = 0; }
+    const pt = getPointOnPath(this.path, this.progress);
+    this.x = pt.x; this.y = pt.y;
+  }
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function getPointOnPath(path, t) {
+  if (path.length < 2) return path[0] || { x: 0, y: 0 };
+  const totalSeg = path.length - 1;
+  const seg = Math.min(Math.floor(t * totalSeg), totalSeg - 1);
+  const local = (t * totalSeg) - seg;
+  const a = path[seg], b = path[seg + 1];
+  return { x: a.x + (b.x - a.x) * local, y: a.y + (b.y - a.y) * local };
+}
+
+function drawFlowDiagram() {
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2;
+
+  // Layout nodes
+  const inputX = 60, outputX = w - 60;
+  const topY = 65, botY = 195, midY = cy;
+
+  // Draw paths
+  ctx.lineWidth = 2;
+  // Frozen path (top)
+  ctx.strokeStyle = 'rgba(100,116,139,0.35)';
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(inputX + 40, midY);
+  ctx.lineTo(inputX + 90, midY);
+  ctx.lineTo(inputX + 90, topY);
+  ctx.lineTo(cx, topY);
+  ctx.lineTo(outputX - 90, topY);
+  ctx.lineTo(outputX - 90, midY);
+  ctx.lineTo(outputX - 40, midY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // LoRA path (bottom)
+  ctx.strokeStyle = 'rgba(139,92,246,0.45)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(inputX + 40, midY);
+  ctx.lineTo(inputX + 90, midY);
+  ctx.lineTo(inputX + 90, botY);
+  const aX = cx - 60, bX = cx + 60;
+  ctx.lineTo(aX, botY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(aX + 50, botY);
+  ctx.lineTo(bX, botY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bX + 50, botY);
+  ctx.lineTo(outputX - 90, botY);
+  ctx.lineTo(outputX - 90, midY);
+  ctx.lineTo(outputX - 40, midY);
+  ctx.stroke();
+
+  // Draw nodes
+  function drawNode(x, y, label, sublabel, color, filled) {
+    ctx.save();
+    const rw = 40, rh = 22;
+    ctx.beginPath();
+    ctx.roundRect(x - rw, y - rh, rw * 2, rh * 2, 8);
+    if (filled) {
+      ctx.fillStyle = color + '33';
+      ctx.fill();
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y - (sublabel ? 4 : 0));
+    if (sublabel) {
+      ctx.font = '9px system-ui';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(sublabel, x, y + 12);
+    }
+    ctx.restore();
+  }
+
+  // Input
+  drawNode(inputX, midY, 'x', '输入向量', '#e2e8f0', true);
+  // W0
+  drawNode(cx, topY, 'W₀', '冻结权重', '#64748b', true);
+  // A matrix
+  drawNode(aX + 25, botY, 'A', '降维 r×d', '#8b5cf6', true);
+  // B matrix
+  drawNode(bX + 25, botY, 'B', '升维 d×r', '#8b5cf6', true);
+  // Output
+  drawNode(outputX, midY, 'h', '输出', '#10b981', true);
+
+  // Plus symbol
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(outputX - 65, midY, 14, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(16,185,129,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#10b981';
+  ctx.font = 'bold 18px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('+', outputX - 65, midY);
+  ctx.restore();
+
+  // Alpha label on LoRA path
+  ctx.save();
+  ctx.fillStyle = '#8b5cf6';
+  ctx.font = 'italic 12px Cambria Math, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('× α', bX + 88, botY - 10);
+  ctx.restore();
+}
+
+function initParticles() {
+  particles = [];
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2;
+  const inputX = 60, outputX = w - 60;
+  const topY = 65, botY = 195, midY = cy;
+  const aX = cx - 60, bX = cx + 60;
+
+  // Frozen path particles
+  const frozenPath = [
+    { x: inputX + 40, y: midY },
+    { x: inputX + 90, y: midY },
+    { x: inputX + 90, y: topY },
+    { x: cx, y: topY },
+    { x: outputX - 90, y: topY },
+    { x: outputX - 90, y: midY },
+    { x: outputX - 40, y: midY }
+  ];
+  for (let i = 0; i < 6; i++) {
+    const p = new Particle(0, 0, frozenPath, 'rgba(148,163,184,0.7)');
+    p.progress = i / 6;
+    particles.push(p);
+  }
+
+  // LoRA path particles
+  const loraPath = [
+    { x: inputX + 40, y: midY },
+    { x: inputX + 90, y: midY },
+    { x: inputX + 90, y: botY },
+    { x: aX, y: botY },
+    { x: aX + 50, y: botY },
+    { x: bX, y: botY },
+    { x: bX + 50, y: botY },
+    { x: outputX - 90, y: botY },
+    { x: outputX - 90, y: midY },
+    { x: outputX - 40, y: midY }
+  ];
+  for (let i = 0; i < 8; i++) {
+    const p = new Particle(0, 0, loraPath, 'rgba(139,92,246,0.85)', 0.35 + Math.random() * 0.3);
+    p.progress = i / 8;
+    p.size = 2.5 + Math.random() * 1.5;
+    particles.push(p);
+  }
+}
+
+function animateFlow() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFlowDiagram();
+  particles.forEach(p => {
+    p.update();
+    p.draw(ctx);
+  });
+  animFrame = requestAnimationFrame(animateFlow);
+}
+
+// Initialize
+function init() {
+  resizeCanvas();
+  onSliderChange();
+  initParticles();
+  animateFlow();
+}
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  initParticles();
+});
+
+init();
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

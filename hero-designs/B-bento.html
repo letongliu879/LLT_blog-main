@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案B：Bento 仪表盘风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans','Noto Sans SC','sans-serif'] } } }
+    }
+  </script>
+  <style>
+    .bento { transition: all 0.35s cubic-bezier(0.4,0,0.2,1); }
+    .bento:hover { transform: translateY(-3px); box-shadow: 0 12px 40px -8px rgba(0,0,0,0.12); }
+    .dark .bento:hover { box-shadow: 0 12px 40px -8px rgba(0,0,0,0.5); }
+    .fade-up { animation: fadeUp 0.6s ease-out both; }
+    .d1{animation-delay:.05s} .d2{animation-delay:.1s} .d3{animation-delay:.15s}
+    .d4{animation-delay:.2s} .d5{animation-delay:.25s} .d6{animation-delay:.3s}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-100 transition-colors">
+  <div class="min-h-screen p-4 md:p-8">
+    <!-- Nav -->
+    <nav class="max-w-6xl mx-auto mb-8 flex justify-between items-center">
+      <span class="text-xl font-bold">Allen's Blog</span>
+      <div class="flex items-center gap-5 text-sm text-gray-500 dark:text-gray-400">
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">博客</a>
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">项目</a>
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">标签</a>
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">关于</a>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-base">
+          <span class="dark:hidden">🌙</span><span class="hidden dark:inline">☀️</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Bento Grid -->
+    <div class="max-w-6xl mx-auto grid grid-cols-4 grid-rows-[180px_180px_180px] gap-4">
+
+      <!-- 主卡：介绍 (2x2) -->
+      <div class="bento fade-up d1 col-span-2 row-span-2 rounded-3xl bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 p-10 flex flex-col justify-between">
+        <div>
+          <p class="text-sm text-gray-400 mb-1">RPA Developer @ Capgemini</p>
+          <h1 class="text-4xl font-extrabold leading-tight mt-2">
+            Hi, I'm <span class="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Allen</span> 👋
+          </h1>
+          <p class="text-gray-500 dark:text-gray-400 mt-4 leading-relaxed max-w-sm">
+            探索 AI、机器学习与自动化技术，用代码理解世界。
+          </p>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <a href="#" class="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">浏览文章 →</a>
+          <a href="#" class="px-5 py-2.5 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">关于我</a>
+        </div>
+      </div>
+
+      <!-- 统计卡 -->
+      <div class="bento fade-up d2 rounded-3xl bg-gradient-to-br from-blue-600 to-violet-600 p-6 text-white flex flex-col justify-between">
+        <p class="text-sm text-blue-100">文章数</p>
+        <div class="text-5xl font-extrabold">50+</div>
+      </div>
+
+      <!-- 统计卡 -->
+      <div class="bento fade-up d3 rounded-3xl bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-between">
+        <p class="text-sm text-gray-400">标签</p>
+        <div class="text-5xl font-extrabold">51</div>
+      </div>
+
+      <!-- 最新文章卡 -->
+      <div class="bento fade-up d4 col-span-2 rounded-3xl bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-between">
+        <div>
+          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Latest Post</p>
+          <h3 class="font-bold text-lg leading-snug">深夜胡言：一个程序员在AI时代的身份危机</h3>
+        </div>
+        <div class="flex justify-between items-end">
+          <div class="flex gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-500">随笔</span>
+            <span class="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-500">AI</span>
+          </div>
+          <span class="text-xs text-gray-400">Jan 25 · 59 min</span>
+        </div>
+      </div>
+
+      <!-- 技术栈卡 -->
+      <div class="bento fade-up d5 col-span-2 rounded-3xl bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-between">
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-3">Tech Stack</p>
+        <div class="flex flex-wrap gap-2">
+          <span class="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-sm font-medium">Python</span>
+          <span class="px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-sm font-medium">TensorFlow</span>
+          <span class="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 text-sm font-medium">PyTorch</span>
+          <span class="px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-sm font-medium">LangChain</span>
+          <span class="px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-sm font-medium">React</span>
+        </div>
+      </div>
+
+      <!-- 项目数 -->
+      <div class="bento fade-up d5 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white flex flex-col justify-between">
+        <p class="text-sm text-emerald-100">项目</p>
+        <div class="text-5xl font-extrabold">10+</div>
+      </div>
+
+      <!-- 社交链接 -->
+      <div class="bento fade-up d6 rounded-3xl bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-center items-center gap-3">
+        <div class="flex gap-4">
+          <a href="#" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="#" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+          </a>
+        </div>
+        <span class="text-xs text-gray-400">Connect</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

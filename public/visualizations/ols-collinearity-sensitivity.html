@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OLS 多重共线性敏感性</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:900px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    label{display:flex;justify-content:space-between;color:#94a3b8;font-size:.86rem;margin-bottom:6px}
+    input[type='range']{width:100%;accent-color:#38bdf8}
+    .v{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#fbbf24}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>相关性越高，参数越不稳定</h1>
+    <p>拖动特征相关系数，观察条件数变化。相关性越接近 1，矩阵越病态，估计更敏感。</p>
+    <label>相关系数 ρ <span id="rVal" class="v">0.50</span></label>
+    <input id="rho" type="range" min="0" max="0.99" step="0.01" value="0.5" />
+    <label style="margin-top:6px">近似条件数 <span id="kappa" class="v">3.00</span></label>
+    <canvas id="c" width="760" height="300"></canvas>
+  </div>
+  <script>
+    const rho=document.getElementById('rho'),rVal=document.getElementById('rVal'),kappa=document.getElementById('kappa');
+    const c=document.getElementById('c'),ctx=c.getContext('2d');
+    function render(){
+      const r=Number(rho.value); rVal.textContent=r.toFixed(2);
+      const cond=(1+r)/(1-r); kappa.textContent=cond.toFixed(2);
+      ctx.clearRect(0,0,c.width,c.height);
+      for(let i=0;i<220;i++){
+        const x=(Math.random()*2-1);
+        const eps=(Math.random()*2-1)*(1-r)*0.8;
+        const y=r*x+eps;
+        const sx=40+(x+1)*(c.width-80)/2, sy=c.height-30-(y+1)*(c.height-60)/2;
+        ctx.beginPath();ctx.arc(sx,sy,2.7,0,Math.PI*2);ctx.fillStyle='rgba(56,189,248,.75)';ctx.fill();
+      }
+      reportHeight();
+    }
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    rho.addEventListener('input',render);
+    window.addEventListener('load',()=>{render();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

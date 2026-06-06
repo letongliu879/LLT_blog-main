@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allen's Blog - 博客列表（Bento Grid 风格）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'Noto Sans SC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .bento-card {
+      transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    .bento-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+    }
+    .dark .bento-card:hover {
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+    }
+    .bento-card:hover .card-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+    .card-icon {
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .gradient-border {
+      position: relative;
+    }
+    .gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #6366f1, #ec4899, #f59e0b);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .bento-card:hover .gradient-border::before {
+      opacity: 1;
+    }
+    .tag-scroll {
+      animation: scroll-tags 20s linear infinite;
+    }
+    @keyframes scroll-tags {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
+  <div class="min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="sticky top-0 z-50 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <a href="#" class="text-xl font-bold">Allen's Blog</a>
+        <div class="flex items-center gap-6">
+          <a href="#" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">博客</a>
+          <a href="#" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">项目</a>
+          <a href="#" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">标签</a>
+          <a href="#" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">关于</a>
+          <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+            <span class="dark:hidden">🌙</span>
+            <span class="hidden dark:block">☀️</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 页面标题区 -->
+    <header class="px-6 py-16">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div>
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight">博客</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 text-lg">
+              探索技术的深度与广度
+            </p>
+          </div>
+          <!-- 搜索框 -->
+          <div class="relative max-w-md w-full">
+            <input type="text" placeholder="搜索文章..." class="w-full px-5 py-3 pl-12 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 标签滚动条 -->
+        <div class="mt-8 overflow-hidden">
+          <div class="tag-scroll flex gap-3 whitespace-nowrap">
+            <span class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">全部</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">机器学习 (10)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">Python (5)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">深度学习 (3)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">TensorFlow (3)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">强化学习 (2)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">NLP (2)</span>
+            <!-- 重复用于无缝滚动 -->
+            <span class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">全部</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">机器学习 (10)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">Python (5)</span>
+            <span class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">深度学习 (3)</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Bento Grid 布局 -->
+    <section class="px-6 pb-16">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[180px]">
+          <!-- 特色大卡片 - 占 2x2 -->
+          <article class="bento-card md:col-span-2 md:row-span-2 gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-8 flex flex-col justify-between text-white">
+              <div>
+                <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm mb-4">✨ 特色文章</span>
+                <h2 class="text-3xl font-bold leading-tight">
+                  深夜胡言：一个程序员在AI时代的身份危机
+                </h2>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">A</div>
+                  <div>
+                    <p class="font-medium">Allen Wang</p>
+                    <p class="text-sm text-white/70">2026年1月25日</p>
+                  </div>
+                </div>
+                <span class="text-sm text-white/70">59 分钟阅读</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 中等卡片 -->
+          <article class="bento-card lg:col-span-2 gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-white dark:bg-gray-900 p-6 flex gap-6">
+              <div class="w-32 h-32 shrink-0 rounded-2xl bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 flex items-center justify-center">
+                <span class="card-icon text-5xl">🤖</span>
+              </div>
+              <div class="flex flex-col justify-center">
+                <span class="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wider">机器学习</span>
+                <h3 class="text-xl font-bold mt-2 leading-snug">LangGraph Reflection Agents 完全指南</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">从原理到实战，构建自我改进的 AI 系统</p>
+              </div>
+            </div>
+          </article>
+
+          <!-- 小卡片们 -->
+          <article class="bento-card gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 flex flex-col">
+              <span class="card-icon text-4xl mb-4">🌙</span>
+              <h3 class="font-bold text-lg leading-snug flex-1">基于深度Q学习的月球着陆</h3>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-2">强化学习 · 15分钟</span>
+            </div>
+          </article>
+
+          <article class="bento-card gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-6 flex flex-col">
+              <span class="card-icon text-4xl mb-4">🎬</span>
+              <h3 class="font-bold text-lg leading-snug flex-1">协同过滤推荐系统实践</h3>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-2">推荐系统 · 20分钟</span>
+            </div>
+          </article>
+
+          <!-- 横向长卡片 -->
+          <article class="bento-card lg:col-span-2 gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-white dark:bg-gray-900 p-6 flex items-center gap-6">
+              <div class="w-24 h-24 shrink-0 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center">
+                <span class="card-icon text-4xl">🧠</span>
+              </div>
+              <div>
+                <span class="text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wider">神经网络</span>
+                <h3 class="text-xl font-bold mt-1">构建电影推荐系统：协同过滤从理论到实践</h3>
+              </div>
+              <div class="ml-auto shrink-0">
+                <span class="text-sm text-gray-400">18分钟</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="bento-card gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 p-6 flex flex-col">
+              <span class="card-icon text-4xl mb-4">⚡</span>
+              <h3 class="font-bold text-lg leading-snug flex-1">Transformer 架构详解</h3>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-2">NLP · 25分钟</span>
+            </div>
+          </article>
+
+          <article class="bento-card gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20 p-6 flex flex-col">
+              <span class="card-icon text-4xl mb-4">📊</span>
+              <h3 class="font-bold text-lg leading-snug flex-1">数据可视化最佳实践</h3>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-2">Python · 12分钟</span>
+            </div>
+          </article>
+
+          <!-- 统计信息卡片 -->
+          <article class="bento-card md:col-span-2 gradient-border rounded-3xl overflow-hidden">
+            <div class="h-full bg-gray-900 dark:bg-gray-800 p-6 flex items-center justify-around text-white">
+              <div class="text-center">
+                <div class="text-4xl font-bold">50+</div>
+                <div class="text-sm text-gray-400 mt-1">文章</div>
+              </div>
+              <div class="w-px h-16 bg-gray-700"></div>
+              <div class="text-center">
+                <div class="text-4xl font-bold">51</div>
+                <div class="text-sm text-gray-400 mt-1">标签</div>
+              </div>
+              <div class="w-px h-16 bg-gray-700"></div>
+              <div class="text-center">
+                <div class="text-4xl font-bold">10+</div>
+                <div class="text-sm text-gray-400 mt-1">项目</div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- 加载更多按钮 -->
+        <div class="flex justify-center mt-12">
+          <button class="px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-medium hover:opacity-90 transition-opacity flex items-center gap-2">
+            加载更多文章
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

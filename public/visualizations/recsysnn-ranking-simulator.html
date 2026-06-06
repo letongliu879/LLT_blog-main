@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecSysNN 排序模拟器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+    }
+    body {
+      background: radial-gradient(circle at 18% 8%, #0d3b66 0%, #020617 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+      padding: 20px;
+    }
+    h1 {
+      font-size: 1.28rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--good));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 12px;
+    }
+    .list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.45);
+      padding: 10px;
+      font-size: 0.88rem;
+    }
+    .score {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--warn);
+      font-weight: 700;
+    }
+    .controls { display: grid; gap: 12px; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type='range'] { width: 100%; accent-color: var(--primary); }
+    .value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .hint {
+      margin-top: 8px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-size: 0.84rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Top-N 排序模拟器</h1>
+    <p class="sub">
+      用“预测分 + 置信度 + 热门惩罚”组合出最终排序，体验推荐系统在工程中如何做重排。
+    </p>
+
+    <div class="grid">
+      <section class="panel controls">
+        <div>
+          <label>热门惩罚系数 <span id="popVal" class="value">0.20</span></label>
+          <input id="popPenalty" type="range" min="0" max="0.8" step="0.05" value="0.2" />
+        </div>
+        <div>
+          <label>置信度权重 <span id="confVal" class="value">0.50</span></label>
+          <input id="confWeight" type="range" min="0" max="1" step="0.05" value="0.5" />
+        </div>
+        <p class="hint">
+          “热门惩罚”用于防止榜单被头部电影垄断；“置信度权重”用于提升高评分样本足够多的电影排名稳定性。
+        </p>
+      </section>
+
+      <section class="panel">
+        <strong style="color:#94a3b8;font-size:0.86rem">Top 6 推荐结果</strong>
+        <div id="rankList" class="list"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const popPenalty = document.getElementById('popPenalty');
+    const confWeight = document.getElementById('confWeight');
+    const popVal = document.getElementById('popVal');
+    const confVal = document.getElementById('confVal');
+    const rankList = document.getElementById('rankList');
+
+    const movies = [
+      { title: 'The Departed', pred: 4.62, confidence: 0.92, popularity: 0.95 },
+      { title: 'Memento', pred: 4.57, confidence: 0.78, popularity: 0.68 },
+      { title: 'Inception', pred: 4.54, confidence: 0.88, popularity: 0.90 },
+      { title: 'Amelie', pred: 4.41, confidence: 0.74, popularity: 0.55 },
+      { title: 'Whiplash', pred: 4.48, confidence: 0.71, popularity: 0.62 },
+      { title: 'Her', pred: 4.35, confidence: 0.66, popularity: 0.44 },
+      { title: 'Moonlight', pred: 4.29, confidence: 0.61, popularity: 0.38 },
+      { title: 'Arrival', pred: 4.33, confidence: 0.73, popularity: 0.59 },
+    ];
+
+    function render() {
+      const pop = Number(popPenalty.value);
+      const conf = Number(confWeight.value);
+      popVal.textContent = pop.toFixed(2);
+      confVal.textContent = conf.toFixed(2);
+
+      const ranked = movies
+        .map((m) => {
+          const score = m.pred + conf * (m.confidence - 0.5) - pop * m.popularity;
+          return { ...m, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6);
+
+      rankList.innerHTML = ranked
+        .map(
+          (m, idx) => `
+            <div class="row">
+              <div>${idx + 1}. ${m.title}</div>
+              <div class="score">${m.score.toFixed(3)}</div>
+            </div>
+          `
+        )
+        .join('');
+
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    popPenalty.addEventListener('input', render);
+    confWeight.addEventListener('input', render);
+
+    window.addEventListener('load', () => {
+      render();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

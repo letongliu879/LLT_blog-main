@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>位置编码可视化 - Positional Encoding</title>
+<style>
+:root{
+  --bg:#0f172a;
+  --card:rgba(30,41,59,0.7);
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --primary:#38bdf8;
+  --accent:#22c55e;
+  --purple:#8b5cf6;
+  --border:rgba(148,163,184,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:radial-gradient(circle at 20% 20%,#162542 0%,#0f172a 45%);
+  color:var(--text);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.6;
+  min-height:100vh;
+  padding:32px 16px 48px;
+}
+.container{max-width:960px;margin:0 auto}
+
+/* ---------- Title ---------- */
+.hero{text-align:center;margin-bottom:36px}
+.hero h1{
+  font-size:2.2rem;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(135deg,var(--primary),var(--purple),var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:8px;
+}
+.hero .subtitle{color:var(--muted);font-size:.95rem}
+
+/* ---------- Cards ---------- */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:24px;
+  backdrop-filter:blur(12px);
+}
+.card h2{
+  font-size:1.15rem;font-weight:700;margin-bottom:4px;
+  color:var(--primary);
+}
+.card .desc{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+
+/* ---------- Controls ---------- */
+.controls{
+  display:flex;flex-wrap:wrap;gap:20px;align-items:center;
+  margin-bottom:16px;
+}
+.ctrl-group{display:flex;align-items:center;gap:8px}
+.ctrl-group label{font-size:.85rem;color:var(--muted);white-space:nowrap}
+.ctrl-group select,
+.ctrl-group input[type=range]{
+  background:rgba(15,23,42,0.6);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:8px;
+  padding:4px 10px;
+  font-size:.85rem;
+  cursor:pointer;
+}
+select:focus,input:focus{outline:2px solid var(--primary);outline-offset:1px}
+input[type=range]{-webkit-appearance:none;height:6px;border-radius:3px;background:rgba(56,189,248,0.2)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--primary);cursor:pointer;border:2px solid var(--bg);
+}
+
+/* ---------- Canvas wrappers ---------- */
+.canvas-wrap{position:relative;width:100%;overflow:hidden;border-radius:8px}
+.canvas-wrap canvas{display:block;width:100%}
+
+/* ---------- Tooltip ---------- */
+#tooltip{
+  position:fixed;pointer-events:none;z-index:999;
+  background:rgba(15,23,42,0.95);border:1px solid var(--primary);
+  border-radius:8px;padding:8px 12px;font-size:.8rem;
+  color:var(--text);line-height:1.5;
+  opacity:0;transition:opacity .12s;
+  max-width:260px;
+  backdrop-filter:blur(8px);
+}
+#tooltip.visible{opacity:1}
+#tooltip .val{color:var(--primary);font-weight:700}
+
+/* ---------- Legend ---------- */
+.legend-bar{
+  display:flex;align-items:center;gap:12px;
+  margin-top:12px;justify-content:center;
+}
+.legend-gradient{
+  width:240px;height:14px;border-radius:7px;
+  border:1px solid var(--border);
+}
+.legend-label{font-size:.78rem;color:var(--muted)}
+
+/* ---------- Formula ---------- */
+.formula-box{
+  background:rgba(15,23,42,0.5);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 20px;
+  margin-bottom:16px;
+  font-size:.88rem;
+  color:var(--muted);
+  text-align:center;
+  line-height:1.8;
+}
+.formula-box code{
+  color:var(--primary);font-family:"Cascadia Code","Fira Code",monospace;
+  font-size:.85rem;
+}
+
+/* ---------- Dim selector chips ---------- */
+.dim-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.dim-chip{
+  padding:3px 10px;border-radius:12px;font-size:.78rem;
+  cursor:pointer;border:1px solid var(--border);
+  background:rgba(15,23,42,0.5);color:var(--muted);
+  transition:all .15s;user-select:none;
+}
+.dim-chip.active{border-color:var(--primary);color:var(--primary);background:rgba(56,189,248,0.1)}
+.dim-chip:hover{border-color:var(--primary)}
+
+/* ---------- Responsive ---------- */
+@media(max-width:640px){
+  .hero h1{font-size:1.6rem}
+  .controls{gap:12px}
+  .card{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== Hero ===== -->
+  <div class="hero">
+    <h1>位置编码可视化</h1>
+    <p class="subtitle">Transformer Positional Encoding &mdash; 交互式探索正弦位置编码的数学结构</p>
+  </div>
+
+  <!-- ===== Formula ===== -->
+  <div class="formula-box">
+    <code>PE(pos, 2i) = sin(pos / 10000<sup>2i/d<sub>model</sub></sup>)</code><br/>
+    <code>PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d<sub>model</sub></sup>)</code>
+  </div>
+
+  <!-- ===== Controls ===== -->
+  <div class="card">
+    <h2>参数控制</h2>
+    <p class="desc">调整模型维度和序列长度，观察位置编码矩阵的变化</p>
+    <div class="controls">
+      <div class="ctrl-group">
+        <label for="sel-dmodel">d<sub>model</sub>：</label>
+        <select id="sel-dmodel">
+          <option value="32">32</option>
+          <option value="64" selected>64</option>
+          <option value="128">128</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label for="sel-maxlen">max_len：</label>
+        <select id="sel-maxlen">
+          <option value="20">20</option>
+          <option value="50" selected>50</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Heatmap ===== -->
+  <div class="card">
+    <h2>位置编码热力图</h2>
+    <p class="desc">每行是一个位置，每列是一个嵌入维度。颜色从蓝(-1)到白(0)到红(+1)。悬停可查看精确值。</p>
+    <div class="canvas-wrap" id="heatmap-wrap">
+      <canvas id="heatmap-canvas"></canvas>
+    </div>
+    <div class="legend-bar">
+      <span class="legend-label">-1</span>
+      <canvas id="legend-canvas" class="legend-gradient" width="240" height="14"></canvas>
+      <span class="legend-label">+1</span>
+    </div>
+  </div>
+
+  <!-- ===== Curve Chart ===== -->
+  <div class="card">
+    <h2>维度曲线对比</h2>
+    <p class="desc">选择不同维度索引，观察 sin/cos 在位置轴上的周期变化</p>
+    <div class="dim-chips" id="dim-chips"></div>
+    <div class="canvas-wrap" id="curve-wrap">
+      <canvas id="curve-canvas"></canvas>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<script>
+/* ============================================================
+   Positional Encoding Visualization
+   ============================================================ */
+(function(){
+"use strict";
+
+/* ---------- DOM refs ---------- */
+const selD      = document.getElementById("sel-dmodel");
+const selL      = document.getElementById("sel-maxlen");
+const hmCanvas  = document.getElementById("heatmap-canvas");
+const hmCtx     = hmCanvas.getContext("2d");
+const cvCanvas  = document.getElementById("curve-canvas");
+const cvCtx     = cvCanvas.getContext("2d");
+const lgCanvas  = document.getElementById("legend-canvas");
+const tooltip   = document.getElementById("tooltip");
+const dimChipsEl= document.getElementById("dim-chips");
+
+/* ---------- State ---------- */
+let dModel  = 64;
+let maxLen  = 50;
+let peMatrix= [];          // [pos][dim]
+let activeDims = [0,1,4,5,16,17]; // default selected dims for curve chart
+const DPR = Math.max(window.devicePixelRatio || 1, 1);
+
+/* ---------- Curve colors ---------- */
+const CURVE_PALETTE = [
+  "#38bdf8","#22c55e","#f59e0b","#ef4444","#8b5cf6",
+  "#ec4899","#06b6d4","#84cc16","#f97316","#a78bfa",
+  "#14b8a6","#e879f9","#facc15","#fb7185","#67e8f9"
+];
+
+/* ============================================================
+   PE computation
+   ============================================================ */
+function computePE(){
+  peMatrix = [];
+  for(let pos=0; pos<maxLen; pos++){
+    const row = new Float64Array(dModel);
+    for(let i=0; i<dModel; i++){
+      const dimIdx = Math.floor(i/2);
+      const denom  = Math.pow(10000, (2*dimIdx)/dModel);
+      row[i] = (i%2===0) ? Math.sin(pos/denom) : Math.cos(pos/denom);
+    }
+    peMatrix.push(row);
+  }
+}
+
+/* ============================================================
+   Diverging colormap: blue(-1) -> white(0) -> red(+1)
+   ============================================================ */
+function valToRGB(v){
+  // v in [-1,1]
+  const t = Math.max(-1, Math.min(1, v));
+  let r,g,b;
+  if(t<0){
+    // blue(30,80,220) -> white(255,255,255)
+    const s = 1+t; // 0..1
+    r = Math.round(30  + (255-30)*s);
+    g = Math.round(80  + (255-80)*s);
+    b = Math.round(220 + (255-220)*s);
+  } else {
+    // white(255,255,255) -> red(220,40,40)
+    const s = t; // 0..1
+    r = Math.round(255 + (220-255)*s);
+    g = Math.round(255 + (40-255)*s);
+    b = Math.round(255 + (40-255)*s);
+  }
+  return [r,g,b];
+}
+
+/* ============================================================
+   Draw legend gradient
+   ============================================================ */
+function drawLegend(){
+  const w = 240, h = 14;
+  lgCanvas.width  = w * DPR;
+  lgCanvas.height = h * DPR;
+  lgCanvas.style.width  = w+"px";
+  lgCanvas.style.height = h+"px";
+  const ctx = lgCanvas.getContext("2d");
+  ctx.scale(DPR,DPR);
+  for(let x=0;x<w;x++){
+    const v = (x/w)*2 - 1; // -1..1
+    const [r,g,b] = valToRGB(v);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(x,0,1,h);
+  }
+}
+
+/* ============================================================
+   Heatmap
+   ============================================================ */
+const HM_PAD_L = 52;
+const HM_PAD_R = 16;
+const HM_PAD_T = 12;
+const HM_PAD_B = 38;
+let hmCellW = 0, hmCellH = 0, hmW = 0, hmH = 0;
+
+function drawHeatmap(){
+  const wrapW = document.getElementById("heatmap-wrap").clientWidth;
+  hmW = wrapW;
+  hmH = Math.max(280, Math.min(420, maxLen*7 + HM_PAD_T + HM_PAD_B));
+  hmCanvas.width  = hmW * DPR;
+  hmCanvas.height = hmH * DPR;
+  hmCanvas.style.width  = hmW+"px";
+  hmCanvas.style.height = hmH+"px";
+  hmCtx.setTransform(DPR,0,0,DPR,0,0);
+
+  const plotW = hmW - HM_PAD_L - HM_PAD_R;
+  const plotH = hmH - HM_PAD_T - HM_PAD_B;
+  hmCellW = plotW / dModel;
+  hmCellH = plotH / maxLen;
+
+  // background
+  hmCtx.fillStyle = "rgba(15,23,42,0.35)";
+  hmCtx.fillRect(0,0,hmW,hmH);
+
+  // cells
+  for(let pos=0; pos<maxLen; pos++){
+    for(let dim=0; dim<dModel; dim++){
+      const v = peMatrix[pos][dim];
+      const [r,g,b] = valToRGB(v);
+      hmCtx.fillStyle = `rgb(${r},${g},${b})`;
+      const x = HM_PAD_L + dim*hmCellW;
+      const y = HM_PAD_T + pos*hmCellH;
+      hmCtx.fillRect(x, y, Math.ceil(hmCellW), Math.ceil(hmCellH));
+    }
+  }
+
+  // axes labels
+  hmCtx.fillStyle = "#94a3b8";
+  hmCtx.font = "11px 'Segoe UI','PingFang SC',sans-serif";
+  hmCtx.textAlign = "center";
+  // x-axis ticks
+  const xStep = Math.max(1, Math.round(dModel/8));
+  for(let d=0; d<dModel; d+=xStep){
+    const x = HM_PAD_L + (d+0.5)*hmCellW;
+    hmCtx.fillText(d, x, hmH - HM_PAD_B + 16);
+  }
+  hmCtx.fillText("维度 (dim)", HM_PAD_L + plotW/2, hmH - 4);
+
+  // y-axis ticks
+  hmCtx.textAlign = "right";
+  const yStep = Math.max(1, Math.round(maxLen/6));
+  for(let p=0; p<maxLen; p+=yStep){
+    const y = HM_PAD_T + (p+0.5)*hmCellH;
+    hmCtx.fillText(p, HM_PAD_L - 6, y+4);
+  }
+  hmCtx.save();
+  hmCtx.translate(12, HM_PAD_T + plotH/2);
+  hmCtx.rotate(-Math.PI/2);
+  hmCtx.textAlign = "center";
+  hmCtx.fillText("位置 (pos)", 0, 0);
+  hmCtx.restore();
+}
+
+/* ---------- Heatmap hover ---------- */
+function heatmapHover(e){
+  const rect = hmCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const dim = Math.floor((mx - HM_PAD_L) / hmCellW);
+  const pos = Math.floor((my - HM_PAD_T) / hmCellH);
+  if(dim<0||dim>=dModel||pos<0||pos>=maxLen){
+    tooltip.classList.remove("visible");
+    return;
+  }
+  const v = peMatrix[pos][dim];
+  const dimIdx = Math.floor(dim/2);
+  const fn = dim%2===0 ? "sin" : "cos";
+  tooltip.innerHTML =
+    `<b>pos</b>=<span class="val">${pos}</span> &nbsp; <b>dim</b>=<span class="val">${dim}</span><br/>`+
+    `<b>类型</b>: ${fn} &nbsp; <b>i</b>=${dimIdx}<br/>`+
+    `<b>值</b>: <span class="val">${v.toFixed(6)}</span>`;
+  tooltip.classList.add("visible");
+  const tx = e.clientX + 14;
+  const ty = e.clientY - 10;
+  tooltip.style.left = Math.min(tx, window.innerWidth - 270) + "px";
+  tooltip.style.top  = Math.min(ty, window.innerHeight - 80) + "px";
+}
+hmCanvas.addEventListener("mousemove", heatmapHover);
+hmCanvas.addEventListener("mouseleave", ()=> tooltip.classList.remove("visible"));
+
+/* ============================================================
+   Dimension chip selector
+   ============================================================ */
+function buildDimChips(){
+  dimChipsEl.innerHTML = "";
+  for(let d=0; d<dModel; d++){
+    const chip = document.createElement("span");
+    chip.className = "dim-chip" + (activeDims.includes(d) ? " active" : "");
+    const fn = d%2===0 ? "sin" : "cos";
+    const idx = Math.floor(d/2);
+    chip.textContent = `${d} (${fn},i=${idx})`;
+    chip.dataset.dim = d;
+    chip.addEventListener("click", ()=>{
+      const i = activeDims.indexOf(d);
+      if(i>=0){ activeDims.splice(i,1); chip.classList.remove("active"); }
+      else if(activeDims.length < 10){ activeDims.push(d); chip.classList.add("active"); }
+      drawCurves();
+    });
+    dimChipsEl.appendChild(chip);
+  }
+}
+
+/* ============================================================
+   Curve chart
+   ============================================================ */
+const CV_PAD_L = 52;
+const CV_PAD_R = 16;
+const CV_PAD_T = 16;
+const CV_PAD_B = 42;
+
+function drawCurves(){
+  const wrapW = document.getElementById("curve-wrap").clientWidth;
+  const cvW = wrapW;
+  const cvH = 320;
+  cvCanvas.width  = cvW * DPR;
+  cvCanvas.height = cvH * DPR;
+  cvCanvas.style.width  = cvW+"px";
+  cvCanvas.style.height = cvH+"px";
+  cvCtx.setTransform(DPR,0,0,DPR,0,0);
+
+  const plotW = cvW - CV_PAD_L - CV_PAD_R;
+  const plotH = cvH - CV_PAD_T - CV_PAD_B;
+
+  // bg
+  cvCtx.fillStyle = "rgba(15,23,42,0.35)";
+  cvCtx.fillRect(0,0,cvW,cvH);
+
+  // grid
+  cvCtx.strokeStyle = "rgba(148,163,184,0.1)";
+  cvCtx.lineWidth = 1;
+  for(let v=-1;v<=1;v+=0.5){
+    const y = CV_PAD_T + plotH*(1 - (v+1)/2);
+    cvCtx.beginPath();cvCtx.moveTo(CV_PAD_L,y);cvCtx.lineTo(CV_PAD_L+plotW,y);cvCtx.stroke();
+  }
+
+  // zero line
+  cvCtx.strokeStyle = "rgba(148,163,184,0.25)";
+  cvCtx.lineWidth = 1;
+  const zeroY = CV_PAD_T + plotH*0.5;
+  cvCtx.beginPath();cvCtx.moveTo(CV_PAD_L,zeroY);cvCtx.lineTo(CV_PAD_L+plotW,zeroY);cvCtx.stroke();
+
+  // axes labels
+  cvCtx.fillStyle = "#94a3b8";
+  cvCtx.font = "11px 'Segoe UI','PingFang SC',sans-serif";
+  cvCtx.textAlign = "right";
+  for(let v=-1;v<=1;v+=0.5){
+    const y = CV_PAD_T + plotH*(1 - (v+1)/2);
+    cvCtx.fillText(v.toFixed(1), CV_PAD_L-8, y+4);
+  }
+  cvCtx.textAlign = "center";
+  const xStep = Math.max(1, Math.round(maxLen/8));
+  for(let p=0;p<maxLen;p+=xStep){
+    const x = CV_PAD_L + (p/(maxLen-1))*plotW;
+    cvCtx.fillText(p, x, cvH - CV_PAD_B + 16);
+  }
+  cvCtx.fillText("位置 (pos)", CV_PAD_L + plotW/2, cvH - 4);
+  cvCtx.save();
+  cvCtx.translate(12, CV_PAD_T + plotH/2);
+  cvCtx.rotate(-Math.PI/2);
+  cvCtx.textAlign = "center";
+  cvCtx.fillText("编码值", 0, 0);
+  cvCtx.restore();
+
+  // curves
+  activeDims.sort((a,b)=>a-b);
+  activeDims.forEach((dim, ci)=>{
+    const color = CURVE_PALETTE[ci % CURVE_PALETTE.length];
+    cvCtx.strokeStyle = color;
+    cvCtx.lineWidth = 2;
+    cvCtx.beginPath();
+    for(let pos=0; pos<maxLen; pos++){
+      const x = CV_PAD_L + (pos/(maxLen-1))*plotW;
+      const v = peMatrix[pos][dim];
+      const y = CV_PAD_T + plotH*(1 - (v+1)/2);
+      if(pos===0) cvCtx.moveTo(x,y); else cvCtx.lineTo(x,y);
+    }
+    cvCtx.stroke();
+  });
+
+  // legend inside chart
+  if(activeDims.length > 0){
+    const lx = CV_PAD_L + 12;
+    let ly = CV_PAD_T + 8;
+    cvCtx.font = "11px 'Segoe UI','PingFang SC',sans-serif";
+    activeDims.forEach((dim, ci)=>{
+      const color = CURVE_PALETTE[ci % CURVE_PALETTE.length];
+      cvCtx.fillStyle = color;
+      cvCtx.fillRect(lx, ly, 16, 3);
+      const fn = dim%2===0 ? "sin" : "cos";
+      const idx = Math.floor(dim/2);
+      cvCtx.fillText(`dim=${dim} (${fn}, i=${idx})`, lx+22, ly+5);
+      ly += 16;
+    });
+  }
+
+  // hint if empty
+  if(activeDims.length === 0){
+    cvCtx.fillStyle = "rgba(148,163,184,0.5)";
+    cvCtx.font = "14px 'Segoe UI','PingFang SC',sans-serif";
+    cvCtx.textAlign = "center";
+    cvCtx.fillText("请在上方点击维度标签以显示曲线", cvW/2, cvH/2);
+  }
+}
+
+/* ============================================================
+   Full redraw
+   ============================================================ */
+function redrawAll(){
+  dModel = parseInt(selD.value);
+  maxLen = parseInt(selL.value);
+  computePE();
+  drawHeatmap();
+  drawLegend();
+  // clamp activeDims
+  activeDims = activeDims.filter(d => d < dModel);
+  if(activeDims.length === 0){
+    activeDims = [0, 1, Math.min(4,dModel-1), Math.min(5,dModel-1)];
+    activeDims = [...new Set(activeDims)];
+  }
+  buildDimChips();
+  drawCurves();
+}
+
+/* ---------- Events ---------- */
+selD.addEventListener("change", redrawAll);
+selL.addEventListener("change", redrawAll);
+
+let resizeTimer;
+window.addEventListener("resize", ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redrawAll, 120);
+});
+
+/* ---------- Init ---------- */
+redrawAll();
+
+})();
+
+/* ============================================================
+   iframe height reporter
+   ============================================================ */
+(function(){const s=()=>{if(window.parent===window)return;const h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',s);window.addEventListener('resize',s);if('ResizeObserver' in window){const o=new ResizeObserver(s);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(s);setTimeout(s,250);setTimeout(s,1000)})();
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-means 迭代实验</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:920px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    .row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+    button{border:1px solid #334155;background:#111827;color:#e5e7eb;border-radius:8px;padding:8px 12px;cursor:pointer}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>K-means 一步一步看收敛</h1>
+    <p>点击“迭代一步”，观察样本重新归类和质心移动。你会看到 K-means 的两阶段循环在可视化中的真实形态。</p>
+    <div class="row"><button id="step">迭代一步</button><button id="reset">重置</button></div>
+    <canvas id="c" width="760" height="420"></canvas>
+  </div>
+  <script>
+    const c=document.getElementById('c'),ctx=c.getContext('2d');
+    const points=[]; function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+    for(let i=0;i<45;i++){points.push({x:randn()*0.6-1.5,y:randn()*0.6+1.2});points.push({x:randn()*0.6+1.6,y:randn()*0.6-1.1});points.push({x:randn()*0.6+0.2,y:randn()*0.6+0.1});}
+    let cent=[{x:-2,y:2},{x:2,y:-2},{x:2,y:2}], cls=[];
+    const colors=['#38bdf8','#22c55e','#f59e0b'];
+    const sx=(x)=>40+((x+3)/6)*(c.width-80), sy=(y)=>c.height-40-((y+3)/6)*(c.height-80);
+    function assign(){cls=points.map(p=>{let best=0,bd=1e9;cent.forEach((k,i)=>{const d=(p.x-k.x)**2+(p.y-k.y)**2;if(d<bd){bd=d;best=i}});return best});}
+    function move(){for(let i=0;i<cent.length;i++){const grp=points.filter((_,idx)=>cls[idx]===i); if(!grp.length)continue; cent[i]={x:grp.reduce((s,p)=>s+p.x,0)/grp.length, y:grp.reduce((s,p)=>s+p.y,0)/grp.length};}}
+    function draw(){ctx.clearRect(0,0,c.width,c.height); points.forEach((p,i)=>{ctx.beginPath();ctx.arc(sx(p.x),sy(p.y),3.8,0,Math.PI*2);ctx.fillStyle=colors[cls[i]??0];ctx.fill()}); cent.forEach((k,i)=>{ctx.beginPath();ctx.rect(sx(k.x)-7,sy(k.y)-7,14,14);ctx.fillStyle=colors[i];ctx.fill()}); reportHeight();}
+    function runStep(){assign();move();assign();draw()}
+    function reset(){cent=[{x:-2,y:2},{x:2,y:-2},{x:2,y:2}];assign();draw()}
+    document.getElementById('step').addEventListener('click',runStep); document.getElementById('reset').addEventListener('click',reset);
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    window.addEventListener('load',()=>{reset();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

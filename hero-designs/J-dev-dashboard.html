@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案J：开发者仪表盘风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: {
+          sans: ['Geist', 'sans-serif'],
+          mono: ['Geist Mono', 'monospace']
+        }
+      }}
+    }
+  </script>
+  <style>
+    .fade-in { animation: fadeIn 0.5s ease both; }
+    .d1{animation-delay:.05s} .d2{animation-delay:.1s} .d3{animation-delay:.15s} .d4{animation-delay:.2s} .d5{animation-delay:.25s}
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+    .card { transition: all 0.2s ease; }
+    .card:hover { transform: translateY(-2px); }
+    .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body class="bg-[#09090b] text-white font-sans min-h-screen">
+  <!-- 顶部渐变光晕 -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-500/10 via-purple-500/5 to-transparent blur-3xl pointer-events-none"></div>
+
+  <div class="relative min-h-screen">
+    <!-- 导航 -->
+    <nav class="border-b border-white/5">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">
+            A
+          </div>
+          <span class="font-semibold">Allen Wang</span>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">
+            ● online
+          </span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-zinc-400">
+          <a href="#" class="hover:text-white transition-colors">博客</a>
+          <a href="#" class="hover:text-white transition-colors">项目</a>
+          <a href="#" class="hover:text-white transition-colors">标签</a>
+          <a href="#" class="hover:text-white transition-colors">关于</a>
+          <a href="#" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors font-medium text-white">
+            GitHub →
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-6 py-12">
+      <!-- 欢迎区域 -->
+      <section class="mb-12 fade-in d1">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-3 text-sm text-zinc-500 font-mono mb-3">
+              <span>~</span>
+              <span>/</span>
+              <span>allen</span>
+              <span>/</span>
+              <span class="text-zinc-300">home</span>
+            </div>
+            <h1 class="text-4xl font-bold tracking-tight">
+              欢迎来到我的开发日志
+            </h1>
+            <p class="mt-3 text-lg text-zinc-400 max-w-xl">
+              探索 AI、机器学习与自动化技术。用代码理解世界，用文字记录思考。
+            </p>
+          </div>
+          <div class="text-right text-sm font-mono text-zinc-500">
+            <div>last updated</div>
+            <div class="text-zinc-300">2026-01-27 14:32</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 状态卡片 -->
+      <section class="grid grid-cols-4 gap-4 mb-8">
+        <div class="card fade-in d2 p-4 rounded-xl bg-zinc-900/50 border border-white/5 glow">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-zinc-500">文章数</span>
+            <span class="text-emerald-400 text-xs">↑ 12%</span>
+          </div>
+          <div class="text-3xl font-bold">50+</div>
+          <div class="mt-2 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div class="h-full w-3/4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+          </div>
+        </div>
+        <div class="card fade-in d2 p-4 rounded-xl bg-zinc-900/50 border border-white/5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-zinc-500">标签数</span>
+            <span class="text-emerald-400 text-xs">↑ 5%</span>
+          </div>
+          <div class="text-3xl font-bold">51</div>
+          <div class="mt-2 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div class="h-full w-2/3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></div>
+          </div>
+        </div>
+        <div class="card fade-in d2 p-4 rounded-xl bg-zinc-900/50 border border-white/5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-zinc-500">项目数</span>
+            <span class="text-emerald-400 text-xs">↑ 2</span>
+          </div>
+          <div class="text-3xl font-bold">10+</div>
+          <div class="mt-2 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div class="h-full w-1/2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"></div>
+          </div>
+        </div>
+        <div class="card fade-in d2 p-4 rounded-xl bg-zinc-900/50 border border-white/5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-zinc-500">运行时间</span>
+            <span class="text-zinc-500 text-xs">stable</span>
+          </div>
+          <div class="text-3xl font-bold">3y+</div>
+          <div class="mt-2 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div class="h-full w-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-3 gap-6">
+        <!-- 左侧：最新文章 -->
+        <div class="col-span-2 fade-in d3">
+          <div class="p-6 rounded-xl bg-zinc-900/50 border border-white/5">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="font-semibold flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                最新文章
+              </h2>
+              <a href="#" class="text-sm text-zinc-500 hover:text-white transition-colors">
+                查看全部 →
+              </a>
+            </div>
+            <div class="space-y-4">
+              <a href="#" class="block p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h3 class="font-medium group-hover:text-blue-400 transition-colors">
+                      深夜胡言：一个程序员在AI时代的身份危机
+                    </h3>
+                    <p class="mt-1 text-sm text-zinc-500">一个关于存在主义的深夜思考...</p>
+                  </div>
+                  <span class="shrink-0 px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-xs">
+                    随笔
+                  </span>
+                </div>
+                <div class="mt-3 flex items-center gap-4 text-xs text-zinc-600 font-mono">
+                  <span>2025-01-25</span>
+                  <span>·</span>
+                  <span>59 min</span>
+                  <span>·</span>
+                  <span>128 views</span>
+                </div>
+              </a>
+              <a href="#" class="block p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h3 class="font-medium group-hover:text-blue-400 transition-colors">
+                      LangGraph Reflection Agents 完全指南
+                    </h3>
+                    <p class="mt-1 text-sm text-zinc-500">深入解析反思代理的架构与实现...</p>
+                  </div>
+                  <span class="shrink-0 px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs">
+                    ML
+                  </span>
+                </div>
+                <div class="mt-3 flex items-center gap-4 text-xs text-zinc-600 font-mono">
+                  <span>2025-01-22</span>
+                  <span>·</span>
+                  <span>29 min</span>
+                  <span>·</span>
+                  <span>96 views</span>
+                </div>
+              </a>
+              <a href="#" class="block p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h3 class="font-medium group-hover:text-blue-400 transition-colors">
+                      基于深度Q学习的月球着陆
+                    </h3>
+                    <p class="mt-1 text-sm text-zinc-500">使用 DQN 算法解决 LunarLander 环境...</p>
+                  </div>
+                  <span class="shrink-0 px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-xs">
+                    RL
+                  </span>
+                </div>
+                <div class="mt-3 flex items-center gap-4 text-xs text-zinc-600 font-mono">
+                  <span>2025-01-18</span>
+                  <span>·</span>
+                  <span>15 min</span>
+                  <span>·</span>
+                  <span>64 views</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧 -->
+        <div class="space-y-6">
+          <!-- 关于我 -->
+          <div class="fade-in d4 p-6 rounded-xl bg-zinc-900/50 border border-white/5">
+            <h2 class="font-semibold flex items-center gap-2 mb-4">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              关于我
+            </h2>
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold">
+                A
+              </div>
+              <div>
+                <div class="font-medium">Allen Wang</div>
+                <div class="text-sm text-zinc-500">RPA Developer @ Capgemini</div>
+              </div>
+            </div>
+            <p class="text-sm text-zinc-400 leading-relaxed">
+              探索 AI、机器学习与自动化技术。
+            </p>
+            <div class="mt-4 flex gap-2">
+              <a href="#" class="flex-1 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-center text-sm">
+                GitHub
+              </a>
+              <a href="#" class="flex-1 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-center text-sm">
+                LinkedIn
+              </a>
+            </div>
+          </div>
+
+          <!-- 技术栈 -->
+          <div class="fade-in d5 p-6 rounded-xl bg-zinc-900/50 border border-white/5">
+            <h2 class="font-semibold flex items-center gap-2 mb-4">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              技术栈
+            </h2>
+            <div class="flex flex-wrap gap-2">
+              <span class="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs border border-blue-500/20">Python</span>
+              <span class="px-2.5 py-1 rounded-md bg-orange-500/10 text-orange-400 text-xs border border-orange-500/20">TensorFlow</span>
+              <span class="px-2.5 py-1 rounded-md bg-red-500/10 text-red-400 text-xs border border-red-500/20">PyTorch</span>
+              <span class="px-2.5 py-1 rounded-md bg-green-500/10 text-green-400 text-xs border border-green-500/20">LangChain</span>
+              <span class="px-2.5 py-1 rounded-md bg-cyan-500/10 text-cyan-400 text-xs border border-cyan-500/20">React</span>
+              <span class="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs border border-blue-500/20">TypeScript</span>
+            </div>
+          </div>
+
+          <!-- 精选项目 -->
+          <div class="fade-in d5 p-6 rounded-xl bg-zinc-900/50 border border-white/5">
+            <h2 class="font-semibold flex items-center gap-2 mb-4">
+              <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+              精选项目
+            </h2>
+            <a href="#" class="block p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📊</span>
+                <span class="font-medium group-hover:text-blue-400 transition-colors">FinSight</span>
+              </div>
+              <p class="mt-1 text-xs text-zinc-500">Multi-agent 金融研究平台</p>
+              <div class="mt-2 flex items-center gap-3 text-xs text-zinc-600">
+                <span>⭐ 32</span>
+                <span>🍴 8</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 mt-12">
+      <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-sm text-zinc-600">
+        <span class="font-mono">© 2026 allen.dev</span>
+        <div class="flex items-center gap-2 font-mono text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>All systems operational</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

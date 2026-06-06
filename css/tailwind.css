@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.task-list-item::before {
+  @apply hidden;
+}
+
+.task-list-item {
+  @apply list-none;
+}
+
+.footnotes {
+  @apply mt-12 border-t border-gray-200 pt-8 dark:border-gray-700;
+}
+
+.data-footnote-backref {
+  @apply no-underline;
+}
+
+.csl-entry {
+  @apply my-5;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* https://stackoverflow.com/questions/61083813/how-to-avoid-internal-autofill-selected-style-to-be-applied */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+}
+
+.katex-display {
+  overflow: auto hidden;
+}
+
+.content-header-link {
+  opacity: 0;
+  margin-left: -24px;
+  padding-right: 4px;
+}
+
+.content-header:hover .content-header-link,
+.content-header-link:hover {
+  opacity: 1;
+}
+
+.linkicon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ===== A-style: Subtle grid pattern ===== */
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, currentColor 1px, transparent 1px),
+    linear-gradient(to bottom, currentColor 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 40%, transparent 100%);
+}
+
+/* ===== C-style: Mesh gradient blobs for gradient theme ===== */
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.mesh-blob-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.45), transparent 70%);
+  top: -120px;
+  right: -80px;
+  animation: mesh-drift-1 18s ease-in-out infinite;
+}
+
+.mesh-blob-2 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.35), transparent 70%);
+  bottom: -100px;
+  left: -60px;
+  animation: mesh-drift-2 22s ease-in-out infinite;
+}
+
+.mesh-blob-3 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(147, 197, 253, 0.3), transparent 70%);
+  top: 20%;
+  left: 35%;
+  animation: mesh-drift-3 20s ease-in-out infinite;
+}
+
+@keyframes mesh-drift-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-30px, 20px) scale(1.1);
+  }
+  66% {
+    transform: translate(20px, -15px) scale(0.95);
+  }
+}
+
+@keyframes mesh-drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(25px, -20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-15px, 25px) scale(1.1);
+  }
+}
+
+@keyframes mesh-drift-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-20px, -20px) scale(1.15);
+  }
+}
+
+@media (max-width: 768px) {
+  .mesh-blob {
+    filter: blur(60px);
+    opacity: 0.25;
+  }
+  .mesh-blob-1 {
+    width: 250px;
+    height: 250px;
+  }
+  .mesh-blob-2 {
+    width: 200px;
+    height: 200px;
+  }
+  .mesh-blob-3 {
+    display: none;
+  }
+}
+
+/* ===== Gradient theme: primary (cyan) → pink for third-party components (KBar, etc.) ===== */
+.gradient .bg-primary-500 {
+  background-color: rgb(236 72 153 / var(--tw-bg-opacity, 1));
+}
+.gradient .bg-primary-600 {
+  background-color: rgb(219 39 119 / var(--tw-bg-opacity, 1));
+}
+.gradient .text-primary-500 {
+  color: rgb(236 72 153 / var(--tw-text-opacity, 1));
+}
+.gradient .text-primary-600 {
+  color: rgb(219 39 119 / var(--tw-text-opacity, 1));
+}
+.gradient .hover\:text-primary-500:hover {
+  color: rgb(236 72 153 / var(--tw-text-opacity, 1));
+}
+.gradient .hover\:text-primary-600:hover {
+  color: rgb(219 39 119 / var(--tw-text-opacity, 1));
+}
+.gradient .hover\:bg-primary-600:hover {
+  background-color: rgb(219 39 119 / var(--tw-bg-opacity, 1));
+}
+.gradient .hover\:bg-primary-700:hover {
+  background-color: rgb(190 24 93 / var(--tw-bg-opacity, 1));
+}
+.gradient .focus\:ring-primary-500:focus {
+  --tw-ring-color: rgb(236 72 153 / var(--tw-ring-opacity, 1));
+}
+.gradient .focus\:ring-primary-600:focus {
+  --tw-ring-color: rgb(219 39 119 / var(--tw-ring-opacity, 1));
+}
+.gradient .focus\:border-primary-500:focus {
+  border-color: rgb(236 72 153 / var(--tw-border-opacity, 1));
+}

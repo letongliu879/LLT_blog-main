@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>决策树剪枝实验</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #020617; color: #e5e7eb; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .w { max-width: 900px; margin: 0 auto; background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; padding: 18px; }
+    h1 { font-size: 1.2rem; color: #38bdf8; margin-bottom: 8px; }
+    p { color: #94a3b8; font-size: .9rem; line-height: 1.6; margin-bottom: 12px; }
+    .g { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+    @media (max-width: 860px) { .g { grid-template-columns: 1fr; } }
+    .panel { border: 1px solid #1f2937; border-radius: 10px; padding: 10px; background: #111827; }
+    canvas { width: 100%; border: 1px solid #334155; border-radius: 10px; background: #020617; display: block; }
+    label { display: flex; justify-content: space-between; color: #94a3b8; font-size: .86rem; margin-bottom: 6px; }
+    input[type='range'] { width: 100%; accent-color: #38bdf8; }
+    .v { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #fbbf24; }
+    .status { margin-top: 10px; color: #94a3b8; font-size: .8rem; min-height: 1.1rem; }
+    .status.error { color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>剪枝强度与泛化</h1>
+    <p>用剪枝强度模拟模型复杂度变化：训练准确率通常下降，验证准确率会先升后降，帮助你找到平衡点。</p>
+    <div class="g">
+      <canvas id="c" width="560" height="320"></canvas>
+      <div class="panel">
+        <label>剪枝强度 α <span id="aVal" class="v">0.00</span></label>
+        <input id="a" type="range" min="0" max="1" step="0.02" value="0" />
+        <label style="margin-top:10px">训练准确率 <span id="tr" class="v">96.0%</span></label>
+        <label>验证准确率 <span id="va" class="v">84.6%</span></label>
+        <div id="status" class="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const c = document.getElementById('c');
+    const ctx = c && c.getContext ? c.getContext('2d') : null;
+    const a = document.getElementById('a');
+    const aVal = document.getElementById('aVal');
+    const tr = document.getElementById('tr');
+    const va = document.getElementById('va');
+    const statusEl = document.getElementById('status');
+
+    let initialized = false;
+
+    function metric(alpha) {
+      const train = 96 - 18 * alpha;
+      const valid = 84 + 8 * Math.exp(-(((alpha - 0.35) / 0.22) ** 2)) - 6 * alpha;
+      return { train, valid };
+    }
+
+    function px(x) { return 40 + x * 490; }
+    function py(v) { return 280 - ((v - 60) / 40) * 240; }
+
+    function drawAxes() {
+      if (!ctx) return;
+      ctx.strokeStyle = 'rgba(148,163,184,.45)';
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(40, 280);
+      ctx.lineTo(530, 280);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(40, 30);
+      ctx.lineTo(40, 280);
+      ctx.stroke();
+    }
+
+    function drawCurve(color, fn) {
+      if (!ctx) return;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i += 1) {
+        const x = i / 100;
+        const y = fn(x);
+        if (i === 0) {
+          ctx.moveTo(px(x), py(y));
+        } else {
+          ctx.lineTo(px(x), py(y));
+        }
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+
+    function draw(alpha) {
+      if (!ctx || !c) return;
+      ctx.clearRect(0, 0, c.width, c.height);
+      drawAxes();
+
+      drawCurve('#ef4444', (x) => 96 - 18 * x);
+      drawCurve('#22c55e', (x) => 84 + 8 * Math.exp(-(((x - 0.35) / 0.22) ** 2)) - 6 * x);
+
+      const m = metric(alpha);
+      ctx.beginPath();
+      ctx.arc(px(alpha), py(m.valid), 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+    }
+
+    function reportHeight() {
+      const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
+    }
+
+    function setStatus(message, isError = false) {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      statusEl.classList.toggle('error', isError);
+    }
+
+    function update() {
+      try {
+        if (!a || !aVal || !tr || !va) return;
+        const alpha = Number(a.value || 0);
+        const m = metric(alpha);
+
+        aVal.textContent = alpha.toFixed(2);
+        tr.textContent = `${m.train.toFixed(1)}%`;
+        va.textContent = `${m.valid.toFixed(1)}%`;
+
+        draw(alpha);
+        setStatus('拖动滑块观察训练/验证曲线平衡点。');
+      } catch (error) {
+        setStatus('可视化渲染失败，请刷新页面重试。', true);
+        console.error('pruning-visualization error:', error);
+      } finally {
+        reportHeight();
+      }
+    }
+
+    function init() {
+      if (initialized) return;
+      initialized = true;
+
+      update();
+
+      if (a) {
+        a.addEventListener('input', update, { passive: true });
+      }
+
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(reportHeight);
+        ro.observe(document.body);
+        ro.observe(document.documentElement);
+      }
+
+      window.addEventListener('resize', reportHeight, { passive: true });
+      setTimeout(reportHeight, 120);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+      init();
+    }
+
+    window.addEventListener('load', init, { once: true });
+  </script>
+</body>
+</html>

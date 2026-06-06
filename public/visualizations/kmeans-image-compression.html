@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-means 图像压缩交互</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:920px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617}
+    label{display:flex;justify-content:space-between;color:#94a3b8;font-size:.86rem;margin-bottom:6px}
+    input[type='range']{width:100%;accent-color:#38bdf8}
+    .v{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#fbbf24}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>颜色量化与压缩直觉</h1>
+    <p>调节颜色数 K，观察图像从平滑到“分段色块”的变化。K 越小压缩率越高，但失真也更明显。</p>
+    <label>K（颜色数量）<span id="kVal" class="v">16</span></label>
+    <input id="k" type="range" min="4" max="32" step="4" value="16" />
+    <div class="grid" style="margin-top:10px">
+      <canvas id="orig" width="420" height="260"></canvas>
+      <canvas id="cmp" width="420" height="260"></canvas>
+    </div>
+  </div>
+  <script>
+    const k=document.getElementById('k'),kVal=document.getElementById('kVal');
+    const orig=document.getElementById('orig'),cmp=document.getElementById('cmp');
+    const octx=orig.getContext('2d'),cctx=cmp.getContext('2d');
+    function drawBase(ctx){
+      const g=ctx.createLinearGradient(0,0,orig.width,orig.height); g.addColorStop(0,'#ff6b6b'); g.addColorStop(.35,'#f59e0b'); g.addColorStop(.7,'#22c55e'); g.addColorStop(1,'#38bdf8');
+      ctx.fillStyle=g; ctx.fillRect(0,0,orig.width,orig.height);
+      for(let i=0;i<90;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.18})`;ctx.beginPath();ctx.arc(Math.random()*orig.width,Math.random()*orig.height,Math.random()*12,0,Math.PI*2);ctx.fill()}
+    }
+    function quantize(){
+      drawBase(octx);
+      const img=octx.getImageData(0,0,orig.width,orig.height);
+      const levels=Number(k.value); const step=256/levels;
+      for(let i=0;i<img.data.length;i+=4){img.data[i]=Math.floor(img.data[i]/step)*step;img.data[i+1]=Math.floor(img.data[i+1]/step)*step;img.data[i+2]=Math.floor(img.data[i+2]/step)*step;}
+      cctx.putImageData(img,0,0);
+      kVal.textContent=String(levels);
+      reportHeight();
+    }
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    k.addEventListener('input',quantize);
+    window.addEventListener('load',()=>{quantize();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

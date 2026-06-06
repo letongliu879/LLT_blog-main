@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案F：IDE编辑器风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: {
+          mono: ['JetBrains Mono', 'monospace'],
+          sans: ['Inter', 'sans-serif']
+        }
+      }}
+    }
+  </script>
+  <style>
+    .fade-in { animation: fadeIn 0.5s ease both; }
+    .d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.3s} .d4{animation-delay:.4s}
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .syntax-keyword { color: #c678dd; }
+    .syntax-string { color: #98c379; }
+    .syntax-function { color: #61afef; }
+    .syntax-comment { color: #5c6370; }
+    .syntax-number { color: #d19a66; }
+    .syntax-variable { color: #e06c75; }
+    .line-number { color: #4b5263; user-select: none; }
+    .file-tab { transition: all 0.2s ease; }
+    .file-tab:hover { background: rgba(255,255,255,0.05); }
+    .file-tab.active { background: #1e1e1e; border-bottom-color: transparent; }
+  </style>
+</head>
+<body class="bg-[#1e1e1e] text-gray-200 font-sans min-h-screen">
+  <div class="flex min-h-screen">
+    <!-- 侧边栏 - 文件树 -->
+    <aside class="w-56 bg-[#252526] border-r border-[#3c3c3c] flex flex-col">
+      <!-- 侧边栏标题 -->
+      <div class="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider border-b border-[#3c3c3c]">
+        Explorer
+      </div>
+
+      <!-- 文件树 -->
+      <div class="flex-1 py-2 text-sm">
+        <div class="px-2">
+          <div class="flex items-center gap-2 px-2 py-1 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <span class="font-medium text-gray-300">allen-blog</span>
+          </div>
+
+          <div class="ml-4 space-y-0.5 mt-1">
+            <a href="#" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 text-gray-400 hover:text-gray-200 transition-colors">
+              <span class="text-yellow-400">📄</span> about.tsx
+            </a>
+            <a href="#" class="flex items-center gap-2 px-2 py-1 rounded bg-[#37373d] text-white">
+              <span class="text-blue-400">📄</span> index.tsx
+            </a>
+            <a href="#" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 text-gray-400 hover:text-gray-200 transition-colors">
+              <span class="text-green-400">📄</span> projects.tsx
+            </a>
+            <a href="#" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 text-gray-400 hover:text-gray-200 transition-colors">
+              <span class="text-purple-400">📄</span> blog.tsx
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部信息 -->
+      <div class="border-t border-[#3c3c3c] p-4">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+            A
+          </div>
+          <div>
+            <div class="text-sm font-medium">Allen Wang</div>
+            <div class="text-xs text-gray-500">RPA Developer</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col">
+      <!-- 标签栏 -->
+      <div class="flex items-center bg-[#252526] border-b border-[#3c3c3c]">
+        <div class="file-tab active flex items-center gap-2 px-4 py-2 border-r border-[#3c3c3c] text-sm">
+          <span class="text-blue-400">TS</span>
+          <span>index.tsx</span>
+          <span class="ml-2 text-gray-600 hover:text-gray-400 cursor-pointer">×</span>
+        </div>
+        <div class="file-tab flex items-center gap-2 px-4 py-2 border-r border-[#3c3c3c] text-sm text-gray-500">
+          <span class="text-yellow-400">TS</span>
+          <span>about.tsx</span>
+        </div>
+        <div class="flex-1"></div>
+        <div class="px-4 flex items-center gap-3">
+          <a href="#" class="text-gray-500 hover:text-white transition-colors text-sm">GitHub</a>
+          <a href="#" class="text-gray-500 hover:text-white transition-colors text-sm">LinkedIn</a>
+        </div>
+      </div>
+
+      <!-- 代码区域 -->
+      <div class="flex-1 overflow-auto p-6 bg-[#1e1e1e]">
+        <div class="max-w-4xl mx-auto">
+          <!-- 代码块 -->
+          <pre class="font-mono text-sm leading-relaxed fade-in d1"><code><span class="line-number">  1 </span><span class="syntax-keyword">import</span> { Developer } <span class="syntax-keyword">from</span> <span class="syntax-string">'@capgemini/rpa'</span>;
+<span class="line-number">  2 </span>
+<span class="line-number">  3 </span><span class="syntax-keyword">interface</span> <span class="syntax-function">Profile</span> {
+<span class="line-number">  4 </span>  name: <span class="syntax-variable">string</span>;
+<span class="line-number">  5 </span>  role: <span class="syntax-variable">string</span>;
+<span class="line-number">  6 </span>  skills: <span class="syntax-variable">string</span>[];
+<span class="line-number">  7 </span>  stats: { posts: <span class="syntax-variable">number</span>; tags: <span class="syntax-variable">number</span>; projects: <span class="syntax-variable">number</span> };
+<span class="line-number">  8 </span>}
+<span class="line-number">  9 </span>
+<span class="line-number"> 10 </span><span class="syntax-keyword">const</span> <span class="syntax-function">allen</span>: Profile = {
+<span class="line-number"> 11 </span>  name: <span class="syntax-string">"Allen Wang"</span>,
+<span class="line-number"> 12 </span>  role: <span class="syntax-string">"RPA Developer @ Capgemini"</span>,
+<span class="line-number"> 13 </span>  skills: [
+<span class="line-number"> 14 </span>    <span class="syntax-string">"Python"</span>, <span class="syntax-string">"TensorFlow"</span>, <span class="syntax-string">"PyTorch"</span>,
+<span class="line-number"> 15 </span>    <span class="syntax-string">"LangChain"</span>, <span class="syntax-string">"React"</span>, <span class="syntax-string">"TypeScript"</span>
+<span class="line-number"> 16 </span>  ],
+<span class="line-number"> 17 </span>  stats: { posts: <span class="syntax-number">50</span>, tags: <span class="syntax-number">51</span>, projects: <span class="syntax-number">10</span> }
+<span class="line-number"> 18 </span>};
+<span class="line-number"> 19 </span></code></pre>
+
+          <!-- 分隔线 -->
+          <div class="my-8 border-t border-[#3c3c3c]"></div>
+
+          <!-- 介绍区块 -->
+          <div class="fade-in d2 grid grid-cols-2 gap-8">
+            <div>
+              <h1 class="text-3xl font-bold text-white mb-3">Allen Wang</h1>
+              <p class="text-gray-400 leading-relaxed">
+                探索 AI、机器学习与自动化技术。用代码理解世界，用文字记录思考。
+              </p>
+              <div class="mt-6 flex gap-3">
+                <a href="#" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors">
+                  阅读博客
+                </a>
+                <a href="#" class="px-5 py-2.5 border border-gray-600 hover:border-gray-500 text-gray-300 text-sm font-medium rounded transition-colors">
+                  查看项目
+                </a>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-3 bg-[#252526] rounded border border-[#3c3c3c]">
+                <span class="text-gray-400 font-mono text-sm">posts.length</span>
+                <span class="text-2xl font-bold text-green-400">50+</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-[#252526] rounded border border-[#3c3c3c]">
+                <span class="text-gray-400 font-mono text-sm">tags.size</span>
+                <span class="text-2xl font-bold text-blue-400">51</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-[#252526] rounded border border-[#3c3c3c]">
+                <span class="text-gray-400 font-mono text-sm">projects.count</span>
+                <span class="text-2xl font-bold text-purple-400">10+</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 最新文章 -->
+          <div class="mt-10 fade-in d3">
+            <h2 class="font-mono text-sm text-gray-500 mb-4">// recent posts</h2>
+            <div class="space-y-3">
+              <a href="#" class="block p-4 bg-[#252526] rounded border border-[#3c3c3c] hover:border-blue-500/50 transition-colors group">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-medium text-gray-200 group-hover:text-blue-400 transition-colors">
+                    深夜胡言：一个程序员在AI时代的身份危机
+                  </h3>
+                  <span class="text-xs text-gray-600 font-mono">2025-01-25</span>
+                </div>
+                <div class="mt-2 flex gap-2">
+                  <span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">随笔</span>
+                  <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded">AI</span>
+                </div>
+              </a>
+              <a href="#" class="block p-4 bg-[#252526] rounded border border-[#3c3c3c] hover:border-blue-500/50 transition-colors group">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-medium text-gray-200 group-hover:text-blue-400 transition-colors">
+                    LangGraph Reflection Agents 完全指南
+                  </h3>
+                  <span class="text-xs text-gray-600 font-mono">2025-01-22</span>
+                </div>
+                <div class="mt-2 flex gap-2">
+                  <span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">Machine Learning</span>
+                  <span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">LangGraph</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部状态栏 -->
+      <footer class="flex items-center justify-between px-4 py-1.5 bg-[#007acc] text-white text-xs">
+        <div class="flex items-center gap-4">
+          <span>⚡ main</span>
+          <span>✓ 0 Problems</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span>TypeScript React</span>
+          <span>UTF-8</span>
+          <span>Spaces: 2</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

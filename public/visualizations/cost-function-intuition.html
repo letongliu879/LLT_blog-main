@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成本函数直觉理解</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    width: 100%;
+    background: rgba(30, 30, 60, 0.85);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 1px solid rgba(100,100,255,0.15);
+  }
+  h2 {
+    text-align: center;
+    font-size: 1.5em;
+    background: linear-gradient(90deg, #34d399, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+  }
+  .canvas-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .canvas-box { text-align: center; }
+  .canvas-box h3 {
+    font-size: 0.95em;
+    color: #c4b5fd;
+    margin-bottom: 8px;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    background: rgba(15, 15, 35, 0.6);
+    border-radius: 12px;
+    border: 1px solid rgba(100,100,255,0.1);
+  }
+  .explain {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .step-card {
+    background: rgba(40, 40, 80, 0.5);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid rgba(100,100,255,0.1);
+    transition: all 0.3s;
+  }
+  .step-card.active {
+    border-color: rgba(96, 165, 250, 0.5);
+    background: rgba(50, 50, 100, 0.7);
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.1);
+  }
+  .step-card h4 {
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  .step-card p {
+    font-size: 0.78em;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .step-card .num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    font-size: 0.75em;
+    font-weight: bold;
+    margin-right: 6px;
+  }
+  .slider-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .slider-row label { color: #94a3b8; font-size: 0.85em; }
+  .slider-row .val { color: #60a5fa; font-weight: bold; font-family: monospace; font-size: 1.1em; min-width: 60px; text-align: center; }
+  input[type="range"] { width: 400px; accent-color: #60a5fa; cursor: pointer; }
+  .formula-box {
+    text-align: center;
+    margin-top: 16px;
+    padding: 12px 20px;
+    background: rgba(40, 40, 80, 0.4);
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.95em;
+  }
+  .formula-box .highlight { color: #fbbf24; font-weight: bold; }
+  .formula-box .cost-val { color: #f87171; font-weight: bold; font-size: 1.1em; }
+  @media (max-width: 860px) {
+    .container { padding: 18px; }
+    .canvas-row { grid-template-columns: 1fr; }
+    .explain { grid-template-columns: 1fr; }
+    input[type="range"] { width: min(100%, 320px); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>💡 成本函数直觉理解</h2>
+  <p class="subtitle">拖动 w 滑块，同时观察左侧拟合效果和右侧成本变化（b 固定为 0）</p>
+
+  <div class="canvas-row">
+    <div class="canvas-box">
+      <h3>数据拟合：f(x) = w·x</h3>
+      <canvas id="fitCanvas" width="400" height="350"></canvas>
+    </div>
+    <div class="canvas-box">
+      <h3>成本函数：J(w)</h3>
+      <canvas id="costCanvas" width="400" height="350"></canvas>
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <label>w =</label>
+    <div class="val" id="wDisplay">0.00</div>
+    <input type="range" id="wSlider" min="-1" max="4" step="0.02" value="0">
+  </div>
+
+  <div class="formula-box">
+    J(w) = <span class="highlight">1/(2m)</span> × Σ(f(x⁽ⁱ⁾) - y⁽ⁱ⁾)² = <span class="cost-val" id="costDisplay">0.00</span>
+  </div>
+
+  <div class="explain">
+    <div class="step-card" id="step1">
+      <h4><span class="num">1</span>预测</h4>
+      <p>对每个数据点计算预测值 f(x) = w·x，红色竖线表示预测误差的大小</p>
+    </div>
+    <div class="step-card" id="step2">
+      <h4><span class="num">2</span>误差平方</h4>
+      <p>将每个误差取平方 (f(x)-y)²，消除正负号影响，放大较大的误差</p>
+    </div>
+    <div class="step-card" id="step3">
+      <h4><span class="num">3</span>求平均</h4>
+      <p>对所有样本的平方误差求平均并除以2，得到最终的成本 J(w)</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Simple dataset for clear visualization
+const dataX = [1, 2, 3, 4, 5, 6, 7, 8];
+const dataY = [1.2, 2.8, 3.5, 4.1, 5.5, 6.2, 7.8, 8.5];
+const m = dataX.length;
+
+const fitC = document.getElementById('fitCanvas');
+const fitCtx = fitC.getContext('2d');
+const costC = document.getElementById('costCanvas');
+const costCtx = costC.getContext('2d');
+const wSlider = document.getElementById('wSlider');
+const wDisplay = document.getElementById('wDisplay');
+const costDisplay = document.getElementById('costDisplay');
+
+const fitPad = { left: 50, right: 20, top: 20, bottom: 40 };
+const costPad = { left: 60, right: 20, top: 20, bottom: 40 };
+
+function costJ(w) {
+  let s = 0;
+  for (let i = 0; i < m; i++) { const d = w * dataX[i] - dataY[i]; s += d * d; }
+  return s / (2 * m);
+}
+
+function drawFit(w) {
+  fitCtx.clearRect(0, 0, fitC.width, fitC.height);
+  const pw = fitC.width - fitPad.left - fitPad.right;
+  const ph = fitC.height - fitPad.top - fitPad.bottom;
+  const xMin = 0, xMax = 10, yMin = -2, yMax = 12;
+
+  function toX(x) { return fitPad.left + (x - xMin) / (xMax - xMin) * pw; }
+  function toY(y) { return fitPad.top + (1 - (y - yMin) / (yMax - yMin)) * ph; }
+
+  // Grid
+  fitCtx.strokeStyle = 'rgba(100,100,200,0.1)';
+  fitCtx.lineWidth = 1;
+  for (let x = 0; x <= 10; x += 2) {
+    fitCtx.beginPath(); fitCtx.moveTo(toX(x), fitPad.top); fitCtx.lineTo(toX(x), fitC.height - fitPad.bottom); fitCtx.stroke();
+  }
+  for (let y = 0; y <= 10; y += 2) {
+    fitCtx.beginPath(); fitCtx.moveTo(fitPad.left, toY(y)); fitCtx.lineTo(fitC.width - fitPad.right, toY(y)); fitCtx.stroke();
+  }
+
+  // Error lines with animated glow
+  for (let i = 0; i < m; i++) {
+    const px = toX(dataX[i]);
+    const py = toY(dataY[i]);
+    const predY = w * dataX[i];
+    const predPy = toY(predY);
+    const err = Math.abs(predY - dataY[i]);
+    const alpha = Math.min(0.8, err / 5);
+
+    // Error rectangle
+    const rectX = px - 4;
+    const rectW = 8;
+    const rectTop = Math.min(py, predPy);
+    const rectH = Math.abs(py - predPy);
+    fitCtx.fillStyle = `rgba(248, 113, 113, ${alpha * 0.2})`;
+    fitCtx.fillRect(rectX, rectTop, rectW, rectH);
+
+    // Error line
+    fitCtx.strokeStyle = `rgba(248, 113, 113, ${alpha})`;
+    fitCtx.lineWidth = 2;
+    fitCtx.setLineDash([4, 3]);
+    fitCtx.beginPath();
+    fitCtx.moveTo(px, py);
+    fitCtx.lineTo(px, predPy);
+    fitCtx.stroke();
+    fitCtx.setLineDash([]);
+  }
+
+  // Regression line
+  const ly1 = w * xMin;
+  const ly2 = w * xMax;
+  fitCtx.strokeStyle = '#60a5fa';
+  fitCtx.lineWidth = 3;
+  fitCtx.shadowColor = '#60a5fa';
+  fitCtx.shadowBlur = 10;
+  fitCtx.beginPath();
+  fitCtx.moveTo(toX(xMin), toY(ly1));
+  fitCtx.lineTo(toX(xMax), toY(ly2));
+  fitCtx.stroke();
+  fitCtx.shadowBlur = 0;
+
+  // Data points
+  for (let i = 0; i < m; i++) {
+    fitCtx.fillStyle = '#34d399';
+    fitCtx.shadowColor = '#34d399';
+    fitCtx.shadowBlur = 8;
+    fitCtx.beginPath();
+    fitCtx.arc(toX(dataX[i]), toY(dataY[i]), 6, 0, Math.PI * 2);
+    fitCtx.fill();
+    fitCtx.shadowBlur = 0;
+
+    // Predicted point
+    fitCtx.fillStyle = 'rgba(96,165,250,0.6)';
+    fitCtx.beginPath();
+    fitCtx.arc(toX(dataX[i]), toY(w * dataX[i]), 4, 0, Math.PI * 2);
+    fitCtx.fill();
+  }
+
+  // Axes labels
+  fitCtx.fillStyle = '#94a3b8';
+  fitCtx.font = '11px system-ui';
+  fitCtx.textAlign = 'center';
+  for (let x = 0; x <= 10; x += 2) fitCtx.fillText(x.toString(), toX(x), fitC.height - fitPad.bottom + 18);
+  fitCtx.textAlign = 'right';
+  for (let y = 0; y <= 10; y += 2) fitCtx.fillText(y.toString(), fitPad.left - 8, toY(y) + 4);
+
+  // Legend
+  fitCtx.fillStyle = '#34d399';
+  fitCtx.beginPath(); fitCtx.arc(fitC.width - 120, 15, 4, 0, Math.PI*2); fitCtx.fill();
+  fitCtx.fillStyle = '#94a3b8';
+  fitCtx.font = '10px system-ui';
+  fitCtx.textAlign = 'left';
+  fitCtx.fillText('实际值', fitC.width - 112, 19);
+
+  fitCtx.fillStyle = 'rgba(96,165,250,0.6)';
+  fitCtx.beginPath(); fitCtx.arc(fitC.width - 120, 32, 4, 0, Math.PI*2); fitCtx.fill();
+  fitCtx.fillStyle = '#94a3b8';
+  fitCtx.fillText('预测值', fitC.width - 112, 36);
+}
+
+function drawCostCurve(currentW) {
+  costCtx.clearRect(0, 0, costC.width, costC.height);
+  const pw = costC.width - costPad.left - costPad.right;
+  const ph = costC.height - costPad.top - costPad.bottom;
+  const wMin = -1, wMax = 4;
+
+  // Precompute cost curve
+  const points = [];
+  let maxJ = 0;
+  for (let i = 0; i <= 200; i++) {
+    const wv = wMin + (i / 200) * (wMax - wMin);
+    const j = costJ(wv);
+    points.push([wv, j]);
+    if (j > maxJ) maxJ = j;
+  }
+  maxJ = Math.min(maxJ, 50);
+
+  function toX(w) { return costPad.left + (w - wMin) / (wMax - wMin) * pw; }
+  function toY(j) { return costPad.top + (1 - Math.min(j, maxJ) / maxJ) * ph; }
+
+  // Grid
+  costCtx.strokeStyle = 'rgba(100,100,200,0.1)';
+  costCtx.lineWidth = 1;
+  for (let w = 0; w <= 3; w++) {
+    costCtx.beginPath(); costCtx.moveTo(toX(w), costPad.top); costCtx.lineTo(toX(w), costC.height - costPad.bottom); costCtx.stroke();
+  }
+
+  // Cost curve
+  const gradient = costCtx.createLinearGradient(costPad.left, costPad.top, costPad.left, costC.height - costPad.bottom);
+  gradient.addColorStop(0, '#f87171');
+  gradient.addColorStop(1, '#34d399');
+  costCtx.strokeStyle = gradient;
+  costCtx.lineWidth = 3;
+  costCtx.beginPath();
+  for (let i = 0; i < points.length; i++) {
+    const x = toX(points[i][0]), y = toY(points[i][1]);
+    i === 0 ? costCtx.moveTo(x, y) : costCtx.lineTo(x, y);
+  }
+  costCtx.stroke();
+
+  // Fill under curve
+  costCtx.lineTo(toX(wMax), costC.height - costPad.bottom);
+  costCtx.lineTo(toX(wMin), costC.height - costPad.bottom);
+  costCtx.closePath();
+  const fillGrad = costCtx.createLinearGradient(0, costPad.top, 0, costC.height - costPad.bottom);
+  fillGrad.addColorStop(0, 'rgba(248,113,113,0.08)');
+  fillGrad.addColorStop(1, 'rgba(52,211,153,0.02)');
+  costCtx.fillStyle = fillGrad;
+  costCtx.fill();
+
+  // Current point
+  const curJ = costJ(currentW);
+  costCtx.fillStyle = '#fbbf24';
+  costCtx.shadowColor = '#fbbf24';
+  costCtx.shadowBlur = 15;
+  costCtx.beginPath();
+  costCtx.arc(toX(currentW), toY(curJ), 8, 0, Math.PI * 2);
+  costCtx.fill();
+  costCtx.shadowBlur = 0;
+
+  // Vertical line from point to axis
+  costCtx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+  costCtx.lineWidth = 1;
+  costCtx.setLineDash([4, 3]);
+  costCtx.beginPath();
+  costCtx.moveTo(toX(currentW), toY(curJ));
+  costCtx.lineTo(toX(currentW), costC.height - costPad.bottom);
+  costCtx.stroke();
+  costCtx.setLineDash([]);
+
+  // Minimum marker
+  const bestW = 1.08; // approximate minimum
+  const bestJ = costJ(bestW);
+  costCtx.fillStyle = 'rgba(52, 211, 153, 0.6)';
+  costCtx.beginPath();
+  costCtx.arc(toX(bestW), toY(bestJ), 5, 0, Math.PI * 2);
+  costCtx.fill();
+  costCtx.fillStyle = '#34d399';
+  costCtx.font = '10px system-ui';
+  costCtx.textAlign = 'center';
+  costCtx.fillText('最小值', toX(bestW), toY(bestJ) - 10);
+
+  // Axes labels
+  costCtx.fillStyle = '#94a3b8';
+  costCtx.font = '11px system-ui';
+  costCtx.textAlign = 'center';
+  for (let w = 0; w <= 3; w++) costCtx.fillText(w.toString(), toX(w), costC.height - costPad.bottom + 18);
+  costCtx.fillStyle = '#60a5fa';
+  costCtx.fillText('w', costC.width / 2, costC.height - 5);
+  costCtx.textAlign = 'right';
+  costCtx.fillStyle = '#94a3b8';
+  for (let j = 0; j <= maxJ; j += 10) costCtx.fillText(j.toFixed(0), costPad.left - 8, toY(j) + 4);
+  costCtx.save();
+  costCtx.translate(12, costC.height / 2);
+  costCtx.rotate(-Math.PI / 2);
+  costCtx.fillStyle = '#f87171';
+  costCtx.textAlign = 'center';
+  costCtx.fillText('J(w)', 0, 0);
+  costCtx.restore();
+
+  // Cost value label
+  costCtx.fillStyle = '#fbbf24';
+  costCtx.font = 'bold 12px monospace';
+  costCtx.textAlign = 'left';
+  const labelX = toX(currentW) + 12;
+  const labelY = toY(curJ) - 5;
+  costCtx.fillText(`J = ${curJ.toFixed(2)}`, labelX > costC.width - 80 ? toX(currentW) - 80 : labelX, labelY);
+}
+
+function update() {
+  const w = parseFloat(wSlider.value);
+  wDisplay.textContent = w.toFixed(2);
+  costDisplay.textContent = costJ(w).toFixed(2);
+  drawFit(w);
+  drawCostCurve(w);
+
+  // Highlight steps
+  const err = costJ(w);
+  document.getElementById('step1').classList.toggle('active', true);
+  document.getElementById('step2').classList.toggle('active', err > 2);
+  document.getElementById('step3').classList.toggle('active', err < 1);
+}
+
+wSlider.addEventListener('input', update);
+update();
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

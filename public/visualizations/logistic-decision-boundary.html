@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>逻辑回归决策边界交互</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --card: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --danger: #ef4444;
+      --good: #22c55e;
+    }
+    body {
+      background: radial-gradient(circle at 10% 10%, #0b2b47, #020617 45%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+      padding: 22px;
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--good));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.7fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(2, 6, 23, 0.65);
+    }
+    .controls { display: grid; gap: 12px; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--primary); }
+    .value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .kpi {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.5);
+      padding: 10px;
+      text-align: center;
+    }
+    .kpi-card .title { color: var(--muted); font-size: 0.72rem; margin-bottom: 4px; }
+    .kpi-card .num {
+      font-size: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--good);
+      font-weight: 700;
+    }
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .note {
+      margin-top: 10px;
+      color: #cbd5e1;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>逻辑回归决策边界实验室</h1>
+    <p class="subtitle">
+      调整参数 \(w_1, w_2, b\) 观察边界 \(w_1x_1 + w_2x_2 + b = 0\) 如何旋转和平移，理解“线性可分”的可解释性。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <canvas id="plane" width="660" height="460"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:#22c55e"></i>正类样本 y=1</span>
+          <span><i class="dot" style="background:#ef4444"></i>负类样本 y=0</span>
+          <span><i class="dot" style="background:#38bdf8"></i>当前决策边界</span>
+        </div>
+      </section>
+
+      <section class="panel controls">
+        <div>
+          <label>w1 <span id="w1Val" class="value">1.40</span></label>
+          <input id="w1" type="range" min="-4" max="4" step="0.1" value="1.4" />
+        </div>
+        <div>
+          <label>w2 <span id="w2Val" class="value">-1.60</span></label>
+          <input id="w2" type="range" min="-4" max="4" step="0.1" value="-1.6" />
+        </div>
+        <div>
+          <label>b <span id="bVal" class="value">0.10</span></label>
+          <input id="b" type="range" min="-4" max="4" step="0.1" value="0.1" />
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-card">
+            <div class="title">准确率</div>
+            <div id="acc" class="num">0.00%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="title">正类召回</div>
+            <div id="rec" class="num">0.00%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="title">误分类数</div>
+            <div id="err" class="num">0</div>
+          </div>
+        </div>
+
+        <p class="note">
+          当你把边界调到“正负样本分布过渡带”附近，准确率会更高。注意：线性边界无法拟合明显非线性数据，这也是后面引入特征映射/核方法的动机。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('plane');
+    const ctx = canvas.getContext('2d');
+
+    const w1Input = document.getElementById('w1');
+    const w2Input = document.getElementById('w2');
+    const bInput = document.getElementById('b');
+
+    const w1Val = document.getElementById('w1Val');
+    const w2Val = document.getElementById('w2Val');
+    const bVal = document.getElementById('bVal');
+
+    const accEl = document.getElementById('acc');
+    const recEl = document.getElementById('rec');
+    const errEl = document.getElementById('err');
+
+    const points = [];
+    function randn() {
+      let u = 0, v = 0;
+      while (!u) u = Math.random();
+      while (!v) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    for (let i = 0; i < 55; i++) {
+      points.push({ x1: randn() * 0.9 - 1.1, x2: randn() * 0.8 + 1.2, y: 1 });
+      points.push({ x1: randn() * 0.9 + 1.2, x2: randn() * 0.8 - 1.0, y: 0 });
+    }
+
+    function toCanvas(x1, x2) {
+      const x = 46 + ((x1 + 4) / 8) * (canvas.width - 92);
+      const y = canvas.height - 42 - ((x2 + 4) / 8) * (canvas.height - 84);
+      return { x, y };
+    }
+
+    function sigmoid(z) {
+      return 1 / (1 + Math.exp(-z));
+    }
+
+    function drawAxes() {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(46, canvas.height - 42);
+      ctx.lineTo(canvas.width - 24, canvas.height - 42);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(46, canvas.height - 42);
+      ctx.lineTo(46, 22);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.95)';
+      ctx.font = '12px Segoe UI';
+      ctx.fillText('x1', canvas.width - 28, canvas.height - 46);
+      ctx.fillText('x2', 28, 28);
+    }
+
+    function drawPoints(w1, w2, b) {
+      let correct = 0;
+      let positiveTotal = 0;
+      let positiveHit = 0;
+
+      for (const p of points) {
+        const z = w1 * p.x1 + w2 * p.x2 + b;
+        const pred = sigmoid(z) >= 0.5 ? 1 : 0;
+        if (pred === p.y) correct += 1;
+        if (p.y === 1) {
+          positiveTotal += 1;
+          if (pred === 1) positiveHit += 1;
+        }
+
+        const { x, y } = toCanvas(p.x1, p.x2);
+        ctx.beginPath();
+        ctx.arc(x, y, 4.4, 0, Math.PI * 2);
+        ctx.fillStyle = p.y === 1 ? '#22c55e' : '#ef4444';
+        ctx.fill();
+      }
+
+      const total = points.length;
+      const errorCount = total - correct;
+      const accuracy = (correct / total) * 100;
+      const recall = positiveTotal ? (positiveHit / positiveTotal) * 100 : 0;
+
+      accEl.textContent = `${accuracy.toFixed(1)}%`;
+      recEl.textContent = `${recall.toFixed(1)}%`;
+      errEl.textContent = String(errorCount);
+    }
+
+    function drawBoundary(w1, w2, b) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+
+      const xLeft = -4;
+      const xRight = 4;
+
+      if (Math.abs(w2) < 1e-6) {
+        if (Math.abs(w1) < 1e-6) return;
+        const x = -b / w1;
+        const p1 = toCanvas(x, -4);
+        const p2 = toCanvas(x, 4);
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      } else {
+        const yLeft = -(w1 * xLeft + b) / w2;
+        const yRight = -(w1 * xRight + b) / w2;
+        const p1 = toCanvas(xLeft, yLeft);
+        const p2 = toCanvas(xRight, yRight);
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    }
+
+    function update() {
+      const w1 = Number(w1Input.value);
+      const w2 = Number(w2Input.value);
+      const b = Number(bInput.value);
+
+      w1Val.textContent = w1.toFixed(2);
+      w2Val.textContent = w2.toFixed(2);
+      bVal.textContent = b.toFixed(2);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAxes();
+      drawPoints(w1, w2, b);
+      drawBoundary(w1, w2, b);
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    [w1Input, w2Input, bInput].forEach((el) => el.addEventListener('input', update));
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

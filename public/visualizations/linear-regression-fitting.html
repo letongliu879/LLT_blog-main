@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线性回归拟合可视化</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    width: 100%;
+    background: rgba(30, 30, 60, 0.85);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(100, 100, 255, 0.15);
+  }
+  h2 {
+    text-align: center;
+    font-size: 1.5em;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 820px;
+    height: auto;
+    background: rgba(15, 15, 35, 0.6);
+    border-radius: 12px;
+    border: 1px solid rgba(100, 100, 255, 0.1);
+    cursor: crosshair;
+  }
+  .controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 200px;
+  }
+  .slider-group label {
+    font-size: 0.85em;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+  .slider-group .value {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #60a5fa;
+    margin-bottom: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  input[type="range"] {
+    width: 200px;
+    accent-color: #818cf8;
+    cursor: pointer;
+  }
+  .info-panel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .info-card {
+    background: rgba(40, 40, 80, 0.6);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid rgba(100, 100, 255, 0.1);
+  }
+  .info-card .label {
+    font-size: 0.75em;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+  .info-card .val {
+    font-size: 1.3em;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+  }
+  .info-card .val.cost { color: #f87171; }
+  .info-card .val.w { color: #60a5fa; }
+  .info-card .val.b { color: #a78bfa; }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: white;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+  .btn-secondary {
+    background: rgba(60, 60, 100, 0.8);
+    color: #c4b5fd;
+    border: 1px solid rgba(100, 100, 255, 0.2);
+  }
+  .btn-secondary:hover { background: rgba(80, 80, 120, 0.8); }
+  .formula {
+    text-align: center;
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(40, 40, 80, 0.4);
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    color: #c4b5fd;
+  }
+  @media (max-width: 860px) {
+    .container { padding: 18px; }
+    .info-panel { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>🎯 线性回归拟合可视化</h2>
+  <p class="subtitle">拖动滑块调整 w 和 b，观察拟合直线如何变化 | 点击"自动拟合"观看梯度下降过程</p>
+
+  <canvas id="canvas" width="820" height="420"></canvas>
+
+  <div class="controls">
+    <div class="slider-group">
+      <label>斜率 w（权重）</label>
+      <div class="value" id="wVal">0.00</div>
+      <input type="range" id="wSlider" min="-2" max="4" step="0.01" value="0">
+    </div>
+    <div class="slider-group">
+      <label>截距 b（偏置）</label>
+      <div class="value" id="bVal">0.00</div>
+      <input type="range" id="bSlider" min="-15" max="10" step="0.1" value="0">
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-card">
+      <div class="label">成本函数 J(w,b)</div>
+      <div class="val cost" id="costVal">0.00</div>
+    </div>
+    <div class="info-card">
+      <div class="label">最优 w</div>
+      <div class="val w" id="optW">—</div>
+    </div>
+    <div class="info-card">
+      <div class="label">最优 b</div>
+      <div class="val b" id="optB">—</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="fitBtn">▶ 自动拟合（梯度下降）</button>
+    <button class="btn-secondary" id="resetBtn">↻ 重置</button>
+  </div>
+
+  <div class="formula">f(x) = <span id="fW">0.00</span> · x + (<span id="fB">0.00</span>)</div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const wSlider = document.getElementById('wSlider');
+const bSlider = document.getElementById('bSlider');
+const wValEl = document.getElementById('wVal');
+const bValEl = document.getElementById('bVal');
+const costValEl = document.getElementById('costVal');
+const optWEl = document.getElementById('optW');
+const optBEl = document.getElementById('optB');
+const fWEl = document.getElementById('fW');
+const fBEl = document.getElementById('fB');
+const fitBtn = document.getElementById('fitBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+// Dataset (simplified from the blog)
+const dataX = [6.1101,5.5277,8.5186,7.0032,5.8598,8.3829,7.4764,8.5781,6.4862,5.0546,
+  5.7107,14.164,5.734,8.4084,5.6407,5.3794,6.3654,5.1301,6.4296,7.0708,
+  6.1891,20.27,5.4901,6.3261,5.186,18.945,12.828,10.957,13.176,22.203,
+  5.2524,6.5894,9.2482,5.8918,8.2111,7.9334,6.5736,7.5883,5.0269,11.711,
+  5.0055,8.768,7.5422,5.0039,8.0106,7.1642,5.8428,7.4666,6.749,7.6543,
+  9.3102,7.4086,7.4618,7.328,6.3711,6.2614,5.6484,6.7539,8.4757,6.0269,
+  8.0727,7.2098,5.8727,5.6847,7.2854,8.7517,5.2149,6.7299,5.2074,6.2175,
+  6.7172,7.0305,12.5,5.5894,6.7917,7.2448,6.1099,8.6282,7.7655,6.7676,
+  8.5388,7.6969,6.5479,5.577,5.8048,6.9508,5.0737,8.9297,6.3328,5.8014,
+  6.889,5.4528,5.6889,5.0556,6.1215,5.1884,5.1834];
+
+const dataY = [17.592,9.1302,13.662,11.854,6.8233,11.886,4.3483,12.0,6.5987,3.8166,
+  3.2522,15.505,3.1551,7.2258,0.7162,3.5129,5.3048,0.5609,3.6518,5.3893,
+  3.1386,21.767,4.263,5.1875,3.0825,22.638,13.501,7.0467,14.692,24.147,
+  -1.22,5.9966,12.134,1.8495,6.5426,4.5623,4.1164,7.2029,1.9869,0.14454,
+  1.8495,12.0,2.6928,1.7152,6.5426,4.5623,1.9243,4.7143,3.9223,4.4284,
+  14.573,5.8428,4.7143,6.7901,3.9624,5.3854,0.1657,4.3214,11.191,2.3218,
+  6.5426,3.2522,4.3483,1.6118,4.7143,13.662,2.6397,5.4726,2.6397,3.2522,
+  3.2522,3.5316,10.091,2.0962,5.4726,4.7143,3.5316,6.5426,4.7143,4.3483,
+  10.091,4.7143,3.9624,2.6397,2.0962,3.5316,0.7162,10.091,3.9624,2.0962,
+  5.4726,0.7162,2.0962,1.5841,3.2522,1.5841,1.6118];
+
+const m = dataX.length;
+const padding = { left: 60, right: 30, top: 30, bottom: 50 };
+const plotW = canvas.width - padding.left - padding.right;
+const plotH = canvas.height - padding.top - padding.bottom;
+
+const xMin = 3, xMax = 24;
+const yMin = -5, yMax = 27;
+
+let w = 0, b = 0;
+let animating = false;
+let animId = null;
+
+function toCanvasX(x) { return padding.left + (x - xMin) / (xMax - xMin) * plotW; }
+function toCanvasY(y) { return padding.top + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+function computeCost(w, b) {
+  let sum = 0;
+  for (let i = 0; i < m; i++) {
+    const diff = (w * dataX[i] + b) - dataY[i];
+    sum += diff * diff;
+  }
+  return sum / (2 * m);
+}
+
+function computeGradient(w, b) {
+  let dw = 0, db = 0;
+  for (let i = 0; i < m; i++) {
+    const diff = (w * dataX[i] + b) - dataY[i];
+    dw += diff * dataX[i];
+    db += diff;
+  }
+  return [dw / m, db / m];
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(100, 100, 200, 0.1)';
+  ctx.lineWidth = 1;
+  for (let x = 5; x <= 20; x += 5) {
+    const cx = toCanvasX(x);
+    ctx.beginPath(); ctx.moveTo(cx, padding.top); ctx.lineTo(cx, canvas.height - padding.bottom); ctx.stroke();
+  }
+  for (let y = 0; y <= 25; y += 5) {
+    const cy = toCanvasY(y);
+    ctx.beginPath(); ctx.moveTo(padding.left, cy); ctx.lineTo(canvas.width - padding.right, cy); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(150, 150, 200, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top);
+  ctx.lineTo(padding.left, canvas.height - padding.bottom);
+  ctx.lineTo(canvas.width - padding.right, canvas.height - padding.bottom);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'center';
+  for (let x = 5; x <= 20; x += 5) {
+    ctx.fillText(x.toString(), toCanvasX(x), canvas.height - padding.bottom + 20);
+  }
+  ctx.textAlign = 'right';
+  for (let y = 0; y <= 25; y += 5) {
+    ctx.fillText(y.toString(), padding.left - 10, toCanvasY(y) + 4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#60a5fa';
+  ctx.font = '13px system-ui';
+  ctx.fillText('城市人口（万人）', canvas.width / 2, canvas.height - 5);
+  ctx.save();
+  ctx.translate(15, canvas.height / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('利润（万美元）', 0, 0);
+  ctx.restore();
+
+  // Error lines
+  for (let i = 0; i < m; i++) {
+    const px = toCanvasX(dataX[i]);
+    const py = toCanvasY(dataY[i]);
+    const predY = w * dataX[i] + b;
+    const predPy = toCanvasY(predY);
+    ctx.strokeStyle = 'rgba(248, 113, 113, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px, predPy);
+    ctx.stroke();
+  }
+
+  // Regression line
+  const lineY1 = w * xMin + b;
+  const lineY2 = w * xMax + b;
+  ctx.strokeStyle = '#818cf8';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#818cf8';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.moveTo(toCanvasX(xMin), toCanvasY(lineY1));
+  ctx.lineTo(toCanvasX(xMax), toCanvasY(lineY2));
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Data points
+  for (let i = 0; i < m; i++) {
+    const px = toCanvasX(dataX[i]);
+    const py = toCanvasY(dataY[i]);
+    ctx.fillStyle = '#f87171';
+    ctx.shadowColor = '#f87171';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Update UI
+  const cost = computeCost(w, b);
+  costValEl.textContent = cost.toFixed(2);
+  fWEl.textContent = w.toFixed(2);
+  fBEl.textContent = b.toFixed(2);
+}
+
+function updateFromSliders() {
+  w = parseFloat(wSlider.value);
+  b = parseFloat(bSlider.value);
+  wValEl.textContent = w.toFixed(2);
+  bValEl.textContent = b.toFixed(2);
+  draw();
+}
+
+wSlider.addEventListener('input', () => { if (!animating) updateFromSliders(); });
+bSlider.addEventListener('input', () => { if (!animating) updateFromSliders(); });
+
+fitBtn.addEventListener('click', () => {
+  if (animating) return;
+  animating = true;
+  fitBtn.textContent = '⏳ 拟合中...';
+  fitBtn.disabled = true;
+
+  w = 0; b = 0;
+  const alpha = 0.01;
+  let iter = 0;
+  const maxIter = 1500;
+  const stepsPerFrame = 5;
+
+  function step() {
+    for (let s = 0; s < stepsPerFrame; s++) {
+      if (iter >= maxIter) break;
+      const [dw, db] = computeGradient(w, b);
+      w -= alpha * dw;
+      b -= alpha * db;
+      iter++;
+    }
+
+    wSlider.value = w;
+    bSlider.value = b;
+    wValEl.textContent = w.toFixed(2);
+    bValEl.textContent = b.toFixed(2);
+    draw();
+
+    if (iter < maxIter) {
+      animId = requestAnimationFrame(step);
+    } else {
+      animating = false;
+      fitBtn.textContent = '▶ 自动拟合（梯度下降）';
+      fitBtn.disabled = false;
+      optWEl.textContent = w.toFixed(4);
+      optBEl.textContent = b.toFixed(4);
+    }
+  }
+  step();
+});
+
+resetBtn.addEventListener('click', () => {
+  if (animId) cancelAnimationFrame(animId);
+  animating = false;
+  fitBtn.textContent = '▶ 自动拟合（梯度下降）';
+  fitBtn.disabled = false;
+  w = 0; b = 0;
+  wSlider.value = 0;
+  bSlider.value = 0;
+  wValEl.textContent = '0.00';
+  bValEl.textContent = '0.00';
+  optWEl.textContent = '—';
+  optBEl.textContent = '—';
+  draw();
+});
+
+draw();
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

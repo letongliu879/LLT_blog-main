@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>决策边界动态可视化</title>
+  <style>
+    :root {
+      --bg-start: #0b1026;
+      --bg-end: #1e295f;
+      --card-bg: rgba(7, 12, 32, 0.9);
+      --card-border: #2f3f87;
+      --text-main: #e5ecff;
+      --text-sub: #b5c4f0;
+      --accent: #ffb74d;
+      --green: #45b867;
+      --blue: #2f8df8;
+      --danger: #ff5a5a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: radial-gradient(circle at 15% 15%, #17245b 0%, var(--bg-start) 45%, var(--bg-end) 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text-main);
+      min-height: 0;
+    }
+
+    .wrapper {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px 18px 14px;
+      box-shadow: 0 20px 48px rgba(4, 8, 26, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 1.7rem;
+      line-height: 1.2;
+      color: #f3f7ff;
+      letter-spacing: 0.3px;
+    }
+
+    .subtitle {
+      margin: 10px 0 16px;
+      color: var(--text-sub);
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+
+    .canvas-shell {
+      border: 1px solid #324a9b;
+      border-radius: 14px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(8, 18, 50, 0.92) 0%, rgba(8, 16, 42, 0.95) 100%);
+    }
+
+    #boundaryCanvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(120, 148, 236, 0.35);
+      background: #0d1738;
+      cursor: crosshair;
+    }
+
+    .metrics {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      border: 1px solid #2a3d84;
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(16, 30, 76, 0.5);
+    }
+
+    .metric-label {
+      color: #a9bbe8;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      color: #f4f8ff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .controls {
+      margin-top: 14px;
+      border: 1px solid #29408d;
+      border-radius: 12px;
+      background: rgba(9, 19, 52, 0.78);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+    }
+
+    .control {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .control-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      color: #c4d3ff;
+      gap: 10px;
+      min-height: 20px;
+    }
+
+    .control-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #ffd38a;
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+
+    input[type='range'] {
+      width: 100%;
+      accent-color: #7ea5ff;
+    }
+
+    .row-actions {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 1px solid #4e6fd8;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #4667d9 0%, #7558ea 100%);
+      color: #eff4ff;
+      padding: 9px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(59, 82, 184, 0.35);
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, #33427f 0%, #28356c 100%);
+      border-color: #4e5d9f;
+    }
+
+    .hint {
+      margin: 12px 2px 4px;
+      font-size: 0.84rem;
+      color: #aec0f5;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 12px;
+      }
+
+      .title {
+        font-size: 1.38rem;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="title">🎯 决策边界动态可视化</h1>
+    <p class="subtitle">拖动参数后，边界线、背景概率区、分类准确率会实时联动。点击图中任意位置可添加测试点，观察当前边界是否能正确分类。</p>
+
+    <div class="canvas-shell">
+      <canvas id="boundaryCanvas" width="960" height="600"></canvas>
+    </div>
+
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">整体准确率</div>
+        <div class="metric-value" id="metricAccuracy">0%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">错误样本</div>
+        <div class="metric-value" id="metricErrors">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">样本数量</div>
+        <div class="metric-value" id="metricCount">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">边界复杂度</div>
+        <div class="metric-value" id="metricComplexity">0</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <div class="control-label">边界中心偏移 <span class="control-value" id="centerOffsetValue">0.00</span></div>
+        <input id="centerOffset" type="range" min="-0.25" max="0.25" step="0.01" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-label">弯曲幅度 <span class="control-value" id="amplitudeValue">0.16</span></div>
+        <input id="amplitude" type="range" min="0" max="0.3" step="0.01" value="0.16" />
+      </div>
+      <div class="control">
+        <div class="control-label">波动频率 <span class="control-value" id="frequencyValue">2.40</span></div>
+        <input id="frequency" type="range" min="0.4" max="4.2" step="0.1" value="2.4" />
+      </div>
+      <div class="control">
+        <div class="control-label">倾斜系数 <span class="control-value" id="tiltValue">0.00</span></div>
+        <input id="tilt" type="range" min="-0.6" max="0.6" step="0.02" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-label">边界平滑度 <span class="control-value" id="smoothnessValue">0.07</span></div>
+        <input id="smoothness" type="range" min="0.02" max="0.16" step="0.01" value="0.07" />
+      </div>
+      <div class="control">
+        <div class="control-label">数据重叠度 <span class="control-value" id="overlapValue">0.12</span></div>
+        <input id="overlap" type="range" min="0.02" max="0.28" step="0.01" value="0.12" />
+      </div>
+      <div class="control">
+        <div class="control-label">相位偏移 <span class="control-value" id="phaseValue">0.00</span></div>
+        <input id="phase" type="range" min="0" max="6.283" step="0.02" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-label">自动演示速度 <span class="control-value" id="speedValue">0.80</span></div>
+        <input id="speed" type="range" min="0.2" max="2.2" step="0.1" value="0.8" />
+      </div>
+    </div>
+
+    <div class="row-actions">
+      <button class="btn" id="regenerateBtn">🔄 重新采样数据</button>
+      <button class="btn" id="autoPlayBtn">▶ 自动演示</button>
+      <button class="btn secondary" id="heatmapBtn">🌈 关闭概率背景</button>
+      <button class="btn secondary" id="resetBtn">↺ 恢复默认参数</button>
+    </div>
+
+    <p class="hint">绿色点为类别 0，蓝色点为类别 1，红色描边表示分类错误。边界线越复杂，不一定泛化越好；可通过调节重叠度观察误差变化。</p>
+  </div>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('boundaryCanvas');
+      const context = canvas.getContext('2d');
+
+      const state = {
+        centerOffset: 0,
+        amplitude: 0.16,
+        frequency: 2.4,
+        tilt: 0,
+        smoothness: 0.07,
+        overlap: 0.12,
+        phase: 0,
+        speed: 0.8,
+        showHeatmap: true,
+        autoPlay: false,
+        pointCount: 280,
+      };
+
+      const defaults = { ...state };
+      const points = [];
+
+      const padding = { left: 74, right: 56, top: 42, bottom: 62 };
+
+      const controls = {
+        centerOffset: document.getElementById('centerOffset'),
+        amplitude: document.getElementById('amplitude'),
+        frequency: document.getElementById('frequency'),
+        tilt: document.getElementById('tilt'),
+        smoothness: document.getElementById('smoothness'),
+        overlap: document.getElementById('overlap'),
+        phase: document.getElementById('phase'),
+        speed: document.getElementById('speed'),
+      };
+
+      const valueLabels = {
+        centerOffset: document.getElementById('centerOffsetValue'),
+        amplitude: document.getElementById('amplitudeValue'),
+        frequency: document.getElementById('frequencyValue'),
+        tilt: document.getElementById('tiltValue'),
+        smoothness: document.getElementById('smoothnessValue'),
+        overlap: document.getElementById('overlapValue'),
+        phase: document.getElementById('phaseValue'),
+        speed: document.getElementById('speedValue'),
+      };
+
+      const metrics = {
+        accuracy: document.getElementById('metricAccuracy'),
+        errors: document.getElementById('metricErrors'),
+        count: document.getElementById('metricCount'),
+        complexity: document.getElementById('metricComplexity'),
+      };
+
+      const regenerateButton = document.getElementById('regenerateBtn');
+      const autoPlayButton = document.getElementById('autoPlayBtn');
+      const heatmapButton = document.getElementById('heatmapBtn');
+      const resetButton = document.getElementById('resetBtn');
+
+      let animationFrameId = null;
+      let previousTimestamp = 0;
+
+      function clamp(value, minimum, maximum) {
+        return Math.min(Math.max(value, minimum), maximum);
+      }
+
+      function randomGaussian() {
+        const valueA = Math.max(1e-8, Math.random());
+        const valueB = Math.random();
+        return Math.sqrt(-2 * Math.log(valueA)) * Math.cos(2 * Math.PI * valueB);
+      }
+
+      function axisWidth() {
+        return canvas.width - padding.left - padding.right;
+      }
+
+      function axisHeight() {
+        return canvas.height - padding.top - padding.bottom;
+      }
+
+      function normalizedToCanvasX(normalizedX) {
+        return padding.left + normalizedX * axisWidth();
+      }
+
+      function normalizedToCanvasY(normalizedY) {
+        return padding.top + normalizedY * axisHeight();
+      }
+
+      function canvasToNormalizedX(canvasX) {
+        return clamp((canvasX - padding.left) / axisWidth(), 0, 1);
+      }
+
+      function canvasToNormalizedY(canvasY) {
+        return clamp((canvasY - padding.top) / axisHeight(), 0, 1);
+      }
+
+      function boundaryAt(normalizedY) {
+        const centeredY = normalizedY - 0.5;
+        const waveTerm = state.amplitude * Math.sin(normalizedY * Math.PI * 2 * state.frequency + state.phase);
+        return clamp(0.5 + state.centerOffset + waveTerm + state.tilt * centeredY, 0.04, 0.96);
+      }
+
+      function probabilityClassOne(normalizedX, normalizedY) {
+        const scaled = (normalizedX - boundaryAt(normalizedY)) / Math.max(0.015, state.smoothness);
+        return 1 / (1 + Math.exp(-scaled));
+      }
+
+      function predictLabel(normalizedX, normalizedY) {
+        return probabilityClassOne(normalizedX, normalizedY) >= 0.5 ? 1 : 0;
+      }
+
+      function updateValueLabels() {
+        Object.keys(valueLabels).forEach((key) => {
+          valueLabels[key].textContent = Number(state[key]).toFixed(2);
+        });
+      }
+
+      function updateMetrics(errorCount) {
+        const totalCount = points.length;
+        const accuracy = totalCount === 0 ? 0 : ((totalCount - errorCount) / totalCount) * 100;
+        const complexity = Math.abs(state.amplitude * state.frequency * 10) + Math.abs(state.tilt * 3);
+
+        metrics.accuracy.textContent = `${accuracy.toFixed(1)}%`;
+        metrics.errors.textContent = `${errorCount}`;
+        metrics.count.textContent = `${totalCount}`;
+        metrics.complexity.textContent = `${complexity.toFixed(2)}`;
+      }
+
+      function drawAxes() {
+        context.strokeStyle = 'rgba(176, 197, 255, 0.35)';
+        context.lineWidth = 1;
+
+        context.beginPath();
+        context.moveTo(padding.left, padding.top);
+        context.lineTo(padding.left, canvas.height - padding.bottom);
+        context.lineTo(canvas.width - padding.right, canvas.height - padding.bottom);
+        context.stroke();
+
+        context.fillStyle = 'rgba(203, 217, 255, 0.8)';
+        context.font = '12px Segoe UI';
+        context.fillText('PCA Component 1', canvas.width * 0.48, canvas.height - 24);
+
+        context.save();
+        context.translate(24, canvas.height * 0.5);
+        context.rotate(-Math.PI / 2);
+        context.fillText('PCA Component 2', 0, 0);
+        context.restore();
+      }
+
+      function drawProbabilityBackground() {
+        if (!state.showHeatmap) {
+          return;
+        }
+
+        const step = 8;
+        for (let pixelY = padding.top; pixelY < canvas.height - padding.bottom; pixelY += step) {
+          const normalizedY = canvasToNormalizedY(pixelY);
+          for (let pixelX = padding.left; pixelX < canvas.width - padding.right; pixelX += step) {
+            const normalizedX = canvasToNormalizedX(pixelX);
+            const probability = probabilityClassOne(normalizedX, normalizedY);
+
+            const redChannel = Math.round(54 + 28 * probability);
+            const greenChannel = Math.round(171 - 48 * probability);
+            const blueChannel = Math.round(88 + 160 * probability);
+            context.fillStyle = `rgba(${redChannel}, ${greenChannel}, ${blueChannel}, 0.24)`;
+            context.fillRect(pixelX, pixelY, step, step);
+          }
+        }
+      }
+
+      function drawDecisionBoundary() {
+        context.beginPath();
+        for (let pixelY = padding.top; pixelY <= canvas.height - padding.bottom; pixelY += 2) {
+          const normalizedY = canvasToNormalizedY(pixelY);
+          const pixelX = normalizedToCanvasX(boundaryAt(normalizedY));
+          if (pixelY === padding.top) {
+            context.moveTo(pixelX, pixelY);
+          } else {
+            context.lineTo(pixelX, pixelY);
+          }
+        }
+
+        context.strokeStyle = '#ffb74d';
+        context.lineWidth = 3;
+        context.shadowColor = 'rgba(255, 183, 77, 0.45)';
+        context.shadowBlur = 12;
+        context.stroke();
+        context.shadowBlur = 0;
+      }
+
+      function drawDataPoints() {
+        let errorCount = 0;
+
+        points.forEach((point) => {
+          const predictedLabel = predictLabel(point.normalizedX, point.normalizedY);
+          const isCorrect = predictedLabel === point.label;
+          if (!isCorrect) {
+            errorCount += 1;
+          }
+
+          const pointX = normalizedToCanvasX(point.normalizedX);
+          const pointY = normalizedToCanvasY(point.normalizedY);
+
+          context.beginPath();
+          context.arc(pointX, pointY, point.isUserPoint ? 6 : 4.7, 0, Math.PI * 2);
+          context.fillStyle = point.label === 0 ? '#45b867' : '#2f8df8';
+          context.fill();
+
+          if (!isCorrect) {
+            context.strokeStyle = '#ff5a5a';
+            context.lineWidth = 2.4;
+            context.stroke();
+          } else if (point.isUserPoint) {
+            context.strokeStyle = '#f7fbff';
+            context.lineWidth = 1.6;
+            context.stroke();
+          }
+        });
+
+        return errorCount;
+      }
+
+      function render() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawProbabilityBackground();
+        drawAxes();
+        drawDecisionBoundary();
+
+        const errorCount = drawDataPoints();
+        updateMetrics(errorCount);
+        reportHeight();
+      }
+
+      function buildDataset() {
+        points.length = 0;
+        const firstClassCount = Math.floor(state.pointCount / 2);
+
+        for (let index = 0; index < state.pointCount; index += 1) {
+          const label = index < firstClassCount ? 0 : 1;
+          const normalizedY = Math.random();
+          const boundary = boundaryAt(normalizedY);
+          const margin = 0.17 + Math.random() * 0.05;
+          const direction = label === 0 ? -1 : 1;
+          const spread = state.overlap * randomGaussian();
+          const normalizedX = clamp(boundary + direction * margin + spread, 0.02, 0.98);
+
+          points.push({
+            normalizedX,
+            normalizedY,
+            label,
+            isUserPoint: false,
+          });
+        }
+
+        render();
+      }
+
+      function syncControlValues() {
+        Object.keys(controls).forEach((key) => {
+          controls[key].value = String(state[key]);
+        });
+        updateValueLabels();
+      }
+
+      function readControlValues() {
+        Object.keys(controls).forEach((key) => {
+          state[key] = Number(controls[key].value);
+        });
+        updateValueLabels();
+      }
+
+      function toggleAutoPlay() {
+        state.autoPlay = !state.autoPlay;
+        autoPlayButton.textContent = state.autoPlay ? '⏸ 停止演示' : '▶ 自动演示';
+
+        if (state.autoPlay && !animationFrameId) {
+          previousTimestamp = 0;
+          animationFrameId = requestAnimationFrame(runAnimation);
+        }
+      }
+
+      function runAnimation(timestamp) {
+        if (!state.autoPlay) {
+          if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+          }
+          return;
+        }
+
+        if (!previousTimestamp) {
+          previousTimestamp = timestamp;
+        }
+
+        const elapsedSeconds = (timestamp - previousTimestamp) / 1000;
+        previousTimestamp = timestamp;
+
+        state.phase += elapsedSeconds * state.speed;
+        const wrappedPhase = ((state.phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        state.phase = wrappedPhase;
+        controls.phase.value = String(wrappedPhase);
+
+        updateValueLabels();
+        render();
+
+        animationFrameId = requestAnimationFrame(runAnimation);
+      }
+
+      function toggleHeatmap() {
+        state.showHeatmap = !state.showHeatmap;
+        heatmapButton.textContent = state.showHeatmap ? '🌈 关闭概率背景' : '🌈 打开概率背景';
+        render();
+      }
+
+      function resetControls() {
+        Object.assign(state, defaults);
+        state.autoPlay = false;
+        syncControlValues();
+        autoPlayButton.textContent = '▶ 自动演示';
+        heatmapButton.textContent = '🌈 关闭概率背景';
+
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+
+        buildDataset();
+      }
+
+      function onSliderInput(event) {
+        readControlValues();
+        if (event.target.id === 'overlap') {
+          buildDataset();
+          return;
+        }
+        render();
+      }
+
+      function addPointFromCanvas(event) {
+        const bounds = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / bounds.width;
+        const scaleY = canvas.height / bounds.height;
+
+        const localX = (event.clientX - bounds.left) * scaleX;
+        const localY = (event.clientY - bounds.top) * scaleY;
+
+        if (localX < padding.left || localX > canvas.width - padding.right || localY < padding.top || localY > canvas.height - padding.bottom) {
+          return;
+        }
+
+        const normalizedX = canvasToNormalizedX(localX);
+        const normalizedY = canvasToNormalizedY(localY);
+        const probability = probabilityClassOne(normalizedX, normalizedY);
+        const sampledLabel = Math.random() < probability ? 1 : 0;
+
+        points.push({
+          normalizedX,
+          normalizedY,
+          label: sampledLabel,
+          isUserPoint: true,
+        });
+
+        render();
+      }
+
+      function reportHeight() {
+        if (window.parent === window) {
+          return;
+        }
+
+        const body = document.body;
+        const root = document.documentElement;
+        const pageHeight = Math.max(
+          body ? body.scrollHeight : 0,
+          body ? body.offsetHeight : 0,
+          root ? root.scrollHeight : 0,
+          root ? root.offsetHeight : 0
+        );
+
+        window.parent.postMessage({ type: 'iframe-height', height: pageHeight }, '*');
+      }
+
+      function bindEvents() {
+        Object.values(controls).forEach((element) => {
+          element.addEventListener('input', onSliderInput);
+        });
+
+        regenerateButton.addEventListener('click', buildDataset);
+        autoPlayButton.addEventListener('click', toggleAutoPlay);
+        heatmapButton.addEventListener('click', toggleHeatmap);
+        resetButton.addEventListener('click', resetControls);
+        canvas.addEventListener('click', addPointFromCanvas);
+        window.addEventListener('resize', reportHeight, { passive: true });
+
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(reportHeight);
+          observer.observe(document.body);
+          observer.observe(document.documentElement);
+        }
+      }
+
+      function initialize() {
+        syncControlValues();
+        bindEvents();
+        buildDataset();
+        reportHeight();
+        setTimeout(reportHeight, 120);
+        setTimeout(reportHeight, 600);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+      } else {
+        initialize();
+      }
+    })();
+  </script>
+</body>
+</html>

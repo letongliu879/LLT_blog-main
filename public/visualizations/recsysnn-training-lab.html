@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecSysNN 训练动态实验</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+    }
+    body {
+      background: radial-gradient(circle at 20% 10%, #0f3b63 0%, #020617 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+      padding: 20px;
+    }
+    h1 {
+      font-size: 1.32rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--good));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(2, 6, 23, 0.66);
+    }
+    .controls { display: grid; gap: 12px; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type='range'] { width: 100%; accent-color: var(--primary); }
+    .value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.52);
+      padding: 10px;
+      text-align: center;
+    }
+    .kpi-card .label { color: var(--muted); font-size: 0.72rem; margin-bottom: 4px; }
+    .kpi-card .num {
+      color: var(--warn);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .hint {
+      margin-top: 10px;
+      color: #cbd5e1;
+      font-size: 0.84rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>训练损失曲线实验</h1>
+    <p class="sub">
+      模拟训练中损失下降过程，直观看到学习率、正则化强度与收敛稳定性的关系。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <canvas id="lossChart" width="660" height="420"></canvas>
+      </section>
+      <section class="panel controls">
+        <div>
+          <label>学习率 lr <span id="lrVal" class="value">0.10</span></label>
+          <input id="lr" type="range" min="0.01" max="0.40" step="0.01" value="0.10" />
+        </div>
+        <div>
+          <label>正则化 λ <span id="lamVal" class="value">1.0</span></label>
+          <input id="lam" type="range" min="0.0" max="4.0" step="0.1" value="1.0" />
+        </div>
+        <div>
+          <label>训练轮次 epoch <span id="epVal" class="value">120</span></label>
+          <input id="ep" type="range" min="40" max="240" step="10" value="120" />
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-card">
+            <div class="label">初始损失</div>
+            <div id="startLoss" class="num">0.000</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">最终损失</div>
+            <div id="endLoss" class="num">0.000</div>
+          </div>
+        </div>
+
+        <p class="hint">
+          如果学习率过大，曲线会出现明显震荡；如果正则过大，曲线虽稳定但最终损失会偏高。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('lossChart');
+    const ctx = canvas.getContext('2d');
+
+    const lrInput = document.getElementById('lr');
+    const lamInput = document.getElementById('lam');
+    const epInput = document.getElementById('ep');
+
+    const lrVal = document.getElementById('lrVal');
+    const lamVal = document.getElementById('lamVal');
+    const epVal = document.getElementById('epVal');
+
+    const startLossEl = document.getElementById('startLoss');
+    const endLossEl = document.getElementById('endLoss');
+
+    function genCurve(lr, lam, epochs) {
+      const out = [];
+      let v = 2.6 + lam * 0.22;
+      for (let i = 0; i < epochs; i++) {
+        const decay = Math.exp(-i * (0.035 + lr * 0.18));
+        const floor = 0.22 + lam * 0.11;
+        const noise = (Math.sin(i * 0.25) * 0.04 + Math.cos(i * 0.08) * 0.02) * (1 + lr * 1.5);
+        const jump = lr > 0.24 ? Math.sin(i * 0.6) * 0.14 : 0;
+        v = floor + (2.4 - floor) * decay + noise + jump;
+        out.push(Math.max(0.06, v));
+      }
+      return out;
+    }
+
+    function drawAxes() {
+      ctx.strokeStyle = 'rgba(148,163,184,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(48, canvas.height - 36);
+      ctx.lineTo(canvas.width - 24, canvas.height - 36);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(48, canvas.height - 36);
+      ctx.lineTo(48, 22);
+      ctx.stroke();
+    }
+
+    function drawCurve(curve) {
+      const maxY = Math.max(...curve);
+      const minY = Math.min(...curve);
+      const pad = 0.15;
+      const top = maxY + pad;
+      const bot = Math.max(0, minY - pad);
+      const w = canvas.width - 72;
+      const h = canvas.height - 72;
+
+      ctx.beginPath();
+      curve.forEach((v, i) => {
+        const x = 48 + (i / (curve.length - 1)) * w;
+        const y = canvas.height - 36 - ((v - bot) / (top - bot)) * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+    }
+
+    function update() {
+      const lr = Number(lrInput.value);
+      const lam = Number(lamInput.value);
+      const epochs = Number(epInput.value);
+      const curve = genCurve(lr, lam, epochs);
+
+      lrVal.textContent = lr.toFixed(2);
+      lamVal.textContent = lam.toFixed(1);
+      epVal.textContent = String(epochs);
+      startLossEl.textContent = curve[0].toFixed(3);
+      endLossEl.textContent = curve[curve.length - 1].toFixed(3);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAxes();
+      drawCurve(curve);
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    [lrInput, lamInput, epInput].forEach((el) => el.addEventListener('input', update));
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

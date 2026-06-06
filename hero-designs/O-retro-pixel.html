@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案O：复古像素风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    .pixel { font-family: 'Press Start 2P', cursive; }
+    .vt { font-family: 'VT323', monospace; }
+    body { image-rendering: pixelated; }
+    .scanlines { background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px); pointer-events: none; }
+    .blink { animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .pixel-border { box-shadow: 4px 0 0 0 currentColor, -4px 0 0 0 currentColor, 0 4px 0 0 currentColor, 0 -4px 0 0 currentColor; }
+    .float { animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .typing { overflow: hidden; border-right: 4px solid #00ff00; white-space: nowrap; animation: typing 2s steps(20) 1s forwards, cursor 0.5s step-end infinite; width: 0; }
+    @keyframes typing { from{width:0} to{width:100%} }
+    @keyframes cursor { 0%,100%{border-color:#00ff00} 50%{border-color:transparent} }
+  </style>
+</head>
+<body class="bg-[#0a0a0a] text-[#00ff00] min-h-screen relative overflow-x-hidden">
+  <!-- 扫描线效果 -->
+  <div class="fixed inset-0 scanlines z-50 pointer-events-none"></div>
+
+  <!-- CRT 边框效果 -->
+  <div class="fixed inset-0 pointer-events-none" style="box-shadow: inset 0 0 100px rgba(0,0,0,0.5);"></div>
+
+  <!-- 导航 -->
+  <nav class="border-b-4 border-[#00ff00]/30">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <span class="pixel text-sm">ALLEN.EXE</span>
+      <div class="flex items-center gap-6 vt text-xl">
+        <a href="#" class="hover:text-white transition-colors">[BLOG]</a>
+        <a href="#" class="hover:text-white transition-colors">[PROJECTS]</a>
+        <a href="#" class="hover:text-white transition-colors">[TAGS]</a>
+        <a href="#" class="hover:text-white transition-colors">[ABOUT]</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-6 py-12">
+    <!-- 系统启动 -->
+    <section class="mb-16">
+      <div class="vt text-xl text-[#00ff00]/60 mb-4">
+        > SYSTEM BOOT...<br>
+        > LOADING USER PROFILE...<br>
+        > <span class="text-[#00ff00]">SUCCESS!</span>
+      </div>
+
+      <div class="border-4 border-[#00ff00] p-8 relative">
+        <div class="absolute -top-3 left-4 bg-[#0a0a0a] px-2 pixel text-xs">
+          USER_INFO.DAT
+        </div>
+
+        <div class="flex items-start gap-8">
+          <!-- ASCII 头像 -->
+          <div class="vt text-lg leading-none text-[#00ff00]/80 float">
+            <pre>
+  ████████
+ ██      ██
+██  ●  ●  ██
+██    ▽   ██
+ ██      ██
+  ████████
+            </pre>
+          </div>
+
+          <div>
+            <h1 class="pixel text-2xl mb-4 leading-relaxed">
+              ALLEN WANG
+            </h1>
+            <div class="vt text-2xl space-y-2 text-[#00ff00]/80">
+              <p>> CLASS: RPA_DEVELOPER</p>
+              <p>> GUILD: CAPGEMINI</p>
+              <p>> LEVEL: <span class="text-yellow-400">★★★</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 vt text-xl">
+          <p class="typing inline-block max-w-full">
+            探索 AI、机器学习与自动化技术...
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 状态栏 -->
+    <section class="grid grid-cols-4 gap-4 mb-16">
+      <div class="border-2 border-[#00ff00]/50 p-4 text-center">
+        <div class="pixel text-xs text-[#00ff00]/50 mb-2">ARTICLES</div>
+        <div class="pixel text-2xl text-cyan-400">050</div>
+        <div class="mt-2 h-2 bg-[#00ff00]/20">
+          <div class="h-full bg-cyan-400" style="width:75%"></div>
+        </div>
+      </div>
+      <div class="border-2 border-[#00ff00]/50 p-4 text-center">
+        <div class="pixel text-xs text-[#00ff00]/50 mb-2">TAGS</div>
+        <div class="pixel text-2xl text-yellow-400">051</div>
+        <div class="mt-2 h-2 bg-[#00ff00]/20">
+          <div class="h-full bg-yellow-400" style="width:80%"></div>
+        </div>
+      </div>
+      <div class="border-2 border-[#00ff00]/50 p-4 text-center">
+        <div class="pixel text-xs text-[#00ff00]/50 mb-2">PROJECTS</div>
+        <div class="pixel text-2xl text-pink-400">010</div>
+        <div class="mt-2 h-2 bg-[#00ff00]/20">
+          <div class="h-full bg-pink-400" style="width:50%"></div>
+        </div>
+      </div>
+      <div class="border-2 border-[#00ff00]/50 p-4 text-center">
+        <div class="pixel text-xs text-[#00ff00]/50 mb-2">EXP_YEARS</div>
+        <div class="pixel text-2xl text-[#00ff00]">003</div>
+        <div class="mt-2 h-2 bg-[#00ff00]/20">
+          <div class="h-full bg-[#00ff00]" style="width:30%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 任务列表 -->
+    <section class="mb-16">
+      <div class="pixel text-sm mb-6 flex items-center gap-2">
+        <span class="blink">▶</span> QUEST_LOG
+      </div>
+
+      <div class="space-y-4">
+        <a href="#" class="block border-2 border-[#00ff00]/30 p-4 hover:border-[#00ff00] hover:bg-[#00ff00]/5 transition-all group">
+          <div class="flex items-center gap-4">
+            <span class="vt text-xl text-yellow-400">[NEW!]</span>
+            <div class="flex-1">
+              <div class="pixel text-xs mb-2 group-hover:text-white transition-colors">
+                深夜胡言：一个程序员在AI时代的身份危机
+              </div>
+              <div class="vt text-lg text-[#00ff00]/50">
+                2026.01.25 | CATEGORY: 随笔 | READ_TIME: 59min
+              </div>
+            </div>
+            <span class="vt text-2xl text-[#00ff00]/30 group-hover:text-[#00ff00] transition-colors">►</span>
+          </div>
+        </a>
+        <a href="#" class="block border-2 border-[#00ff00]/30 p-4 hover:border-[#00ff00] hover:bg-[#00ff00]/5 transition-all group">
+          <div class="flex items-center gap-4">
+            <span class="vt text-xl text-cyan-400">[TECH]</span>
+            <div class="flex-1">
+              <div class="pixel text-xs mb-2 group-hover:text-white transition-colors">
+                LANGGRAPH REFLECTION AGENTS 完全指南
+              </div>
+              <div class="vt text-lg text-[#00ff00]/50">
+                2026.01.22 | CATEGORY: ML | READ_TIME: 29min
+              </div>
+            </div>
+            <span class="vt text-2xl text-[#00ff00]/30 group-hover:text-[#00ff00] transition-colors">►</span>
+          </div>
+        </a>
+        <a href="#" class="block border-2 border-[#00ff00]/30 p-4 hover:border-[#00ff00] hover:bg-[#00ff00]/5 transition-all group">
+          <div class="flex items-center gap-4">
+            <span class="vt text-xl text-pink-400">[RL]</span>
+            <div class="flex-1">
+              <div class="pixel text-xs mb-2 group-hover:text-white transition-colors">
+                基于深度Q学习的月球着陆
+              </div>
+              <div class="vt text-lg text-[#00ff00]/50">
+                2026.01.18 | CATEGORY: RL | READ_TIME: 15min
+              </div>
+            </div>
+            <span class="vt text-2xl text-[#00ff00]/30 group-hover:text-[#00ff00] transition-colors">►</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 技能 -->
+    <section>
+      <div class="pixel text-sm mb-6 flex items-center gap-2">
+        <span class="blink">▶</span> SKILL_TREE
+      </div>
+      <div class="flex flex-wrap gap-3 vt text-xl">
+        <span class="px-3 py-1 border border-cyan-400 text-cyan-400">PYTHON ★★★</span>
+        <span class="px-3 py-1 border border-yellow-400 text-yellow-400">TENSORFLOW ★★☆</span>
+        <span class="px-3 py-1 border border-pink-400 text-pink-400">PYTORCH ★★☆</span>
+        <span class="px-3 py-1 border border-[#00ff00] text-[#00ff00]">LANGCHAIN ★★★</span>
+        <span class="px-3 py-1 border border-purple-400 text-purple-400">REACT ★★☆</span>
+        <span class="px-3 py-1 border border-blue-400 text-blue-400">TYPESCRIPT ★★☆</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t-4 border-[#00ff00]/30 mt-16">
+    <div class="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
+      <span class="vt text-xl text-[#00ff00]/50">© 2026 ALLEN.EXE v3.0</span>
+      <div class="flex items-center gap-4 vt text-xl">
+        <a href="#" class="hover:text-white transition-colors">[GITHUB]</a>
+        <a href="#" class="hover:text-white transition-colors">[LINKEDIN]</a>
+        <span class="blink">_</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

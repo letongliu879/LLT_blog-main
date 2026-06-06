@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QLoRA 量化可视化</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-card-hover: #253349;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-bright: #f8fafc;
+    --primary: #3b82f6; --accent: #10b981; --highlight: #f59e0b;
+    --quant: #06b6d4; --purple: #8b5cf6; --red: #ef4444;
+    --glow-primary: 0 0 20px rgba(59,130,246,0.3); --glow-accent: 0 0 20px rgba(16,185,129,0.3);
+    --glow-quant: 0 0 20px rgba(6,182,212,0.4); --glow-highlight: 0 0 20px rgba(245,158,11,0.3);
+  }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    overflow-x: hidden; padding: 24px; min-height: 0;
+  }
+  h1 { font-size: 2rem; text-align: center; margin-bottom: 8px; color: var(--text-bright);
+    background: linear-gradient(135deg, var(--quant), var(--primary), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 32px; font-size: 0.95rem; }
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: var(--text-bright);
+    display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: ''; width: 4px; height: 24px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--primary), var(--quant)); }
+  .glass {
+    background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(30,41,59,0.5));
+    border: 1px solid rgba(148,163,184,0.1); border-radius: 16px;
+    backdrop-filter: blur(12px); padding: 24px; position: relative; overflow: hidden;
+  }
+  .glass::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148,163,184,0.2), transparent); }
+
+  /* === Precision Tower === */
+  .tower { display: flex; flex-direction: column; gap: 12px; }
+  .tower-level {
+    display: grid; grid-template-columns: 100px 1fr 120px 100px; gap: 16px;
+    align-items: center; padding: 16px 20px; border-radius: 12px; cursor: pointer;
+    background: rgba(15,23,42,0.6); border: 1px solid rgba(148,163,184,0.08);
+    transition: all 0.4s ease; position: relative;
+  }
+  .tower-level:hover { transform: translateX(4px); border-color: rgba(148,163,184,0.2); }
+  .tower-level.active { border-color: var(--quant); box-shadow: var(--glow-quant); }
+  .tower-level.nf4-level { border-color: rgba(6,182,212,0.3); background: rgba(6,182,212,0.05); }
+  .level-badge {
+    font-weight: 700; font-size: 0.85rem; padding: 4px 12px; border-radius: 6px;
+    text-align: center; white-space: nowrap;
+  }
+  .fp32 .level-badge { background: rgba(239,68,68,0.15); color: var(--red); }
+  .fp16 .level-badge { background: rgba(245,158,11,0.15); color: var(--highlight); }
+  .int8 .level-badge { background: rgba(59,130,246,0.15); color: var(--primary); }
+  .nf4 .level-badge { background: rgba(6,182,212,0.15); color: var(--quant); }
+  .bits-row { display: flex; gap: 2px; flex-wrap: wrap; align-items: center; }
+  .bit { width: 8px; height: 18px; border-radius: 2px; transition: all 0.5s ease; opacity: 0; animation: bitAppear 0.3s forwards; }
+  @keyframes bitAppear { to { opacity: 1; } }
+  .fp32 .bit { background: var(--red); }
+  .fp16 .bit { background: var(--highlight); }
+  .int8 .bit { background: var(--primary); }
+  .nf4 .bit { background: var(--quant); box-shadow: 0 0 6px rgba(6,182,212,0.5); }
+  .mem-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .mem-bar { height: 8px; border-radius: 4px; background: rgba(148,163,184,0.1); overflow: hidden; }
+  .mem-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .fp32 .mem-bar-fill { background: linear-gradient(90deg, var(--red), #f87171); }
+  .fp16 .mem-bar-fill { background: linear-gradient(90deg, var(--highlight), #fbbf24); }
+  .int8 .mem-bar-fill { background: linear-gradient(90deg, var(--primary), #60a5fa); }
+  .nf4 .mem-bar-fill { background: linear-gradient(90deg, var(--quant), #22d3ee); }
+  .mem-label { font-size: 0.75rem; color: var(--text-dim); }
+  .mem-value { font-size: 0.9rem; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .level-detail {
+    grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid rgba(148,163,184,0.1);
+    font-size: 0.85rem; color: var(--text-dim); line-height: 1.7;
+    max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease;
+  }
+  .tower-level.expanded .level-detail { max-height: 200px; padding-top: 12px; }
+  .value-repr { font-family: 'Courier New', monospace; font-size: 0.95rem; color: var(--text-bright); }
+
+  /* === NF4 Distribution === */
+  .nf4-section { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+  .canvas-wrap { position: relative; }
+  #nf4Canvas { width: 100%; border-radius: 8px; cursor: crosshair; }
+  .nf4-info { display: flex; flex-direction: column; gap: 12px; }
+  .nf4-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.8; }
+  .nf4-levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .nf4-level-chip {
+    padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; text-align: center;
+    background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.2);
+    color: var(--quant); font-family: monospace; transition: all 0.3s ease;
+  }
+  .nf4-level-chip.active { background: rgba(6,182,212,0.3); box-shadow: var(--glow-quant); transform: scale(1.1); }
+  .click-hint { font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-top: 8px; font-style: italic; }
+  .mapped-value {
+    padding: 12px 16px; border-radius: 8px; background: rgba(6,182,212,0.08);
+    border: 1px solid rgba(6,182,212,0.15); font-size: 0.85rem; min-height: 64px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .mapped-value strong { color: var(--quant); }
+
+  /* === Architecture === */
+  .arch-container { position: relative; min-height: 340px; }
+  #archCanvas { width: 100%; border-radius: 8px; }
+  .arch-legend { display: flex; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* === Innovations === */
+  .innovations { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .inno-card {
+    padding: 24px; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(30,41,59,0.5));
+    border: 1px solid rgba(148,163,184,0.1); transition: all 0.4s ease;
+    position: relative; overflow: hidden;
+  }
+  .inno-card:hover { transform: translateY(-4px); border-color: rgba(148,163,184,0.25); }
+  .inno-card .inno-icon {
+    width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.3rem; margin-bottom: 14px;
+  }
+  .inno-card:nth-child(1) .inno-icon { background: rgba(6,182,212,0.15); }
+  .inno-card:nth-child(2) .inno-icon { background: rgba(139,92,246,0.15); }
+  .inno-card:nth-child(3) .inno-icon { background: rgba(16,185,129,0.15); }
+  .inno-card h3 { font-size: 1rem; margin-bottom: 8px; color: var(--text-bright); }
+  .inno-card p { font-size: 0.85rem; color: var(--text-dim); line-height: 1.7; }
+  .inno-anim { height: 80px; margin-top: 14px; position: relative; border-radius: 8px;
+    background: rgba(15,23,42,0.6); overflow: hidden; }
+
+  /* Double Quant nested boxes */
+  .double-quant-box {
+    position: absolute; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; font-size: 0.7rem; font-weight: 600; transition: all 1.5s ease;
+  }
+  .dq-outer { width: 80%; height: 60px; top: 10px; left: 10%; border: 2px solid var(--purple);
+    background: rgba(139,92,246,0.08); }
+  .dq-inner { width: 50%; height: 36px; top: 22px; left: 25%; border: 2px solid var(--quant);
+    background: rgba(6,182,212,0.12); z-index: 2; }
+  .dq-label { position: absolute; bottom: 2px; font-size: 0.65rem; color: var(--text-dim); width: 100%; text-align: center; }
+
+  /* Paged optimizer arrows */
+  .paged-anim { display: flex; align-items: center; justify-content: center; height: 100%; gap: 6px; }
+  .mem-block { width: 64px; height: 48px; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+  .gpu-block { background: rgba(16,185,129,0.15); border: 1px solid var(--accent); color: var(--accent); }
+  .cpu-block { background: rgba(59,130,246,0.15); border: 1px solid var(--primary); color: var(--primary); }
+  .swap-arrows { display: flex; flex-direction: column; gap: 4px; }
+  .swap-arrow { font-size: 1rem; animation: swapPulse 2s ease-in-out infinite; }
+  .swap-arrow:nth-child(2) { animation-delay: 1s; }
+  @keyframes swapPulse {
+    0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
+    50% { opacity: 1; transform: scaleX(1.2); }
+  }
+
+  /* === Calculator === */
+  .calc-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .calc-btn {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.15);
+    background: rgba(15,23,42,0.6); color: var(--text); cursor: pointer;
+    font-size: 0.9rem; transition: all 0.3s ease; font-family: inherit;
+  }
+  .calc-btn:hover { border-color: var(--primary); }
+  .calc-btn.active { background: rgba(59,130,246,0.15); border-color: var(--primary); color: var(--primary);
+    box-shadow: var(--glow-primary); }
+  .calc-bars { display: flex; flex-direction: column; gap: 16px; }
+  .calc-row { display: grid; grid-template-columns: 120px 1fr 100px; gap: 16px; align-items: center; }
+  .calc-bar-label { font-size: 0.85rem; font-weight: 600; }
+  .calc-bar-outer { height: 32px; background: rgba(148,163,184,0.06); border-radius: 8px;
+    overflow: hidden; position: relative; }
+  .calc-bar-inner { height: 100%; border-radius: 8px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    display: flex; align-items: center; padding-left: 12px; font-size: 0.8rem; font-weight: 600;
+    color: rgba(255,255,255,0.9); min-width: fit-content; }
+  .calc-bar-fp32 { background: linear-gradient(90deg, var(--red), #f87171); }
+  .calc-bar-fp16 { background: linear-gradient(90deg, var(--highlight), #fbbf24); }
+  .calc-bar-qlora { background: linear-gradient(90deg, var(--quant), #22d3ee); }
+  .calc-gb { font-size: 1rem; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .savings-badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px;
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--accent);
+    font-weight: 700; font-size: 1.1rem; margin-top: 16px;
+  }
+  .savings-label { font-size: 0.85rem; font-weight: 400; color: var(--text-dim); margin-right: 8px; }
+
+  /* Animations */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .section { animation: fadeUp 0.6s ease forwards; }
+  .section:nth-child(2) { animation-delay: 0.1s; }
+  .section:nth-child(3) { animation-delay: 0.2s; }
+  .section:nth-child(4) { animation-delay: 0.3s; }
+  .section:nth-child(5) { animation-delay: 0.4s; }
+  .section:nth-child(6) { animation-delay: 0.5s; }
+
+  /* NF4 mini animation in card */
+  .nf4-mini-curve { position: relative; height: 100%; }
+  .nf4-mini-curve canvas { width: 100%; height: 100%; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    body { padding: 16px; }
+    h1 { font-size: 1.5rem; }
+    .tower-level { grid-template-columns: 80px 1fr 80px; gap: 8px; padding: 12px; }
+    .mem-value { display: none; }
+    .nf4-section { grid-template-columns: 1fr; }
+    .calc-row { grid-template-columns: 80px 1fr 60px; }
+    .innovations { grid-template-columns: 1fr; }
+    .arch-legend { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<h1>QLoRA 量化可视化</h1>
+<p class="subtitle">4-bit 量化 + 低秩自适应 -- 让大模型微调触手可及</p>
+
+<!-- Section 1: Precision Tower -->
+<div class="section">
+  <div class="section-title">精度对比塔</div>
+  <div class="glass">
+    <div class="tower" id="precisionTower"></div>
+  </div>
+</div>
+
+<!-- Section 2: NF4 Distribution -->
+<div class="section">
+  <div class="section-title">NF4 正态分布量化</div>
+  <div class="glass">
+    <div class="nf4-section">
+      <div class="canvas-wrap">
+        <canvas id="nf4Canvas" height="280"></canvas>
+        <p class="click-hint">点击曲线区域查看值映射到哪个 NF4 量化级别</p>
+      </div>
+      <div class="nf4-info">
+        <div class="nf4-desc">
+          <strong style="color:var(--quant)">NF4</strong> 基于正态分布假设，将 16 个量化级别按分位数分配，使得每个区间内的概率质量相等，从而最小化量化误差。
+        </div>
+        <div class="nf4-levels" id="nf4Levels"></div>
+        <div class="mapped-value" id="mappedValue">
+          <span style="color:var(--text-dim)">点击左侧分布曲线查看映射结果</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Architecture -->
+<div class="section">
+  <div class="section-title">QLoRA 架构流程</div>
+  <div class="glass">
+    <div class="arch-container">
+      <canvas id="archCanvas" height="320"></canvas>
+    </div>
+    <div class="arch-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--quant)"></div>4-bit 量化基模型</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>LoRA 适配器 (A/B)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>前向传播</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--highlight)"></div>反向传播 (仅 LoRA)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 4: Three Innovations -->
+<div class="section">
+  <div class="section-title">三大核心创新</div>
+  <div class="innovations">
+    <div class="inno-card">
+      <div class="inno-icon" style="color:var(--quant)">N4</div>
+      <h3 style="color:var(--quant)">NF4 量化</h3>
+      <p>信息论最优的 4-bit 数据类型，量化级别按正态分布的分位数放置，完美匹配预训练权重分布。</p>
+      <div class="inno-anim"><div class="nf4-mini-curve"><canvas id="nf4MiniCanvas"></canvas></div></div>
+    </div>
+    <div class="inno-card">
+      <div class="inno-icon" style="color:var(--purple)">Q2</div>
+      <h3 style="color:var(--purple)">双重量化</h3>
+      <p>对量化常数再次量化，将额外的内存开销从每个参数 0.5 bit 降低至 0.127 bit。</p>
+      <div class="inno-anim">
+        <div class="double-quant-box dq-outer">FP32 量化常数<div class="dq-label">第一次量化</div></div>
+        <div class="double-quant-box dq-inner" id="dqInner">FP8 常数<div class="dq-label">第二次量化</div></div>
+      </div>
+    </div>
+    <div class="inno-card">
+      <div class="inno-icon" style="color:var(--accent)">PM</div>
+      <h3 style="color:var(--accent)">分页优化器</h3>
+      <p>利用 NVIDIA 统一内存，当 GPU 显存不足时自动将优化器状态卸载到 CPU 内存。</p>
+      <div class="inno-anim">
+        <div class="paged-anim">
+          <div class="mem-block gpu-block">GPU</div>
+          <div class="swap-arrows"><span class="swap-arrow" style="color:var(--accent)">&#10140;</span><span class="swap-arrow" style="color:var(--primary)">&#10140;</span></div>
+          <div class="mem-block cpu-block">CPU</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 5: Memory Calculator -->
+<div class="section">
+  <div class="section-title">显存节省计算器</div>
+  <div class="glass">
+    <div class="calc-controls" id="calcControls"></div>
+    <div class="calc-bars" id="calcBars"></div>
+    <div id="savingsBadge"></div>
+  </div>
+</div>
+
+<script>
+/* ========== Precision Tower ========== */
+const towerData = [
+  { id:'fp32', cls:'fp32', label:'FP32', bits:32, value:'3.141592653589793', mem:28, color:'#ef4444',
+    detail:'FP32 使用 1 位符号 + 8 位指数 + 23 位尾数，能精确表示约 7 位有效十进制数。对 7B 模型全参数微调需约 28GB 显存（参数 + 梯度 + 优化器状态）。' },
+  { id:'fp16', cls:'fp16', label:'FP16', bits:16, value:'3.14159', mem:14, color:'#f59e0b',
+    detail:'FP16 使用 1 位符号 + 5 位指数 + 10 位尾数，精度降至约 3-4 位有效数字。混合精度训练可将显存需求减半，但仍需存储 FP32 主副本。' },
+  { id:'int8', cls:'int8', label:'INT8', bits:8, value:'3', mem:7, color:'#3b82f6',
+    detail:'INT8 将浮点值线性映射到 [-128, 127] 范围的整数。LLM.int8() 方法通过分离离群特征保持精度，显存进一步减半。' },
+  { id:'nf4', cls:'nf4 nf4-level', label:'NF4', bits:4, value:'\u22483', mem:3.5, color:'#06b6d4',
+    detail:'NF4 (4-bit NormalFloat) 是 QLoRA 的核心创新：16 个量化级别按正态分布分位数放置，对预训练权重实现信息论最优量化。配合 LoRA 仅需约 3.5GB 即可微调 7B 模型。' }
+];
+
+function buildTower() {
+  const tower = document.getElementById('precisionTower');
+  const maxMem = 28;
+  towerData.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = `tower-level ${d.cls}`;
+    let bitsHtml = '';
+    for (let b = 0; b < d.bits; b++) {
+      bitsHtml += `<div class="bit" style="animation-delay:${b * 30 + i * 100}ms"></div>`;
+    }
+    const pct = (d.mem / maxMem * 100).toFixed(0);
+    el.innerHTML = `
+      <div class="level-badge">${d.label} (${d.bits}-bit)</div>
+      <div><span class="value-repr">${d.value}</span><div class="bits-row" style="margin-top:6px">${bitsHtml}</div></div>
+      <div class="mem-bar-wrap"><div class="mem-bar"><div class="mem-bar-fill" style="width:0%"></div></div><div class="mem-label">7B 模型显存</div></div>
+      <div class="mem-value" style="color:${d.color}">${d.mem} GB</div>
+      <div class="level-detail">${d.detail}</div>`;
+    el.addEventListener('click', () => el.classList.toggle('expanded'));
+    tower.appendChild(el);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        el.querySelector('.mem-bar-fill').style.width = pct + '%';
+      }, 300 + i * 200);
+    });
+  });
+}
+buildTower();
+
+/* ========== NF4 Normal Distribution ========== */
+const NF4_LEVELS = [-1.0, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0911, 0.0,
+                     0.0796, 0.1609, 0.2461, 0.3379, 0.4407, 0.5626, 0.7230, 1.0];
+
+function gaussianPDF(x, mu, sigma) {
+  return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+}
+
+function drawNF4(canvas, highlight) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const mu = 0, sigma = 0.4, xMin = -1.5, xMax = 1.5;
+  const toX = v => (v - xMin) / (xMax - xMin) * W;
+  const toY = v => H - 30 - v / gaussianPDF(0, mu, sigma) * (H - 60);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(148,163,184,0.08)'; ctx.lineWidth = 1;
+  for (let gx = -1.5; gx <= 1.5; gx += 0.5) {
+    const px = toX(gx); ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, H - 20); ctx.stroke();
+  }
+
+  // Curve fill
+  ctx.beginPath(); ctx.moveTo(toX(xMin), H - 30);
+  for (let x = xMin; x <= xMax; x += 0.01) { ctx.lineTo(toX(x), toY(gaussianPDF(x, mu, sigma))); }
+  ctx.lineTo(toX(xMax), H - 30); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(6,182,212,0.15)'); grad.addColorStop(1, 'rgba(6,182,212,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Curve stroke
+  ctx.beginPath();
+  for (let x = xMin; x <= xMax; x += 0.005) {
+    const px = toX(x), py = toY(gaussianPDF(x, mu, sigma));
+    x === xMin ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Quantization levels
+  NF4_LEVELS.forEach((lv, i) => {
+    const px = toX(lv), py = toY(gaussianPDF(lv, mu, sigma));
+    const isHL = highlight === i;
+    ctx.beginPath(); ctx.arc(px, py, isHL ? 7 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = isHL ? '#22d3ee' : 'rgba(6,182,212,0.7)'; ctx.fill();
+    if (isHL) { ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, H - 30);
+      ctx.strokeStyle = 'rgba(6,182,212,0.5)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+    }
+  });
+
+  // Axis labels
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+  for (let gx = -1.5; gx <= 1.5; gx += 0.5) { ctx.fillText(gx.toFixed(1), toX(gx), H - 6); }
+  ctx.fillText('权重值', W / 2, H);
+}
+
+function initNF4Canvas() {
+  const canvas = document.getElementById('nf4Canvas');
+  canvas.width = canvas.parentElement.offsetWidth;
+  drawNF4(canvas, -1);
+  // Build level chips
+  const cont = document.getElementById('nf4Levels');
+  NF4_LEVELS.forEach((lv, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'nf4-level-chip'; chip.textContent = lv.toFixed(3); chip.dataset.idx = i;
+    cont.appendChild(chip);
+  });
+  canvas.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) / rect.width;
+    const xMin = -1.5, xMax = 1.5;
+    const val = xMin + clickX * (xMax - xMin);
+    let closest = 0, minDist = Infinity;
+    NF4_LEVELS.forEach((lv, i) => { const d = Math.abs(val - lv); if (d < minDist) { minDist = d; closest = i; } });
+    drawNF4(canvas, closest);
+    document.querySelectorAll('.nf4-level-chip').forEach((c, i) => c.classList.toggle('active', i === closest));
+    document.getElementById('mappedValue').innerHTML =
+      `<div>原始值: <strong>${val.toFixed(4)}</strong></div>
+       <div>映射到 NF4 级别 <strong>#${closest}</strong>: <strong>${NF4_LEVELS[closest].toFixed(4)}</strong></div>
+       <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px">量化误差: ${Math.abs(val - NF4_LEVELS[closest]).toFixed(4)}</div>`;
+  });
+}
+initNF4Canvas();
+
+// NF4 mini canvas in innovation card
+function drawMiniNF4() {
+  const c = document.getElementById('nf4MiniCanvas');
+  if (!c) return;
+  const p = c.parentElement; c.width = p.offsetWidth; c.height = p.offsetHeight;
+  const ctx = c.getContext('2d'), W = c.width, H = c.height;
+  const mu = 0, sigma = 0.4, xMin = -1.5, xMax = 1.5;
+  const toX = v => (v - xMin) / (xMax - xMin) * W;
+  const peak = gaussianPDF(0, mu, sigma);
+  const toY = v => H - 8 - (v / peak) * (H - 16);
+  ctx.beginPath();
+  for (let x = xMin; x <= xMax; x += 0.02) {
+    const px = toX(x), py = toY(gaussianPDF(x, mu, sigma));
+    x === xMin ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = 'rgba(6,182,212,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  NF4_LEVELS.forEach(lv => {
+    const px = toX(lv), py = toY(gaussianPDF(lv, mu, sigma));
+    ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2); ctx.fillStyle = '#06b6d4'; ctx.fill();
+  });
+}
+drawMiniNF4();
+
+/* ========== Architecture Diagram ========== */
+let archAnimFrame = 0;
+function drawArch() {
+  const canvas = document.getElementById('archCanvas');
+  canvas.width = canvas.parentElement.offsetWidth;
+  const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  archAnimFrame += 0.015;
+
+  const cx = W / 2, blockW = 140, blockH = 56;
+  // Blocks positions
+  const inputY = 270, baseY = 170, loraAY = 170, loraBY = 170, mergeY = 80, outputY = 20;
+  const baseX = cx - 10, loraAX = cx + 120, loraBX = cx + 260;
+
+  // Helper: rounded rect
+  function rr(x, y, w, h, r, fill, stroke, glow) {
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h / 2, w, h, r);
+    if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 15; }
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  // Helper: label
+  function label(text, x, y, color, size) {
+    ctx.fillStyle = color || '#e2e8f0'; ctx.font = `${size || 13}px system-ui`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y);
+  }
+
+  // Helper: arrow with particles
+  function arrow(x1, y1, x2, y2, color, particleColor) {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+    // Arrowhead
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 8 * Math.cos(angle - 0.4), y2 - 8 * Math.sin(angle - 0.4));
+    ctx.lineTo(x2 - 8 * Math.cos(angle + 0.4), y2 - 8 * Math.sin(angle + 0.4));
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    // Particle
+    const t = (archAnimFrame % 1);
+    const px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = particleColor || color; ctx.fill();
+    ctx.shadowColor = particleColor || color; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Input
+  rr(cx, inputY, 120, 36, 8, 'rgba(148,163,184,0.08)', 'rgba(148,163,184,0.3)');
+  label('输入 X', cx, inputY, '#94a3b8', 12);
+
+  // Base model (quantized)
+  rr(baseX, baseY, blockW, blockH, 10, 'rgba(6,182,212,0.1)', 'rgba(6,182,212,0.5)', 'rgba(6,182,212,0.3)');
+  label('4-bit 量化基模型 W', baseX, baseY - 8, '#06b6d4', 12);
+  label('(NF4 冻结权重)', baseX, baseY + 10, '#0e7490', 10);
+
+  // LoRA A
+  rr(loraAX, loraAY, 80, blockH, 10, 'rgba(139,92,246,0.1)', 'rgba(139,92,246,0.5)', 'rgba(139,92,246,0.3)');
+  label('LoRA A', loraAX, loraAY - 8, '#8b5cf6', 12);
+  label('(d\u00d7r)', loraAX, loraAY + 10, '#7c3aed', 10);
+
+  // LoRA B
+  rr(loraBX, loraBY, 80, blockH, 10, 'rgba(139,92,246,0.1)', 'rgba(139,92,246,0.5)', 'rgba(139,92,246,0.3)');
+  label('LoRA B', loraBX, loraBY - 8, '#8b5cf6', 12);
+  label('(r\u00d7d)', loraBX, loraBY + 10, '#7c3aed', 10);
+
+  // Merge / Add
+  const mergeX = cx + 90;
+  rr(mergeX, mergeY, 60, 36, 18, 'rgba(16,185,129,0.12)', 'rgba(16,185,129,0.5)');
+  label('\u2295 合并', mergeX, mergeY, '#10b981', 12);
+
+  // Output
+  rr(mergeX, outputY, 100, 30, 8, 'rgba(148,163,184,0.08)', 'rgba(148,163,184,0.3)');
+  label('输出 Y', mergeX, outputY, '#94a3b8', 12);
+
+  // Forward arrows (green)
+  const fc = '#10b981', fp = '#34d399';
+  arrow(cx, inputY - 18, baseX, baseY + 28, fc, fp);
+  arrow(cx + 20, inputY - 18, loraAX, loraAY + 28, fc, fp);
+  arrow(baseX, baseY - 28, mergeX - 16, mergeY + 18, fc, fp);
+  arrow(loraAX + 40, loraAY, loraBX - 40, loraBY, fc, fp);
+  arrow(loraBX, loraBY - 28, mergeX + 16, mergeY + 18, fc, fp);
+  arrow(mergeX, mergeY - 18, mergeX, outputY + 15, fc, fp);
+
+  // Backward label
+  const bt = ((archAnimFrame * 0.5) % 1);
+  const bx = loraBX - (loraBX - loraAX) * bt;
+  ctx.fillStyle = 'rgba(245,158,11,0.15)';
+  ctx.fillRect(loraAX - 40, loraAY + 32, loraBX - loraAX + 80, 18);
+  ctx.fillStyle = '#f59e0b'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('\u2190 \u53cd\u5411\u4f20\u64ad\u53ea\u901a\u8fc7 LoRA \u53c2\u6570 \u2192', (loraAX + loraBX) / 2, loraAY + 44);
+  ctx.beginPath(); ctx.arc(bx, loraAY + 41, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#fbbf24'; ctx.fill();
+
+  // "Dequantize" annotation
+  ctx.fillStyle = 'rgba(6,182,212,0.7)'; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('\u2191 \u53cd\u91cf\u5316\u4e3a BF16 \u8ba1\u7b97', baseX + blockW / 2 + 8, baseY - 20);
+
+  requestAnimationFrame(drawArch);
+}
+drawArch();
+
+/* ========== Double Quant animation ========== */
+(function animDQ() {
+  const inner = document.getElementById('dqInner');
+  if (!inner) return;
+  let phase = 0;
+  setInterval(() => {
+    phase = (phase + 1) % 4;
+    if (phase < 2) {
+      inner.style.transform = `scale(${1 - phase * 0.1})`;
+      inner.style.borderColor = phase === 0 ? '#06b6d4' : '#22d3ee';
+    } else {
+      inner.style.transform = `scale(${0.8 + (phase - 2) * 0.1})`;
+      inner.style.borderColor = phase === 2 ? '#22d3ee' : '#06b6d4';
+    }
+  }, 800);
+})();
+
+/* ========== Memory Calculator ========== */
+const modelSizes = [
+  { label: '1B', params: 1 },
+  { label: '3B', params: 3 },
+  { label: '7B', params: 7 },
+  { label: '13B', params: 13 },
+  { label: '70B', params: 70 }
+];
+let selectedModel = 2; // 7B default
+
+function calcMemory(params) {
+  // bytes per param * params (billions) / 1e9 = GB, plus optimizer overhead
+  const fp32Full = params * 4 * 4;    // params + grads + 2x optimizer states (Adam)
+  const fp16Full = params * 2 + params * 2 * 3; // fp16 params + fp32 master + grads + optimizer
+  const qlora = params * 0.5 + params * 0.01 * 2 * 4; // NF4 params + small LoRA in fp16 + optimizer for LoRA
+  return { fp32: fp32Full, fp16: fp16Full, qlora: Math.max(qlora, 0.8) };
+}
+
+function renderCalc() {
+  const controls = document.getElementById('calcControls');
+  controls.innerHTML = '';
+  modelSizes.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'calc-btn' + (i === selectedModel ? ' active' : '');
+    btn.textContent = m.label + ' 参数';
+    btn.onclick = () => { selectedModel = i; renderCalc(); };
+    controls.appendChild(btn);
+  });
+
+  const mem = calcMemory(modelSizes[selectedModel].params);
+  const maxGB = mem.fp32;
+  const bars = document.getElementById('calcBars');
+  const data = [
+    { label: 'FP32 全量微调', gb: mem.fp32, cls: 'calc-bar-fp32', color: '#ef4444' },
+    { label: 'FP16 微调', gb: mem.fp16, cls: 'calc-bar-fp16', color: '#f59e0b' },
+    { label: 'QLoRA', gb: mem.qlora, cls: 'calc-bar-qlora', color: '#06b6d4' }
+  ];
+  bars.innerHTML = '';
+  data.forEach((d, i) => {
+    const row = document.createElement('div');
+    row.className = 'calc-row';
+    const pct = Math.min((d.gb / maxGB) * 100, 100);
+    row.innerHTML = `
+      <div class="calc-bar-label" style="color:${d.color}">${d.label}</div>
+      <div class="calc-bar-outer">
+        <div class="calc-bar-inner ${d.cls}" style="width:0%">${d.gb.toFixed(1)} GB</div>
+      </div>
+      <div class="calc-gb" style="color:${d.color}">${d.gb.toFixed(1)} GB</div>`;
+    bars.appendChild(row);
+    requestAnimationFrame(() => {
+      setTimeout(() => { row.querySelector('.calc-bar-inner').style.width = pct + '%'; }, 100 + i * 150);
+    });
+  });
+
+  const saving = ((1 - mem.qlora / mem.fp32) * 100).toFixed(0);
+  document.getElementById('savingsBadge').innerHTML =
+    `<div class="savings-badge"><span class="savings-label">相比 FP32 全量微调节省</span>${saving}% 显存</div>`;
+}
+renderCalc();
+
+/* ========== Resize handler ========== */
+window.addEventListener('resize', () => {
+  const c1 = document.getElementById('nf4Canvas');
+  c1.width = c1.parentElement.offsetWidth;
+  drawNF4(c1, -1);
+  drawMiniNF4();
+});
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

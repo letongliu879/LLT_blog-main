@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分词流程可视化</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --primary: #3b82f6;
+    --accent: #10b981; --warn: #f59e0b; --pink: #ec4899;
+  }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 0; overflow-x: hidden; padding: 2rem 1rem;
+  }
+  /* --- 粒子背景 --- */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particles span {
+    position: absolute; border-radius: 50%; opacity: 0;
+    animation: drift linear infinite;
+  }
+  @keyframes drift {
+    0%   { opacity: 0; transform: translateY(0) scale(0); }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.6; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(1); }
+  }
+  /* --- 布局 --- */
+  .container { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+  h1 {
+    text-align: center; font-size: 1.6rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: .4rem;
+  }
+  .subtitle { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: 2rem; }
+  /* --- 控制栏 --- */
+  .controls {
+    display: flex; justify-content: center; gap: .5rem;
+    margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .controls button {
+    padding: .45rem 1rem; border: 1px solid var(--border); border-radius: .5rem;
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-size: .8rem; transition: all .25s;
+  }
+  .controls button:hover { border-color: var(--primary); color: var(--primary); }
+  .controls button.active {
+    background: var(--primary); border-color: var(--primary); color: #fff;
+  }
+  /* --- 步骤卡片 --- */
+  .step-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: .75rem; padding: 1.4rem; margin-bottom: .5rem;
+    opacity: 0; transform: translateY(24px);
+    transition: opacity .5s ease, transform .5s ease, border-color .3s;
+  }
+  .step-card.visible { opacity: 1; transform: translateY(0); }
+  .step-card.highlight { border-color: var(--primary); box-shadow: 0 0 20px rgba(59,130,246,.15); }
+  .step-label {
+    font-size: .7rem; font-weight: 600; text-transform: uppercase;
+    color: var(--primary); letter-spacing: .08em; margin-bottom: .5rem;
+  }
+  .step-title { font-size: 1.05rem; font-weight: 600; margin-bottom: .75rem; }
+  .step-desc { font-size: .78rem; color: var(--muted); margin-top: .75rem; line-height: 1.55; }
+  /* --- 箭头连接器 --- */
+  .arrow-connector {
+    display: flex; justify-content: center; padding: .35rem 0;
+    opacity: 0; transition: opacity .4s .2s;
+  }
+  .arrow-connector.visible { opacity: 1; }
+  .arrow-connector svg { width: 24px; height: 28px; }
+  .arrow-connector svg path {
+    stroke: var(--primary); stroke-width: 2; fill: none;
+    stroke-dasharray: 40; stroke-dashoffset: 40;
+    animation: none;
+  }
+  .arrow-connector.visible svg path { animation: drawArrow .6s ease forwards .15s; }
+  @keyframes drawArrow { to { stroke-dashoffset: 0; } }
+  /* --- 原始文本 --- */
+  .raw-text {
+    font-size: 1.15rem; font-weight: 500; padding: .8rem 1.2rem;
+    background: linear-gradient(135deg, rgba(59,130,246,.1), rgba(16,185,129,.08));
+    border-radius: .5rem; border-left: 3px solid var(--primary);
+    font-style: italic;
+  }
+  /* --- 分词 Token 行 --- */
+  .token-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .token-chip {
+    padding: .4rem .75rem; border-radius: .4rem; font-size: .9rem;
+    font-weight: 500; cursor: pointer; transition: all .3s;
+    opacity: 0; transform: scale(.7);
+    border: 1.5px solid transparent; position: relative;
+  }
+  .token-chip.visible { opacity: 1; transform: scale(1); }
+  .token-chip:hover { transform: scale(1.08); }
+  .token-chip.selected { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,.25); }
+  /* token 颜色 */
+  .tc0 { background: rgba(59,130,246,.2); color: #93c5fd; }
+  .tc1 { background: rgba(16,185,129,.2); color: #6ee7b7; }
+  .tc2 { background: rgba(245,158,11,.2); color: #fcd34d; }
+  .tc3 { background: rgba(236,72,153,.2); color: #f9a8d4; }
+  .tc4 { background: rgba(139,92,246,.2); color: #c4b5fd; }
+  /* --- Token ID 映射行 --- */
+  .mapping-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .mapping-item {
+    display: flex; flex-direction: column; align-items: center; gap: .25rem;
+    opacity: 0; transform: translateY(10px); transition: all .4s;
+  }
+  .mapping-item.visible { opacity: 1; transform: translateY(0); }
+  .mapping-item.selected .map-id { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,.2); }
+  .map-token { font-size: .72rem; color: var(--muted); }
+  .map-arrow { font-size: .65rem; color: var(--primary); }
+  .map-id {
+    font-size: .9rem; font-weight: 700; font-family: 'Courier New', monospace;
+    padding: .35rem .65rem; border-radius: .4rem;
+    background: rgba(59,130,246,.12); border: 1.5px solid var(--border);
+    transition: all .3s;
+  }
+  /* --- 注意力掩码 --- */
+  .mask-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .mask-item {
+    display: flex; flex-direction: column; align-items: center; gap: .2rem;
+    opacity: 0; transition: all .35s;
+  }
+  .mask-item.visible { opacity: 1; }
+  .mask-item.selected .mask-val { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,.2); }
+  .mask-token { font-size: .7rem; color: var(--muted); }
+  .mask-val {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem; border-radius: .35rem;
+    background: rgba(16,185,129,.18); color: var(--accent);
+    border: 1.5px solid transparent; transition: all .3s;
+  }
+  /* --- 嵌入向量 --- */
+  .embed-row { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .embed-item {
+    display: flex; flex-direction: column; align-items: center; gap: .3rem;
+    opacity: 0; transition: all .4s;
+  }
+  .embed-item.visible { opacity: 1; }
+  .embed-item.selected .embed-bars { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,.2); }
+  .embed-label { font-size: .68rem; color: var(--muted); }
+  .embed-bars {
+    display: flex; align-items: flex-end; gap: 2px; height: 48px;
+    padding: 4px; background: rgba(255,255,255,.03); border-radius: .35rem;
+    border: 1.5px solid transparent; transition: all .3s;
+  }
+  .embed-bar {
+    width: 5px; border-radius: 2px; transition: height .6s ease;
+  }
+  .embed-dim { font-size: .58rem; color: var(--muted); font-family: monospace; }
+  /* --- 进度指示 --- */
+  .progress-bar {
+    display: flex; justify-content: center; gap: .4rem; margin-bottom: 1.5rem;
+  }
+  .progress-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: all .3s;
+  }
+  .progress-dot.active { background: var(--primary); transform: scale(1.3); }
+  .progress-dot.done { background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+<div class="container">
+  <h1>Tokenization 分词流程可视化</h1>
+  <p class="subtitle">自然语言处理中的文本编码管线 &mdash; 从原始文本到模型输入</p>
+
+  <div class="progress-bar" id="progressBar"></div>
+
+  <div class="controls">
+    <button onclick="goStep(0)">步骤 1</button>
+    <button onclick="goStep(1)">步骤 2</button>
+    <button onclick="goStep(2)">步骤 3</button>
+    <button onclick="goStep(3)">步骤 4</button>
+    <button onclick="goStep(4)">步骤 5</button>
+    <button id="btnAuto" onclick="toggleAuto()">自动播放</button>
+  </div>
+
+  <!-- 步骤 1 -->
+  <div class="step-card" id="s0">
+    <div class="step-label">步骤 1 / 5</div>
+    <div class="step-title">原始文本（Raw Text）</div>
+    <div class="raw-text">"This movie is amazing!"</div>
+    <p class="step-desc">模型接收到一段自然语言文本。文本可以是任何语言，这里以英文为例演示完整分词流程。</p>
+  </div>
+  <div class="arrow-connector" id="a0"><svg viewBox="0 0 24 28"><path d="M12 2 L12 20 M6 16 L12 22 L18 16"/></svg></div>
+
+  <!-- 步骤 2 -->
+  <div class="step-card" id="s1">
+    <div class="step-label">步骤 2 / 5</div>
+    <div class="step-title">分词（Tokenization）</div>
+    <div class="token-row" id="tokenRow"></div>
+    <p class="step-desc">分词器将文本拆分为词元（Token）。常用方法有 BPE、WordPiece、SentencePiece 等子词分词算法。</p>
+  </div>
+  <div class="arrow-connector" id="a1"><svg viewBox="0 0 24 28"><path d="M12 2 L12 20 M6 16 L12 22 L18 16"/></svg></div>
+
+  <!-- 步骤 3 -->
+  <div class="step-card" id="s2">
+    <div class="step-label">步骤 3 / 5</div>
+    <div class="step-title">Token ID 映射</div>
+    <div class="mapping-row" id="mappingRow"></div>
+    <p class="step-desc">每个词元在词表中查找对应的整数索引。词表通常包含 30,000 ~ 100,000 个子词。</p>
+  </div>
+  <div class="arrow-connector" id="a2"><svg viewBox="0 0 24 28"><path d="M12 2 L12 20 M6 16 L12 22 L18 16"/></svg></div>
+
+  <!-- 步骤 4 -->
+  <div class="step-card" id="s3">
+    <div class="step-label">步骤 4 / 5</div>
+    <div class="step-title">注意力掩码（Attention Mask）</div>
+    <div class="mask-row" id="maskRow"></div>
+    <p class="step-desc">注意力掩码标记哪些位置是真实词元（1）、哪些是填充（0），确保模型只关注有效输入。</p>
+  </div>
+  <div class="arrow-connector" id="a3"><svg viewBox="0 0 24 28"><path d="M12 2 L12 20 M6 16 L12 22 L18 16"/></svg></div>
+
+  <!-- 步骤 5 -->
+  <div class="step-card" id="s4">
+    <div class="step-label">步骤 5 / 5</div>
+    <div class="step-title">词嵌入（Embeddings）</div>
+    <div class="embed-row" id="embedRow"></div>
+    <p class="step-desc">Token ID 通过嵌入矩阵转换为高维向量（如 768 维），向量捕获词语的语义信息，送入 Transformer 层。</p>
+  </div>
+</div>
+
+<script>
+  /* ========== 数据 ========== */
+  const TOKENS = ["This", "movie", "is", "amazing", "!"];
+  const IDS    = [1423, 3185, 2003, 6429, 999];
+  const MASKS  = [1, 1, 1, 1, 1];
+  const COLORS = ["tc0","tc1","tc2","tc3","tc4"];
+  const BAR_COLORS = ["#3b82f6","#10b981","#f59e0b","#ec4899","#8b5cf6",
+                      "#06b6d4","#ef4444","#84cc16"];
+  const EMBED_DATA = TOKENS.map(() =>
+    Array.from({length: 8}, () => Math.random() * 0.8 + 0.2)
+  );
+  const TOTAL_STEPS = 5;
+
+  let currentStep = -1;
+  let autoTimer = null;
+  let selectedIdx = -1;
+
+  /* ========== 粒子 ========== */
+  (function initParticles() {
+    const c = document.getElementById("particles");
+    for (let i = 0; i < 30; i++) {
+      const s = document.createElement("span");
+      const size = Math.random() * 4 + 2;
+      s.style.cssText = `
+        width:${size}px;height:${size}px;
+        left:${Math.random()*100}%;top:${Math.random()*100+100}%;
+        background:${["#3b82f6","#10b981","#f59e0b","#8b5cf6"][i%4]};
+        animation-duration:${Math.random()*12+8}s;
+        animation-delay:${Math.random()*10}s;
+      `;
+      c.appendChild(s);
+    }
+  })();
+
+  /* ========== 进度条 ========== */
+  (function initProgress() {
+    const bar = document.getElementById("progressBar");
+    for (let i = 0; i < TOTAL_STEPS; i++) {
+      const d = document.createElement("div");
+      d.className = "progress-dot";
+      d.dataset.idx = i;
+      bar.appendChild(d);
+    }
+  })();
+
+  function updateProgress() {
+    document.querySelectorAll(".progress-dot").forEach((d, i) => {
+      d.classList.toggle("active", i === currentStep);
+      d.classList.toggle("done", i < currentStep);
+    });
+  }
+
+  /* ========== 动态内容构建 ========== */
+  function buildTokens() {
+    const row = document.getElementById("tokenRow");
+    if (row.children.length) return;
+    TOKENS.forEach((t, i) => {
+      const el = document.createElement("div");
+      el.className = `token-chip ${COLORS[i]}`;
+      el.textContent = t;
+      el.dataset.idx = i;
+      el.addEventListener("click", () => selectToken(i));
+      row.appendChild(el);
+    });
+  }
+
+  function buildMapping() {
+    const row = document.getElementById("mappingRow");
+    if (row.children.length) return;
+    TOKENS.forEach((t, i) => {
+      const el = document.createElement("div");
+      el.className = "mapping-item";
+      el.dataset.idx = i;
+      el.innerHTML = `
+        <span class="map-token">${t}</span>
+        <span class="map-arrow">&#x2193;</span>
+        <span class="map-id">${IDS[i]}</span>
+      `;
+      el.addEventListener("click", () => selectToken(i));
+      row.appendChild(el);
+    });
+  }
+
+  function buildMask() {
+    const row = document.getElementById("maskRow");
+    if (row.children.length) return;
+    TOKENS.forEach((t, i) => {
+      const el = document.createElement("div");
+      el.className = "mask-item";
+      el.dataset.idx = i;
+      el.innerHTML = `
+        <span class="mask-token">${t}</span>
+        <span class="mask-val">${MASKS[i]}</span>
+      `;
+      el.addEventListener("click", () => selectToken(i));
+      row.appendChild(el);
+    });
+  }
+
+  function buildEmbeddings() {
+    const row = document.getElementById("embedRow");
+    if (row.children.length) return;
+    TOKENS.forEach((t, i) => {
+      const el = document.createElement("div");
+      el.className = "embed-item";
+      el.dataset.idx = i;
+      const bars = EMBED_DATA[i].map((v, j) =>
+        `<div class="embed-bar" style="height:0;background:${BAR_COLORS[j]}" data-h="${v*40}"></div>`
+      ).join("");
+      el.innerHTML = `
+        <span class="embed-label">${t}</span>
+        <div class="embed-bars">${bars}</div>
+        <span class="embed-dim">768-d</span>
+      `;
+      el.addEventListener("click", () => selectToken(i));
+      row.appendChild(el);
+    });
+  }
+
+  /* ========== 步骤显示 ========== */
+  function showStep(idx) {
+    const card = document.getElementById("s" + idx);
+    card.classList.add("visible");
+
+    if (idx === 1) {
+      buildTokens();
+      document.querySelectorAll("#tokenRow .token-chip").forEach((c, i) => {
+        setTimeout(() => c.classList.add("visible"), i * 120);
+      });
+    }
+    if (idx === 2) {
+      buildMapping();
+      document.querySelectorAll("#mappingRow .mapping-item").forEach((c, i) => {
+        setTimeout(() => c.classList.add("visible"), i * 140);
+      });
+    }
+    if (idx === 3) {
+      buildMask();
+      document.querySelectorAll("#maskRow .mask-item").forEach((c, i) => {
+        setTimeout(() => c.classList.add("visible"), i * 100);
+      });
+    }
+    if (idx === 4) {
+      buildEmbeddings();
+      document.querySelectorAll("#embedRow .embed-item").forEach((c, i) => {
+        setTimeout(() => {
+          c.classList.add("visible");
+          c.querySelectorAll(".embed-bar").forEach(b => {
+            b.style.height = b.dataset.h + "px";
+          });
+        }, i * 150);
+      });
+    }
+
+    if (idx > 0) {
+      const arrow = document.getElementById("a" + (idx - 1));
+      if (arrow) arrow.classList.add("visible");
+    }
+  }
+
+  function hideStepsFrom(idx) {
+    for (let i = idx; i < TOTAL_STEPS; i++) {
+      document.getElementById("s" + i).classList.remove("visible");
+      if (i > 0) {
+        const a = document.getElementById("a" + (i - 1));
+        if (a) a.classList.remove("visible");
+      }
+    }
+  }
+
+  /* ========== 导航 ========== */
+  function goStep(target) {
+    if (target === currentStep) return;
+    if (target > currentStep) {
+      for (let i = currentStep + 1; i <= target; i++) {
+        setTimeout(() => showStep(i), (i - currentStep - 1) * 350);
+      }
+    } else {
+      hideStepsFrom(target + 1);
+    }
+    currentStep = target;
+    updateProgress();
+    updateButtons();
+  }
+
+  function updateButtons() {
+    document.querySelectorAll(".controls button:not(#btnAuto)").forEach((b, i) => {
+      b.classList.toggle("active", i <= currentStep);
+    });
+  }
+
+  /* ========== 自动播放 ========== */
+  function toggleAuto() {
+    const btn = document.getElementById("btnAuto");
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      btn.textContent = "自动播放";
+      btn.classList.remove("active");
+    } else {
+      if (currentStep >= TOTAL_STEPS - 1) {
+        hideStepsFrom(0);
+        currentStep = -1;
+        updateProgress();
+        updateButtons();
+      }
+      btn.textContent = "暂停";
+      btn.classList.add("active");
+      advanceAuto();
+      autoTimer = setInterval(advanceAuto, 1800);
+    }
+  }
+
+  function advanceAuto() {
+    const next = currentStep + 1;
+    if (next >= TOTAL_STEPS) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      const btn = document.getElementById("btnAuto");
+      btn.textContent = "重新播放";
+      btn.classList.remove("active");
+      return;
+    }
+    goStep(next);
+  }
+
+  /* ========== Token 交互高亮 ========== */
+  function selectToken(idx) {
+    if (selectedIdx === idx) { clearSelection(); return; }
+    selectedIdx = idx;
+    clearHighlights();
+
+    document.querySelectorAll("#tokenRow .token-chip").forEach((c, i) =>
+      c.classList.toggle("selected", i === idx));
+    document.querySelectorAll("#mappingRow .mapping-item").forEach((c, i) =>
+      c.classList.toggle("selected", i === idx));
+    document.querySelectorAll("#maskRow .mask-item").forEach((c, i) =>
+      c.classList.toggle("selected", i === idx));
+    document.querySelectorAll("#embedRow .embed-item").forEach((c, i) =>
+      c.classList.toggle("selected", i === idx));
+
+    document.querySelectorAll(".step-card").forEach(c => c.classList.add("highlight"));
+  }
+
+  function clearSelection() {
+    selectedIdx = -1;
+    clearHighlights();
+  }
+
+  function clearHighlights() {
+    document.querySelectorAll(".selected").forEach(e => e.classList.remove("selected"));
+    document.querySelectorAll(".highlight").forEach(e => e.classList.remove("highlight"));
+  }
+
+  /* ========== 暴露到全局 ========== */
+  window.goStep = goStep;
+  window.toggleAuto = toggleAuto;
+  window.selectToken = selectToken;
+
+  /* ========== 初始化 ========== */
+  goStep(0);
+  setTimeout(() => toggleAuto(), 600);
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

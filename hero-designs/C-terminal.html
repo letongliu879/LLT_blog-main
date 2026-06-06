@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案C：终端开发者风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { mono: ['JetBrains Mono','monospace'], sans: ['Noto Sans SC','sans-serif'] } } }
+    }
+  </script>
+  <style>
+    .typing { overflow: hidden; white-space: nowrap; border-right: 2px solid #22c55e; animation: typing 2s steps(25) 0.5s both, blink 0.8s step-end infinite; width: 0; }
+    @keyframes typing { to { width: 100%; } }
+    @keyframes blink { 50% { border-color: transparent; } }
+    .cmd-line { opacity:0; animation: cmdIn 0.3s ease both; }
+    .c1{animation-delay:.2s} .c2{animation-delay:.6s} .c3{animation-delay:1s}
+    .c4{animation-delay:1.4s} .c5{animation-delay:1.8s} .c6{animation-delay:2.2s}
+    @keyframes cmdIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .tab-btn { transition: all 0.2s ease; }
+    .tab-btn:hover, .tab-active { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+  </style>
+</head>
+<body class="bg-[#0e1116] text-gray-300 font-mono min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-4xl">
+    <!-- 终端窗口 -->
+    <div class="rounded-xl border border-gray-700/50 overflow-hidden shadow-2xl shadow-black/40">
+      <!-- 窗口标题栏 -->
+      <div class="flex items-center justify-between bg-[#161b22] px-4 py-3 border-b border-gray-700/50">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+          <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+          <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+        </div>
+        <div class="flex gap-1 text-xs text-gray-500">
+          <button class="tab-active tab-btn px-3 py-1 rounded">allen@blog ~</button>
+          <button class="tab-btn px-3 py-1 rounded">posts</button>
+          <button class="tab-btn px-3 py-1 rounded">projects</button>
+        </div>
+        <div class="w-16"></div>
+      </div>
+
+      <!-- 终端内容 -->
+      <div class="bg-[#0d1117] p-6 md:p-8 space-y-4 text-sm leading-relaxed min-h-[480px]">
+        <!-- whoami -->
+        <div class="cmd-line c1">
+          <span class="text-green-400">allen@blog</span><span class="text-gray-500">:</span><span class="text-blue-400">~</span><span class="text-gray-500">$</span>
+          <span class="text-gray-200 ml-2">whoami</span>
+        </div>
+        <div class="cmd-line c2 pl-0">
+          <p class="text-gray-200 font-sans text-base font-medium">Allen Wang</p>
+          <p class="text-gray-500 font-sans mt-1">RPA Developer @ Capgemini · 机器学习探索者</p>
+        </div>
+
+        <!-- cat intro.md -->
+        <div class="cmd-line c3 mt-6">
+          <span class="text-green-400">allen@blog</span><span class="text-gray-500">:</span><span class="text-blue-400">~</span><span class="text-gray-500">$</span>
+          <span class="text-gray-200 ml-2">cat intro.md</span>
+        </div>
+        <div class="cmd-line c4 pl-0 font-sans">
+          <p class="text-gray-400 leading-relaxed">热爱探索 AI、机器学习与自动化技术。<br/>这个博客记录我的学习笔记、项目经验与技术思考。</p>
+        </div>
+
+        <!-- neofetch style stats -->
+        <div class="cmd-line c5 mt-6">
+          <span class="text-green-400">allen@blog</span><span class="text-gray-500">:</span><span class="text-blue-400">~</span><span class="text-gray-500">$</span>
+          <span class="text-gray-200 ml-2">neofetch --blog</span>
+        </div>
+        <div class="cmd-line c6 pl-0">
+          <div class="grid grid-cols-2 gap-x-8 gap-y-2 mt-2 max-w-md">
+            <div class="flex gap-3">
+              <span class="text-blue-400 w-16 text-right">posts:</span>
+              <span class="text-gray-200">50+</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="text-blue-400 w-16 text-right">tags:</span>
+              <span class="text-gray-200">51</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="text-blue-400 w-16 text-right">projects:</span>
+              <span class="text-gray-200">10+</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="text-blue-400 w-16 text-right">uptime:</span>
+              <span class="text-gray-200">3+ years</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="text-purple-400 w-16 text-right">stack:</span>
+              <span class="text-gray-200">Python, TensorFlow, React</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="text-purple-400 w-16 text-right">focus:</span>
+              <span class="text-gray-200">ML, DL, Automation</span>
+            </div>
+          </div>
+
+          <!-- 色块 -->
+          <div class="flex gap-1 mt-5">
+            <div class="w-6 h-3 rounded-sm bg-[#ff5f56]"></div>
+            <div class="w-6 h-3 rounded-sm bg-[#ffbd2e]"></div>
+            <div class="w-6 h-3 rounded-sm bg-[#27c93f]"></div>
+            <div class="w-6 h-3 rounded-sm bg-[#2997ff]"></div>
+            <div class="w-6 h-3 rounded-sm bg-[#a855f7]"></div>
+            <div class="w-6 h-3 rounded-sm bg-[#ec4899]"></div>
+          </div>
+        </div>
+
+        <!-- 最新文章 -->
+        <div class="mt-8 pt-6 border-t border-gray-800">
+          <div class="text-xs text-gray-500 mb-3">// latest posts</div>
+          <div class="space-y-3 font-sans">
+            <a href="#" class="flex items-baseline gap-3 group">
+              <span class="text-gray-600 text-xs font-mono shrink-0">01/25</span>
+              <span class="text-gray-300 group-hover:text-green-400 transition-colors">深夜胡言：一个程序员在AI时代的身份危机</span>
+              <span class="flex-1 border-b border-dotted border-gray-800 mb-1"></span>
+              <span class="text-gray-600 text-xs font-mono shrink-0">59min</span>
+            </a>
+            <a href="#" class="flex items-baseline gap-3 group">
+              <span class="text-gray-600 text-xs font-mono shrink-0">01/22</span>
+              <span class="text-gray-300 group-hover:text-green-400 transition-colors">LangGraph Reflection Agents 完全指南</span>
+              <span class="flex-1 border-b border-dotted border-gray-800 mb-1"></span>
+              <span class="text-gray-600 text-xs font-mono shrink-0">29min</span>
+            </a>
+            <a href="#" class="flex items-baseline gap-3 group">
+              <span class="text-gray-600 text-xs font-mono shrink-0">01/18</span>
+              <span class="text-gray-300 group-hover:text-green-400 transition-colors">基于深度Q学习的月球着陆</span>
+              <span class="flex-1 border-b border-dotted border-gray-800 mb-1"></span>
+              <span class="text-gray-600 text-xs font-mono shrink-0">15min</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 导航链接 -->
+        <div class="flex gap-6 mt-6 pt-4 text-xs">
+          <a href="#" class="text-blue-400 hover:underline">github.com/kkkano</a>
+          <a href="#" class="text-blue-400 hover:underline">linkedin/AllenWangQWQ</a>
+          <a href="#" class="text-gray-500 hover:text-gray-300 transition-colors">wx657394554@163.com</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

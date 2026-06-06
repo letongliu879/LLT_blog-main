@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1分数与阈值选择</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --border: rgba(59, 130, 246, 0.2);
+            --primary: #3b82f6;
+            --accent: #10b981;
+            --lora: #8b5cf6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --text-bright: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            min-height: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.75em;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--lora), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.95em;
+            margin-bottom: 24px;
+        }
+
+        .section {
+            position: relative;
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--lora), var(--accent));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .section-title {
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .value-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--lora));
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+            min-width: 48px;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(59, 130, 246, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid var(--bg);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+            transition: transform 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid var(--bg);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+
+        .canvas-wrap {
+            position: relative;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.75em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-value.precision { color: var(--accent); }
+        .metric-value.recall { color: var(--primary); }
+        .metric-value.f1 { color: var(--danger); }
+        .metric-value.best-f1 { color: var(--warning); }
+
+        .confusion-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .cm-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .cm-label {
+            font-size: 0.7em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .cm-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .cm-value.tp { color: var(--accent); }
+        .cm-value.fp { color: var(--warning); }
+        .cm-value.fn { color: var(--lora); }
+        .cm-value.tn { color: var(--primary); }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8em;
+            color: var(--text-dim);
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .formula-section {
+            margin-top: 4px;
+        }
+
+        .formula-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .formula-card {
+            flex: 1;
+            min-width: 180px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.82em;
+            color: var(--text);
+        }
+
+        .formula-card .formula-name {
+            color: var(--text-dim);
+            font-size: 0.85em;
+            margin-bottom: 4px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>F1 分数与阈值选择</h1>
+        <p class="subtitle">理解精确率、召回率与 F1 分数的权衡</p>
+
+        <div class="section">
+            <div class="section-title">参数控制</div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>
+                        <span>真异常数量</span>
+                        <span class="value-badge" id="trueAnomaliesValue">50</span>
+                    </label>
+                    <input type="range" id="trueAnomaliesSlider" min="10" max="100" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>总样本数</span>
+                        <span class="value-badge" id="totalSamplesValue">500</span>
+                    </label>
+                    <input type="range" id="totalSamplesSlider" min="200" max="1000" step="50" value="500">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>当前阈值 ε</span>
+                        <span class="value-badge" id="currentThresholdValue">0.050</span>
+                    </label>
+                    <input type="range" id="currentThresholdSlider" min="0.001" max="0.2" step="0.001" value="0.05">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">当前指标</div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">精确率 Precision</div>
+                    <div class="metric-value precision" id="precisionValue">0.000</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">召回率 Recall</div>
+                    <div class="metric-value recall" id="recallValue">0.000</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">F1 分数</div>
+                    <div class="metric-value f1" id="f1Value">0.000</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">最佳 F1</div>
+                    <div class="metric-value best-f1" id="bestF1Value">0.000</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">F1 / Precision / Recall vs 阈值</div>
+            <div class="canvas-wrap">
+                <canvas id="f1Canvas" width="1600" height="650"></canvas>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--danger);"></div>
+                    <span>F1 分数</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--accent);"></div>
+                    <span>精确率</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--primary);"></div>
+                    <span>召回率</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--lora); border-top: 2px dashed var(--lora); height:0;"></div>
+                    <span>当前阈值</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--warning); border-top: 2px dotted var(--warning); height:0;"></div>
+                    <span>最佳阈值</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">混淆矩阵</div>
+            <div class="canvas-wrap">
+                <canvas id="cmCanvas" width="1600" height="500"></canvas>
+            </div>
+            <div class="confusion-grid" style="margin-top: 12px;">
+                <div class="cm-card">
+                    <div class="cm-label">True Positive (TP)</div>
+                    <div class="cm-value tp" id="tpValue">0</div>
+                </div>
+                <div class="cm-card">
+                    <div class="cm-label">False Positive (FP)</div>
+                    <div class="cm-value fp" id="fpValue">0</div>
+                </div>
+                <div class="cm-card">
+                    <div class="cm-label">False Negative (FN)</div>
+                    <div class="cm-value fn" id="fnValue">0</div>
+                </div>
+                <div class="cm-card">
+                    <div class="cm-label">True Negative (TN)</div>
+                    <div class="cm-value tn" id="tnValue">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">公式说明</div>
+            <div class="formula-section">
+                <div class="formula-row">
+                    <div class="formula-card">
+                        <div class="formula-name">精确率</div>
+                        Precision = TP / (TP + FP)
+                    </div>
+                    <div class="formula-card">
+                        <div class="formula-name">召回率</div>
+                        Recall = TP / (TP + FN)
+                    </div>
+                    <div class="formula-card">
+                        <div class="formula-name">F1 分数</div>
+                        F1 = 2 * P * R / (P + R)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var f1Canvas = document.getElementById('f1Canvas');
+            var cmCanvas = document.getElementById('cmCanvas');
+            var f1Ctx = f1Canvas.getContext('2d');
+            var cmCtx = cmCanvas.getContext('2d');
+
+            var COLORS = {
+                primary: '#3b82f6',
+                accent: '#10b981',
+                lora: '#8b5cf6',
+                danger: '#ef4444',
+                warning: '#f59e0b',
+                text: '#e2e8f0',
+                textDim: '#94a3b8',
+                gridLine: 'rgba(59, 130, 246, 0.08)',
+                bg: '#0f172a'
+            };
+
+            var cachedSamples = null;
+            var lastKey = '';
+
+            function gaussianPDF(x, mu, sigma) {
+                var coeff = 1 / (sigma * Math.sqrt(2 * Math.PI));
+                var exp = -Math.pow(x - mu, 2) / (2 * sigma * sigma);
+                return coeff * Math.exp(exp);
+            }
+
+            function randomGaussian(mu, sigma) {
+                var u1 = Math.random();
+                var u2 = Math.random();
+                var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                return z0 * sigma + mu;
+            }
+
+            function generateData(trueAnomalies, totalSamples) {
+                var key = trueAnomalies + '_' + totalSamples;
+                if (cachedSamples && lastKey === key) return cachedSamples;
+
+                var samples = [];
+                var mu = 0, sigma = 1;
+
+                for (var i = 0; i < totalSamples - trueAnomalies; i++) {
+                    var x = randomGaussian(mu, sigma);
+                    var prob = gaussianPDF(x, mu, sigma);
+                    samples.push({ prob: prob, isAnomaly: false });
+                }
+
+                for (var i = 0; i < trueAnomalies; i++) {
+                    var x = randomGaussian(mu + 3, sigma * 0.5);
+                    var prob = gaussianPDF(x, mu, sigma);
+                    samples.push({ prob: prob, isAnomaly: true });
+                }
+
+                cachedSamples = samples;
+                lastKey = key;
+                return samples;
+            }
+
+            function calcMetrics(threshold, samples) {
+                var tp = 0, fp = 0, fn = 0, tn = 0;
+                for (var i = 0; i < samples.length; i++) {
+                    var s = samples[i];
+                    var predicted = s.prob < threshold;
+                    if (predicted && s.isAnomaly) tp++;
+                    else if (predicted && !s.isAnomaly) fp++;
+                    else if (!predicted && s.isAnomaly) fn++;
+                    else tn++;
+                }
+                var precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+                var recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+                var f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+                return { tp: tp, fp: fp, fn: fn, tn: tn, precision: precision, recall: recall, f1: f1 };
+            }
+
+            function drawF1Chart(samples, currentThreshold) {
+                var W = f1Canvas.width;
+                var H = f1Canvas.height;
+                var ctx = f1Ctx;
+
+                var pad = { top: 40, right: 40, bottom: 55, left: 70 };
+                var cw = W - pad.left - pad.right;
+                var ch = H - pad.top - pad.bottom;
+
+                ctx.clearRect(0, 0, W, H);
+
+                // Compute metrics across thresholds
+                var probs = samples.map(function (s) { return s.prob; });
+                var minP = Math.min.apply(null, probs);
+                var maxP = Math.max.apply(null, probs);
+                var numSteps = 150;
+                var step = (maxP - minP) / numSteps;
+
+                var thresholds = [];
+                var precisions = [];
+                var recalls = [];
+                var f1Scores = [];
+                var bestF1 = 0, bestThreshold = 0;
+
+                for (var t = minP; t <= maxP; t += step) {
+                    var m = calcMetrics(t, samples);
+                    thresholds.push(t);
+                    precisions.push(m.precision);
+                    recalls.push(m.recall);
+                    f1Scores.push(m.f1);
+                    if (m.f1 > bestF1) {
+                        bestF1 = m.f1;
+                        bestThreshold = t;
+                    }
+                }
+
+                var xMin = minP;
+                var xMax = maxP;
+
+                function toX(v) { return pad.left + ((v - xMin) / (xMax - xMin)) * cw; }
+                function toY(v) { return pad.top + ch - v * ch; }
+
+                // Grid
+                ctx.strokeStyle = COLORS.gridLine;
+                ctx.lineWidth = 1;
+                for (var i = 0; i <= 10; i++) {
+                    var xv = xMin + (i / 10) * (xMax - xMin);
+                    ctx.beginPath(); ctx.moveTo(toX(xv), pad.top); ctx.lineTo(toX(xv), pad.top + ch); ctx.stroke();
+                }
+                for (var i = 0; i <= 5; i++) {
+                    var yv = i / 5;
+                    ctx.beginPath(); ctx.moveTo(pad.left, toY(yv)); ctx.lineTo(pad.left + cw, toY(yv)); ctx.stroke();
+                }
+
+                // Draw curve helper
+                function drawCurve(data, color, width) {
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = width;
+                    ctx.beginPath();
+                    for (var i = 0; i < thresholds.length; i++) {
+                        var px = toX(thresholds[i]);
+                        var py = toY(data[i]);
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                }
+
+                // Curves
+                drawCurve(precisions, COLORS.accent, 2.5);
+                drawCurve(recalls, COLORS.primary, 2.5);
+                drawCurve(f1Scores, COLORS.danger, 3.5);
+
+                // Best threshold vertical line (dotted)
+                ctx.strokeStyle = COLORS.warning;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                var btx = toX(bestThreshold);
+                ctx.beginPath(); ctx.moveTo(btx, pad.top); ctx.lineTo(btx, pad.top + ch); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Best F1 point
+                ctx.beginPath();
+                ctx.arc(btx, toY(bestF1), 8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.3)';
+                ctx.fill();
+                ctx.strokeStyle = COLORS.warning;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Best F1 label
+                ctx.fillStyle = COLORS.warning;
+                ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'left';
+                var labelX = btx + 12;
+                if (labelX + 120 > pad.left + cw) labelX = btx - 130;
+                ctx.fillText('Best F1: ' + bestF1.toFixed(3), labelX, toY(bestF1) - 12);
+
+                // Current threshold (dashed)
+                ctx.strokeStyle = COLORS.lora;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 6]);
+                var ctx_x = toX(currentThreshold);
+                if (ctx_x >= pad.left && ctx_x <= pad.left + cw) {
+                    ctx.beginPath(); ctx.moveTo(ctx_x, pad.top); ctx.lineTo(ctx_x, pad.top + ch); ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                // Axis labels
+                ctx.fillStyle = COLORS.textDim;
+                ctx.font = '22px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                for (var i = 0; i <= 10; i++) {
+                    var xv = xMin + (i / 10) * (xMax - xMin);
+                    ctx.fillText(xv.toFixed(2), toX(xv), pad.top + ch + 30);
+                }
+                ctx.textAlign = 'right';
+                for (var i = 0; i <= 5; i++) {
+                    var yv = i / 5;
+                    ctx.fillText(yv.toFixed(1), pad.left - 10, toY(yv) + 6);
+                }
+
+                // Axis titles
+                ctx.fillStyle = COLORS.text;
+                ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('阈值 ε', pad.left + cw / 2, H - 6);
+                ctx.save();
+                ctx.translate(18, pad.top + ch / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('分数', 0, 0);
+                ctx.restore();
+
+                return { bestF1: bestF1, bestThreshold: bestThreshold };
+            }
+
+            function drawConfusionMatrix(metrics) {
+                var W = cmCanvas.width;
+                var H = cmCanvas.height;
+                var ctx = cmCtx;
+
+                ctx.clearRect(0, 0, W, H);
+
+                var pad = { top: 60, right: 80, bottom: 60, left: 140 };
+                var cw = W - pad.left - pad.right;
+                var ch = H - pad.top - pad.bottom;
+                var cellW = cw / 2;
+                var cellH = ch / 2;
+
+                var matrix = [
+                    [{ label: 'TN', value: metrics.tn, color: COLORS.primary },
+                     { label: 'FP', value: metrics.fp, color: COLORS.warning }],
+                    [{ label: 'FN', value: metrics.fn, color: COLORS.lora },
+                     { label: 'TP', value: metrics.tp, color: COLORS.accent }]
+                ];
+
+                var maxVal = Math.max(metrics.tn, metrics.fp, metrics.fn, metrics.tp, 1);
+
+                for (var row = 0; row < 2; row++) {
+                    for (var col = 0; col < 2; col++) {
+                        var cell = matrix[row][col];
+                        var x = pad.left + col * cellW;
+                        var y = pad.top + row * cellH;
+
+                        // Cell background with intensity
+                        var intensity = cell.value / maxVal;
+                        ctx.fillStyle = cell.color;
+                        ctx.globalAlpha = 0.1 + intensity * 0.25;
+                        ctx.fillRect(x + 2, y + 2, cellW - 4, cellH - 4);
+                        ctx.globalAlpha = 1;
+
+                        // Cell border
+                        ctx.strokeStyle = cell.color;
+                        ctx.globalAlpha = 0.4;
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(x + 2, y + 2, cellW - 4, cellH - 4);
+                        ctx.globalAlpha = 1;
+
+                        // Label
+                        ctx.fillStyle = cell.color;
+                        ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(cell.label, x + cellW / 2, y + cellH / 2 - 18);
+
+                        // Value
+                        ctx.fillStyle = COLORS.text;
+                        ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, sans-serif';
+                        ctx.fillText(cell.value.toString(), x + cellW / 2, y + cellH / 2 + 22);
+                    }
+                }
+
+                // Column headers
+                ctx.fillStyle = COLORS.textDim;
+                ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('预测正常', pad.left + cellW / 2, pad.top - 12);
+                ctx.fillText('预测异常', pad.left + cellW + cellW / 2, pad.top - 12);
+
+                // Row headers
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('实际正常', pad.left - 16, pad.top + cellH / 2);
+                ctx.fillText('实际异常', pad.left - 16, pad.top + cellH + cellH / 2);
+
+                // Overall title
+                ctx.fillStyle = COLORS.text;
+                ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+            }
+
+            function update() {
+                var trueAnomalies = parseInt(document.getElementById('trueAnomaliesSlider').value);
+                var totalSamples = parseInt(document.getElementById('totalSamplesSlider').value);
+                var currentThreshold = parseFloat(document.getElementById('currentThresholdSlider').value);
+
+                document.getElementById('trueAnomaliesValue').textContent = trueAnomalies;
+                document.getElementById('totalSamplesValue').textContent = totalSamples;
+                document.getElementById('currentThresholdValue').textContent = currentThreshold.toFixed(3);
+
+                var samples = generateData(trueAnomalies, totalSamples);
+                var result = drawF1Chart(samples, currentThreshold);
+
+                var currentMetrics = calcMetrics(currentThreshold, samples);
+
+                document.getElementById('precisionValue').textContent = currentMetrics.precision.toFixed(3);
+                document.getElementById('recallValue').textContent = currentMetrics.recall.toFixed(3);
+                document.getElementById('f1Value').textContent = currentMetrics.f1.toFixed(3);
+                document.getElementById('bestF1Value').textContent = result.bestF1.toFixed(3);
+
+                document.getElementById('tpValue').textContent = currentMetrics.tp;
+                document.getElementById('fpValue').textContent = currentMetrics.fp;
+                document.getElementById('fnValue').textContent = currentMetrics.fn;
+                document.getElementById('tnValue').textContent = currentMetrics.tn;
+
+                drawConfusionMatrix(currentMetrics);
+            }
+
+            document.getElementById('trueAnomaliesSlider').addEventListener('input', function () {
+                cachedSamples = null; lastKey = '';
+                update();
+            });
+            document.getElementById('totalSamplesSlider').addEventListener('input', function () {
+                cachedSamples = null; lastKey = '';
+                update();
+            });
+            document.getElementById('currentThresholdSlider').addEventListener('input', update);
+
+            update();
+        })();
+    </script>
+
+    <script>
+    (function () {
+        var sendHeight = function () {
+            if (window.parent === window) return;
+            var body = document.body;
+            var root = document.documentElement;
+            var height = Math.max(
+                body ? body.scrollHeight : 0,
+                body ? body.offsetHeight : 0,
+                root ? root.scrollHeight : 0,
+                root ? root.offsetHeight : 0
+            );
+            window.parent.postMessage({ type: 'iframe-height', height: height }, '*');
+        };
+        window.addEventListener('load', sendHeight);
+        window.addEventListener('resize', sendHeight);
+        if ('ResizeObserver' in window) {
+            var observer = new ResizeObserver(sendHeight);
+            if (document.body) observer.observe(document.body);
+            if (document.documentElement) observer.observe(document.documentElement);
+        }
+        requestAnimationFrame(sendHeight);
+        setTimeout(sendHeight, 250);
+        setTimeout(sendHeight, 1000);
+    })();
+    </script>
+</body>
+</html>

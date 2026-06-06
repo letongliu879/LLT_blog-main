@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>学习曲线可视化</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border: rgba(59, 130, 246, 0.25);
+      --primary: #3b82f6;
+      --accent: #10b981;
+      --lora: #8b5cf6;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --text-sub: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      padding: 20px;
+      min-height: 0;
+    }
+
+    .wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 24px 20px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, var(--primary), var(--accent), var(--lora));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 0.92rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .section {
+      position: relative;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent), var(--lora));
+      border-radius: 2px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .metric-label {
+      color: var(--text-sub);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .mv-train { color: var(--primary); }
+    .mv-cv { color: var(--danger); }
+    .mv-gap { color: var(--lora); }
+    .mv-diag { font-size: 0.88rem; }
+    .diag-hb { color: var(--warn); }
+    .diag-hv { color: var(--danger); }
+    .diag-ok { color: var(--accent); }
+
+    .canvas-shell {
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+      background: rgba(8, 16, 42, 0.9);
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-label {
+      color: var(--text-sub);
+      font-size: 0.84rem;
+      min-width: 140px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--warn);
+      font-weight: 600;
+      font-size: 0.84rem;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 6px;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-btn {
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(30, 41, 59, 0.8));
+      color: var(--text-sub);
+      padding: 8px 18px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-btn.active {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+      border-color: var(--primary);
+      color: var(--text);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .toggle-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .gap-fill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .gap-indicator {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+    }
+
+    .gap-text {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+    }
+
+    .recommendation {
+      margin-top: 8px;
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.84rem;
+      color: var(--text-sub);
+      line-height: 1.55;
+    }
+
+    .recommendation strong { color: var(--text); }
+
+    .insight-box {
+      margin-top: 4px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.84rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+    }
+
+    .insight-box strong { color: var(--text); }
+    .insight-box li { margin-bottom: 4px; }
+    .insight-box ul { padding-left: 18px; margin-top: 6px; }
+
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .wrapper { padding: 16px 12px 14px; }
+      .title { font-size: 1.3rem; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .control-label { min-width: 110px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="title">学习曲线可视化</h1>
+    <p class="subtitle">探索训练集大小如何影响训练误差与交叉验证误差 -- 切换高偏差/高方差场景对比诊断</p>
+
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">训练误差</div>
+        <div class="metric-value mv-train" id="metricTrain">--</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">交叉验证误差</div>
+        <div class="metric-value mv-cv" id="metricCV">--</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">误差间隔</div>
+        <div class="metric-value mv-gap" id="metricGap">--</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">诊断结论</div>
+        <div class="metric-value mv-diag" id="metricDiag">--</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="canvas-shell">
+        <canvas id="lcCanvas" width="980" height="460"></canvas>
+      </div>
+
+      <div class="gap-fill">
+        <div class="gap-indicator" style="background: rgba(139, 92, 246, 0.25);"></div>
+        <span class="gap-text">阴影区域 = 训练误差与交叉验证误差的间隔（方差指标）</span>
+      </div>
+
+      <div class="recommendation" id="recommendation"></div>
+    </div>
+
+    <div class="section">
+      <div class="controls">
+        <div class="control">
+          <div class="control-label">训练集大小 <span class="control-value" id="sizeVal">100</span></div>
+          <input type="range" id="sliderSize" min="10" max="300" step="5" value="100" />
+        </div>
+        <div class="control">
+          <div class="control-label">模型复杂度 <span class="control-value" id="complexVal">5</span></div>
+          <input type="range" id="sliderComplex" min="1" max="15" step="1" value="5" />
+        </div>
+      </div>
+      <div class="toggle-row">
+        <button class="toggle-btn active" id="btnBalanced" data-mode="balanced">均衡模型</button>
+        <button class="toggle-btn" id="btnHighBias" data-mode="high_bias">高偏差场景</button>
+        <button class="toggle-btn" id="btnHighVar" data-mode="high_variance">高方差场景</button>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <strong>关键洞察</strong>
+      <ul>
+        <li><strong>高偏差 (欠拟合)</strong>: 两条曲线很快收敛到一起，但误差值都偏高；增加数据无法显著改善</li>
+        <li><strong>高方差 (过拟合)</strong>: 两条曲线间距大，训练误差远低于交叉验证误差；增加数据能有效改善</li>
+        <li><strong>均衡模型</strong>: 间距适中，随数据增加两条曲线都趋于较低且接近的误差</li>
+        <li>垂直虚线标记当前训练集大小，阴影区域的宽度直观反映方差大小</li>
+        <li>切换场景预设可快速对比不同模型复杂度下的典型学习曲线形态</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    /* ---- DOM refs ---- */
+    var canvas = document.getElementById('lcCanvas');
+    var ctx    = canvas.getContext('2d');
+
+    var sliderSize    = document.getElementById('sliderSize');
+    var sliderComplex = document.getElementById('sliderComplex');
+    var sizeVal       = document.getElementById('sizeVal');
+    var complexVal    = document.getElementById('complexVal');
+
+    var metricTrain = document.getElementById('metricTrain');
+    var metricCV    = document.getElementById('metricCV');
+    var metricGap   = document.getElementById('metricGap');
+    var metricDiag  = document.getElementById('metricDiag');
+    var recEl       = document.getElementById('recommendation');
+
+    var btnBalanced = document.getElementById('btnBalanced');
+    var btnHighBias = document.getElementById('btnHighBias');
+    var btnHighVar  = document.getElementById('btnHighVar');
+    var toggleBtns  = [btnBalanced, btnHighBias, btnHighVar];
+
+    /* ---- state ---- */
+    var currentMode = 'balanced';
+
+    /* ---- constants ---- */
+    var PAD = { left: 62, right: 30, top: 32, bottom: 48 };
+    var COLORS = {
+      primary: '#3b82f6',
+      accent:  '#10b981',
+      lora:    '#8b5cf6',
+      warn:    '#f59e0b',
+      danger:  '#ef4444',
+      grid:    'rgba(148, 163, 184, 0.12)',
+      axis:    'rgba(148, 163, 184, 0.35)',
+      text:    'rgba(226, 232, 240, 0.8)',
+      textDim: 'rgba(148, 163, 184, 0.6)',
+    };
+
+    /* ---- learning curve data generation ---- */
+    function generateCurveData(complexity, maxSamples) {
+      var sizes = [];
+      var trainErrors = [];
+      var cvErrors = [];
+
+      var step = Math.max(5, Math.round(maxSamples / 50));
+
+      for (var n = 10; n <= maxSamples; n += step) {
+        sizes.push(n);
+
+        /* base irreducible error */
+        var irreducible = 0.12;
+
+        /* training error: starts low, increases as more data makes it harder to memorize */
+        var trainBase;
+        var cvBase;
+
+        if (currentMode === 'high_bias' || complexity <= 2) {
+          /* high bias: both errors converge to a high value quickly */
+          trainBase = irreducible + 0.35 * (1 - Math.exp(-n / 40)) + 0.15;
+          cvBase    = irreducible + 0.35 + 0.25 * Math.exp(-n / 50) + 0.15;
+        } else if (currentMode === 'high_variance' || complexity >= 10) {
+          /* high variance: large gap, training very low, CV high */
+          var effectiveC = Math.max(complexity, 10);
+          trainBase = irreducible + 0.08 * (1 - Math.exp(-n / 60));
+          cvBase    = irreducible + 0.25 + (effectiveC / 15) * 0.4 * Math.exp(-n / 120) + 0.15 * Math.exp(-n / 200);
+        } else {
+          /* balanced */
+          trainBase = irreducible + 0.18 * (1 - Math.exp(-n / 50));
+          cvBase    = irreducible + 0.18 + 0.22 * Math.exp(-n / 80);
+        }
+
+        /* add light deterministic noise based on n for realism */
+        var noiseT = 0.015 * Math.sin(n * 0.1) * Math.cos(n * 0.07);
+        var noiseV = 0.02 * Math.cos(n * 0.08) * Math.sin(n * 0.12);
+
+        trainErrors.push(Math.max(0, trainBase + noiseT));
+        cvErrors.push(Math.max(0, cvBase + noiseV));
+      }
+
+      return { sizes: sizes, trainErrors: trainErrors, cvErrors: cvErrors };
+    }
+
+    /* ---- canvas helpers ---- */
+    function plotArea() {
+      return { x: PAD.left, y: PAD.top, w: canvas.width - PAD.left - PAD.right, h: canvas.height - PAD.top - PAD.bottom };
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#0a1128';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function toX(val, xMin, xMax, area) {
+      return area.x + ((val - xMin) / (xMax - xMin)) * area.w;
+    }
+
+    function toY(val, yMin, yMax, area) {
+      return area.y + area.h - ((val - yMin) / (yMax - yMin)) * area.h;
+    }
+
+    function drawGrid(area, xTicks, yTicks, xMin, xMax, yMin, yMax) {
+      ctx.strokeStyle = COLORS.grid;
+      ctx.lineWidth = 1;
+      for (var i = 0; i < xTicks.length; i++) {
+        var px = toX(xTicks[i], xMin, xMax, area);
+        ctx.beginPath(); ctx.moveTo(px, area.y); ctx.lineTo(px, area.y + area.h); ctx.stroke();
+      }
+      for (var i = 0; i < yTicks.length; i++) {
+        var py = toY(yTicks[i], yMin, yMax, area);
+        ctx.beginPath(); ctx.moveTo(area.x, py); ctx.lineTo(area.x + area.w, py); ctx.stroke();
+      }
+    }
+
+    function drawAxes(area, xLabel, yLabel, xTicks, yTicks, xMin, xMax, yMin, yMax) {
+      ctx.strokeStyle = COLORS.axis;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(area.x, area.y);
+      ctx.lineTo(area.x, area.y + area.h);
+      ctx.lineTo(area.x + area.w, area.y + area.h);
+      ctx.stroke();
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '11px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      for (var i = 0; i < xTicks.length; i++) {
+        ctx.fillText(String(xTicks[i]), toX(xTicks[i], xMin, xMax, area), area.y + area.h + 18);
+      }
+
+      ctx.textAlign = 'right';
+      for (var i = 0; i < yTicks.length; i++) {
+        ctx.fillText(yTicks[i].toFixed(2), area.x - 8, toY(yTicks[i], yMin, yMax, area) + 4);
+      }
+
+      ctx.fillStyle = COLORS.textDim;
+      ctx.font = '12px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(xLabel, area.x + area.w / 2, area.y + area.h + 40);
+
+      ctx.save();
+      ctx.translate(16, area.y + area.h / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+    }
+
+    function drawLine(area, sizes, errors, xMin, xMax, yMin, yMax, color, lineWidth, dash) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.setLineDash(dash || []);
+      ctx.beginPath();
+      for (var i = 0; i < sizes.length; i++) {
+        var px = toX(sizes[i], xMin, xMax, area);
+        var py = toY(errors[i], yMin, yMax, area);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawGapFill(area, sizes, trainErrors, cvErrors, xMin, xMax, yMin, yMax) {
+      ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
+      ctx.beginPath();
+      /* forward along train errors */
+      for (var i = 0; i < sizes.length; i++) {
+        var px = toX(sizes[i], xMin, xMax, area);
+        var py = toY(trainErrors[i], yMin, yMax, area);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      /* backward along cv errors */
+      for (var i = sizes.length - 1; i >= 0; i--) {
+        var px = toX(sizes[i], xMin, xMax, area);
+        var py = toY(cvErrors[i], yMin, yMax, area);
+        ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawDots(area, sizes, errors, xMin, xMax, yMin, yMax, color) {
+      for (var i = 0; i < sizes.length; i++) {
+        var px = toX(sizes[i], xMin, xMax, area);
+        var py = toY(errors[i], yMin, yMax, area);
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+    }
+
+    /* ---- main render ---- */
+    function render() {
+      var maxSize    = parseInt(sliderSize.value);
+      var complexity = parseInt(sliderComplex.value);
+
+      sizeVal.textContent    = maxSize;
+      complexVal.textContent = complexity;
+
+      var data = generateCurveData(complexity, 300);
+
+      /* find index closest to current maxSize */
+      var curIdx = 0;
+      for (var i = 0; i < data.sizes.length; i++) {
+        if (data.sizes[i] <= maxSize) curIdx = i;
+      }
+
+      var tErr = data.trainErrors[curIdx];
+      var cErr = data.cvErrors[curIdx];
+      var gap  = Math.abs(cErr - tErr);
+
+      metricTrain.textContent = tErr.toFixed(4);
+      metricCV.textContent    = cErr.toFixed(4);
+      metricGap.textContent   = gap.toFixed(4);
+
+      /* diagnosis */
+      var isHighBias = (tErr > 0.4 && gap < 0.1);
+      var isHighVar  = (gap > 0.15);
+
+      if (isHighBias) {
+        metricDiag.textContent = '高偏差';
+        metricDiag.className = 'metric-value mv-diag diag-hb';
+      } else if (isHighVar) {
+        metricDiag.textContent = '高方差';
+        metricDiag.className = 'metric-value mv-diag diag-hv';
+      } else {
+        metricDiag.textContent = '良好';
+        metricDiag.className = 'metric-value mv-diag diag-ok';
+      }
+
+      /* recommendation */
+      if (isHighBias) {
+        recEl.innerHTML = '<strong>诊断: 高偏差</strong> -- 训练误差与交叉验证误差均较高且接近。增加数据量收效甚微。建议: 增加模型复杂度、添加更多特征或减少正则化。';
+      } else if (isHighVar) {
+        recEl.innerHTML = '<strong>诊断: 高方差</strong> -- 训练误差远低于交叉验证误差，间隔明显。建议: 增加训练数据、增大正则化参数或降低模型复杂度。';
+      } else {
+        recEl.innerHTML = '<strong>诊断: 模型表现良好</strong> -- 训练误差与交叉验证误差都较低且接近。当前数据量与模型复杂度匹配度良好。';
+      }
+
+      /* ---- draw chart ---- */
+      clearCanvas();
+      var area = plotArea();
+
+      var xMin = 0, xMax = 310;
+      var allErrs = data.trainErrors.concat(data.cvErrors);
+      var yMin = 0;
+      var yMax = Math.max.apply(null, allErrs) * 1.15;
+      yMax = Math.max(yMax, 0.5);
+
+      /* x ticks */
+      var xTicks = [];
+      for (var t = 50; t <= 300; t += 50) xTicks.push(t);
+
+      /* y ticks */
+      var yTicks = [];
+      var yStep = parseFloat((yMax / 5).toFixed(2));
+      if (yStep < 0.05) yStep = 0.05;
+      for (var t = 0; t <= yMax; t += yStep) yTicks.push(parseFloat(t.toFixed(3)));
+
+      drawGrid(area, xTicks, yTicks, xMin, xMax, yMin, yMax);
+      drawAxes(area, '训练集大小', 'MSE', xTicks, yTicks, xMin, xMax, yMin, yMax);
+
+      /* gap fill */
+      drawGapFill(area, data.sizes, data.trainErrors, data.cvErrors, xMin, xMax, yMin, yMax);
+
+      /* lines */
+      drawLine(area, data.sizes, data.trainErrors, xMin, xMax, yMin, yMax, COLORS.primary, 2.5, []);
+      drawLine(area, data.sizes, data.cvErrors, xMin, xMax, yMin, yMax, COLORS.danger, 2.5, []);
+
+      /* dots */
+      drawDots(area, data.sizes, data.trainErrors, xMin, xMax, yMin, yMax, COLORS.primary);
+      drawDots(area, data.sizes, data.cvErrors, xMin, xMax, yMin, yMax, COLORS.danger);
+
+      /* current size vertical line */
+      var curPx = toX(maxSize, xMin, xMax, area);
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(curPx, area.y);
+      ctx.lineTo(curPx, area.y + area.h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      /* mark current point on both curves */
+      var curTrainY = toY(tErr, yMin, yMax, area);
+      var curCVY    = toY(cErr, yMin, yMax, area);
+
+      ctx.beginPath();
+      ctx.arc(curPx, curTrainY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.primary;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(curPx, curCVY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.danger;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      /* gap arrow between the two current points */
+      if (Math.abs(curCVY - curTrainY) > 16) {
+        var midX = curPx + 14;
+        ctx.strokeStyle = COLORS.lora;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(midX, curTrainY);
+        ctx.lineTo(midX, curCVY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        /* gap label */
+        ctx.fillStyle = COLORS.lora;
+        ctx.font = '10px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(gap.toFixed(3), midX + 6, (curTrainY + curCVY) / 2 + 4);
+      }
+
+      /* title */
+      var modeLabel = '';
+      if (currentMode === 'high_bias') modeLabel = ' [高偏差场景]';
+      else if (currentMode === 'high_variance') modeLabel = ' [高方差场景]';
+      else modeLabel = ' [均衡模型]';
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 14px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('学习曲线' + modeLabel, canvas.width / 2, 20);
+
+      /* legend */
+      var lx = area.x + area.w - 140, ly = area.y + 10;
+      ctx.font = '11px "Segoe UI", sans-serif';
+
+      /* train */
+      ctx.strokeStyle = COLORS.primary;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(lx, ly + 5); ctx.lineTo(lx + 16, ly + 5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(lx + 8, ly + 5, 2.5, 0, Math.PI * 2); ctx.fillStyle = COLORS.primary; ctx.fill();
+      ctx.fillStyle = COLORS.text; ctx.textAlign = 'left';
+      ctx.fillText('训练误差', lx + 22, ly + 9);
+
+      /* cv */
+      ctx.strokeStyle = COLORS.danger;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(lx, ly + 23); ctx.lineTo(lx + 16, ly + 23); ctx.stroke();
+      ctx.beginPath(); ctx.arc(lx + 8, ly + 23, 2.5, 0, Math.PI * 2); ctx.fillStyle = COLORS.danger; ctx.fill();
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText('交叉验证误差', lx + 22, ly + 27);
+
+      /* gap */
+      ctx.fillStyle = 'rgba(139, 92, 246, 0.3)';
+      ctx.fillRect(lx, ly + 36, 16, 10);
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText('误差间隔', lx + 22, ly + 45);
+    }
+
+    /* ---- toggle buttons ---- */
+    function setMode(mode) {
+      currentMode = mode;
+      toggleBtns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+      });
+
+      /* set complexity slider to match mode */
+      if (mode === 'high_bias') {
+        sliderComplex.value = 1;
+      } else if (mode === 'high_variance') {
+        sliderComplex.value = 12;
+      } else {
+        sliderComplex.value = 5;
+      }
+
+      render();
+    }
+
+    /* ---- events ---- */
+    sliderSize.addEventListener('input', render);
+    sliderComplex.addEventListener('input', function () {
+      /* auto-detect mode from complexity */
+      var c = parseInt(sliderComplex.value);
+      if (c <= 2) currentMode = 'high_bias';
+      else if (c >= 10) currentMode = 'high_variance';
+      else currentMode = 'balanced';
+
+      toggleBtns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-mode') === currentMode);
+      });
+
+      render();
+    });
+
+    toggleBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setMode(btn.getAttribute('data-mode'));
+      });
+    });
+
+    /* ---- init ---- */
+    render();
+  })();
+  </script>
+
+  <script>
+  (function () {
+    var sendHeight = function () {
+      if (window.parent === window) return;
+      var body = document.body;
+      var root = document.documentElement;
+      var height = Math.max(
+        body ? body.scrollHeight : 0,
+        body ? body.offsetHeight : 0,
+        root ? root.scrollHeight : 0,
+        root ? root.offsetHeight : 0
+      );
+      window.parent.postMessage({ type: 'iframe-height', height: height }, '*');
+    };
+    window.addEventListener('load', sendHeight);
+    window.addEventListener('resize', sendHeight);
+    if ('ResizeObserver' in window) {
+      var observer = new ResizeObserver(sendHeight);
+      if (document.body) observer.observe(document.body);
+      if (document.documentElement) observer.observe(document.documentElement);
+    }
+    requestAnimationFrame(sendHeight);
+    setTimeout(sendHeight, 250);
+    setTimeout(sendHeight, 1000);
+  })();
+  </script>
+</body>
+</html>

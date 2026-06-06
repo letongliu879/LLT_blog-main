@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注意力掩码对比</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--card:rgba(30,41,59,0.7);--text:#e2e8f0;--muted:#94a3b8;
+  --primary:#38bdf8;--accent:#22c55e;--warn:#f59e0b;--danger:#ef4444;--purple:#8b5cf6;
+  --cell-size:44px;--gap:2px;
+}
+html{font-size:16px}
+body{
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:radial-gradient(circle at 20% 20%,#162542 0%,#0f172a 45%);
+  color:var(--text);min-height:100vh;padding:2rem 1rem;
+  line-height:1.6;
+}
+.container{max-width:960px;margin:0 auto}
+
+/* ---- Title ---- */
+h1.title{
+  text-align:center;font-size:2rem;font-weight:700;margin-bottom:.25rem;
+  background:linear-gradient(135deg,var(--warn),var(--danger));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.subtitle{text-align:center;color:var(--muted);font-size:.95rem;margin-bottom:2rem}
+
+/* ---- Tabs ---- */
+.tab-bar{
+  display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem;
+}
+.tab-btn{
+  padding:.5rem 1.2rem;border:1px solid rgba(148,163,184,.25);border-radius:8px;
+  background:var(--card);color:var(--muted);cursor:pointer;font-size:.9rem;
+  transition:all .25s;user-select:none;font-family:inherit;
+}
+.tab-btn:hover{border-color:var(--primary);color:var(--text)}
+.tab-btn.active{
+  border-color:var(--primary);color:var(--primary);
+  background:rgba(56,189,248,.08);box-shadow:0 0 12px rgba(56,189,248,.15);
+}
+
+/* ---- Grid Section ---- */
+.grids-wrapper{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-bottom:2rem;
+}
+@media(max-width:800px){
+  .grids-wrapper{grid-template-columns:1fr}
+  :root{--cell-size:38px}
+}
+.grid-card{
+  background:var(--card);border-radius:12px;padding:1rem;
+  border:1px solid rgba(148,163,184,.12);
+  transition:all .35s;position:relative;overflow:hidden;
+}
+.grid-card::before{
+  content:'';position:absolute;inset:0;border-radius:12px;
+  opacity:0;transition:opacity .35s;pointer-events:none;
+}
+.grid-card.highlight::before{opacity:1}
+.grid-card.highlight-bi::before{background:rgba(56,189,248,.04)}
+.grid-card.highlight-causal::before{background:rgba(245,158,11,.04)}
+.grid-card.highlight-cross::before{background:rgba(139,92,246,.04)}
+.grid-card.highlight{
+  border-color:rgba(148,163,184,.3);
+  box-shadow:0 4px 24px rgba(0,0,0,.25);
+  transform:scale(1.02);
+}
+.grid-card.dimmed{opacity:.45;transform:scale(.97)}
+.grid-title{
+  text-align:center;font-size:.85rem;font-weight:600;margin-bottom:.75rem;
+  white-space:nowrap;
+}
+.grid-title .badge{
+  display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;
+  margin-left:.35rem;vertical-align:middle;
+}
+.badge-bi{background:rgba(56,189,248,.15);color:var(--primary)}
+.badge-causal{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-cross{background:rgba(139,92,246,.15);color:var(--purple)}
+
+/* ---- Matrix ---- */
+.matrix-container{display:flex;justify-content:center}
+.matrix{display:inline-block}
+.matrix-row{display:flex;align-items:center}
+.row-label,.col-label{
+  width:var(--cell-size);text-align:center;font-size:.65rem;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.row-label{
+  flex-shrink:0;text-align:right;padding-right:4px;
+}
+.col-labels{display:flex;margin-left:var(--cell-size);margin-bottom:2px}
+.cell{
+  width:var(--cell-size);height:var(--cell-size);
+  border:1px solid rgba(148,163,184,.1);border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;color:rgba(239,68,68,.5);
+  transition:all .3s;position:relative;margin:var(--gap);
+}
+.cell.active-bi{
+  background:rgba(56,189,248,.25);border-color:rgba(56,189,248,.35);
+}
+.cell.active-causal{
+  background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.3);
+}
+.cell.active-cross{
+  background:rgba(139,92,246,.25);border-color:rgba(139,92,246,.35);
+}
+.cell.blocked{
+  background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.12);
+}
+.cell.step-highlight{
+  box-shadow:0 0 8px rgba(56,189,248,.5);z-index:1;
+}
+
+/* ---- Auto-regressive Demo ---- */
+.demo-section{
+  background:var(--card);border-radius:12px;padding:1.5rem;
+  border:1px solid rgba(148,163,184,.12);margin-bottom:2rem;
+}
+.demo-header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;
+}
+.demo-title{font-size:1rem;font-weight:600}
+.demo-controls{display:flex;gap:.5rem;align-items:center}
+.btn{
+  padding:.45rem 1rem;border-radius:8px;border:1px solid rgba(148,163,184,.25);
+  background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem;
+  transition:all .2s;font-family:inherit;
+}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.playing{
+  background:rgba(56,189,248,.12);border-color:var(--primary);color:var(--primary);
+}
+.speed-label{font-size:.8rem;color:var(--muted)}
+.speed-slider{width:80px;accent-color:var(--primary)}
+
+.demo-tokens{
+  display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;justify-content:center;
+}
+.demo-token{
+  padding:.35rem .7rem;border-radius:6px;font-size:.85rem;
+  border:1px solid rgba(148,163,184,.15);background:rgba(30,41,59,.5);
+  color:var(--muted);transition:all .35s;
+}
+.demo-token.visible{color:var(--text);border-color:var(--primary);background:rgba(56,189,248,.1)}
+.demo-token.current{
+  color:var(--primary);border-color:var(--primary);
+  box-shadow:0 0 12px rgba(56,189,248,.25);
+  animation:pulse 1s infinite;
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 12px rgba(56,189,248,.25)}
+  50%{box-shadow:0 0 20px rgba(56,189,248,.4)}
+}
+
+.demo-matrix-wrap{display:flex;justify-content:center;margin-bottom:.75rem}
+.step-info{text-align:center;color:var(--muted);font-size:.85rem}
+.step-info strong{color:var(--warn)}
+
+/* ---- Insight Box ---- */
+.insight-box{
+  background:var(--card);border-radius:12px;padding:1.5rem;
+  border:1px solid rgba(148,163,184,.12);
+}
+.insight-title{font-size:1rem;font-weight:600;margin-bottom:.75rem}
+.insight-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.insight-card{
+  padding:1rem;border-radius:8px;border:1px solid rgba(148,163,184,.1);
+  background:rgba(15,23,42,.5);transition:all .3s;
+}
+.insight-card:hover{border-color:rgba(148,163,184,.25)}
+.insight-card h3{font-size:.9rem;margin-bottom:.4rem}
+.insight-card p{font-size:.8rem;color:var(--muted);line-height:1.5}
+.insight-card.bi h3{color:var(--primary)}
+.insight-card.causal h3{color:var(--warn)}
+.insight-card.cross h3{color:var(--purple)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dot-bi{background:var(--primary)}
+.dot-causal{background:var(--warn)}
+.dot-cross{background:var(--purple)}
+
+/* Legend row */
+.legend{
+  display:flex;gap:1.5rem;justify-content:center;margin-bottom:1.5rem;
+  flex-wrap:wrap;font-size:.8rem;color:var(--muted);
+}
+.legend-item{display:flex;align-items:center;gap:.35rem}
+.legend-swatch{
+  width:20px;height:20px;border-radius:3px;border:1px solid rgba(148,163,184,.2);
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1 class="title">注意力掩码对比</h1>
+  <p class="subtitle">Transformer 架构中三种核心注意力掩码的可视化对比</p>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:rgba(56,189,248,.25);border-color:rgba(56,189,248,.35)"></div>
+      <span>可见 (允许注意)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.12)"></div>
+      <span>遮蔽 (禁止注意)</span>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">全部显示</button>
+    <button class="tab-btn" data-tab="bi" onclick="switchTab('bi')">双向注意力</button>
+    <button class="tab-btn" data-tab="causal" onclick="switchTab('causal')">因果掩码</button>
+    <button class="tab-btn" data-tab="cross" onclick="switchTab('cross')">交叉注意力</button>
+  </div>
+
+  <!-- Three Grids -->
+  <div class="grids-wrapper">
+    <div class="grid-card" id="card-bi">
+      <div class="grid-title">双向注意力 <span class="badge badge-bi">BERT</span></div>
+      <div class="matrix-container" id="matrix-bi"></div>
+    </div>
+    <div class="grid-card" id="card-causal">
+      <div class="grid-title">因果掩码 <span class="badge badge-causal">GPT</span></div>
+      <div class="matrix-container" id="matrix-causal"></div>
+    </div>
+    <div class="grid-card" id="card-cross">
+      <div class="grid-title">交叉注意力 <span class="badge badge-cross">Encoder-Decoder</span></div>
+      <div class="matrix-container" id="matrix-cross"></div>
+    </div>
+  </div>
+
+  <!-- Auto-Regressive Demo -->
+  <div class="demo-section">
+    <div class="demo-header">
+      <div class="demo-title">自回归生成演示 (因果掩码)</div>
+      <div class="demo-controls">
+        <button class="btn" id="playBtn" onclick="togglePlay()">&#9654; 播放</button>
+        <button class="btn" onclick="resetDemo()">&#8634; 重置</button>
+        <span class="speed-label">速度</span>
+        <input type="range" class="speed-slider" id="speedSlider" min="1" max="5" value="3" oninput="updateSpeed()">
+      </div>
+    </div>
+    <div class="demo-tokens" id="demoTokens"></div>
+    <div class="demo-matrix-wrap" id="demoMatrixWrap"></div>
+    <div class="step-info" id="stepInfo">点击「播放」查看因果掩码如何逐步扩展</div>
+  </div>
+
+  <!-- Insight Box -->
+  <div class="insight-box">
+    <div class="insight-title">掩码类型解析</div>
+    <div class="insight-cards">
+      <div class="insight-card bi">
+        <h3><span class="dot dot-bi"></span>双向注意力 (Bidirectional)</h3>
+        <p>每个 token 可以关注序列中的所有其他 token，包括前后方向。BERT 采用此方式进行深度语义理解，适用于文本分类、命名实体识别等需要全局上下文的任务。掩码矩阵全部为 1。</p>
+      </div>
+      <div class="insight-card causal">
+        <h3><span class="dot dot-causal"></span>因果掩码 (Causal)</h3>
+        <p>每个 token 只能关注自身及其左侧的 token，右侧未来信息被遮蔽。GPT 系列采用此方式进行自回归文本生成，确保模型在推理时不会"偷看"未来 token。掩码为下三角矩阵。</p>
+      </div>
+      <div class="insight-card cross">
+        <h3><span class="dot dot-cross"></span>交叉注意力 (Cross-Attention)</h3>
+        <p>Decoder 中的 token 可以关注 Encoder 输出的所有位置。用于 Transformer Encoder-Decoder 架构（如 T5、BART），将源序列信息融合到目标序列的每一步生成中。掩码为全 1 矩阵。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var TOKENS = ["我","爱","自然","语言","处理","这个","领域"];
+  var N = TOKENS.length;
+
+  // ---- Build static matrices ----
+  function buildMatrix(containerId, maskFn, activeClass) {
+    var container = document.getElementById(containerId);
+    var html = '<div class="matrix">';
+    // Column labels
+    html += '<div class="col-labels">';
+    for (var c = 0; c < N; c++) {
+      html += '<div class="col-label">' + TOKENS[c] + '</div>';
+    }
+    html += '</div>';
+    // Rows
+    for (var r = 0; r < N; r++) {
+      html += '<div class="matrix-row">';
+      html += '<div class="row-label">' + TOKENS[r] + '</div>';
+      for (var c2 = 0; c2 < N; c2++) {
+        var active = maskFn(r, c2);
+        if (active) {
+          html += '<div class="cell ' + activeClass + '"></div>';
+        } else {
+          html += '<div class="cell blocked">&times;</div>';
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  // Bidirectional: all active
+  buildMatrix("matrix-bi", function() { return true; }, "active-bi");
+
+  // Causal: lower triangle (row >= col)
+  buildMatrix("matrix-causal", function(r, c) { return r >= c; }, "active-causal");
+
+  // Cross-attention: all active (different color)
+  buildMatrix("matrix-cross", function() { return true; }, "active-cross");
+
+  // ---- Tab switching ----
+  window.switchTab = function(tab) {
+    var btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+
+    var cards = {
+      bi: document.getElementById('card-bi'),
+      causal: document.getElementById('card-causal'),
+      cross: document.getElementById('card-cross')
+    };
+
+    Object.keys(cards).forEach(function(key) {
+      var card = cards[key];
+      card.classList.remove('highlight', 'highlight-bi', 'highlight-causal', 'highlight-cross', 'dimmed');
+      if (tab === 'all') {
+        // no special class
+      } else if (tab === key) {
+        card.classList.add('highlight', 'highlight-' + key);
+      } else {
+        card.classList.add('dimmed');
+      }
+    });
+  };
+
+  // ---- Auto-regressive Demo ----
+  var currentStep = 0;
+  var playing = false;
+  var timerId = null;
+  var speed = 3;
+
+  function getDelay() {
+    var delays = [1200, 900, 600, 400, 250];
+    return delays[speed - 1] || 600;
+  }
+
+  window.updateSpeed = function() {
+    speed = parseInt(document.getElementById('speedSlider').value, 10);
+    if (playing) {
+      clearInterval(timerId);
+      timerId = setInterval(stepForward, getDelay());
+    }
+  };
+
+  function renderDemoTokens() {
+    var wrap = document.getElementById('demoTokens');
+    var html = '';
+    for (var i = 0; i < N; i++) {
+      var cls = 'demo-token';
+      if (i < currentStep) cls += ' visible';
+      if (i === currentStep - 1) cls += ' current';
+      html += '<div class="' + cls + '">' + TOKENS[i] + '</div>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  function renderDemoMatrix() {
+    var wrap = document.getElementById('demoMatrixWrap');
+    if (currentStep === 0) {
+      wrap.innerHTML = '';
+      return;
+    }
+    var size = currentStep;
+    var html = '<div class="matrix">';
+    // col labels
+    html += '<div class="col-labels">';
+    for (var c = 0; c < size; c++) {
+      html += '<div class="col-label">' + TOKENS[c] + '</div>';
+    }
+    html += '</div>';
+    for (var r = 0; r < size; r++) {
+      html += '<div class="matrix-row">';
+      html += '<div class="row-label">' + TOKENS[r] + '</div>';
+      for (var c2 = 0; c2 < size; c2++) {
+        var active = r >= c2;
+        var isNew = (r === size - 1);
+        var extraCls = isNew ? ' step-highlight' : '';
+        if (active) {
+          html += '<div class="cell active-causal' + extraCls + '"></div>';
+        } else {
+          html += '<div class="cell blocked' + extraCls + '">&times;</div>';
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+  }
+
+  function updateStepInfo() {
+    var el = document.getElementById('stepInfo');
+    if (currentStep === 0) {
+      el.innerHTML = '点击「播放」查看因果掩码如何逐步扩展';
+    } else if (currentStep <= N) {
+      el.innerHTML = '步骤 <strong>' + currentStep + '/' + N + '</strong> \u2014 生成 token「' + TOKENS[currentStep - 1] + '」\uff0c可关注前 ' + currentStep + ' 个位置';
+    }
+    if (currentStep >= N && playing) {
+      stopPlay();
+    }
+  }
+
+  function stepForward() {
+    if (currentStep >= N) {
+      stopPlay();
+      return;
+    }
+    currentStep++;
+    renderDemoTokens();
+    renderDemoMatrix();
+    updateStepInfo();
+  }
+
+  function stopPlay() {
+    playing = false;
+    clearInterval(timerId);
+    timerId = null;
+    var btn = document.getElementById('playBtn');
+    btn.innerHTML = '&#9654; 播放';
+    btn.classList.remove('playing');
+  }
+
+  window.togglePlay = function() {
+    if (playing) {
+      stopPlay();
+      return;
+    }
+    if (currentStep >= N) {
+      currentStep = 0;
+    }
+    playing = true;
+    var btn = document.getElementById('playBtn');
+    btn.innerHTML = '&#9646;&#9646; 暂停';
+    btn.classList.add('playing');
+    stepForward();
+    timerId = setInterval(stepForward, getDelay());
+  };
+
+  window.resetDemo = function() {
+    stopPlay();
+    currentStep = 0;
+    renderDemoTokens();
+    renderDemoMatrix();
+    updateStepInfo();
+  };
+
+  // Initial render
+  renderDemoTokens();
+  renderDemoMatrix();
+  updateStepInfo();
+
+})();
+
+/* iframe height reporter */
+(function(){const s=()=>{if(window.parent===window)return;const h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',s);window.addEventListener('resize',s);if('ResizeObserver' in window){const o=new ResizeObserver(s);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(s);setTimeout(s,250);setTimeout(s,1000)})();
+</script>
+</body>
+</html>

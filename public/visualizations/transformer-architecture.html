@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer 编码器-解码器架构</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30,41,59,0.7);
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --purple: #8b5cf6;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  font-family: "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+.container {
+  max-width: 1080px;
+  width: 100%;
+}
+h1 {
+  text-align: center;
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-bottom: 18px;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.btn {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid rgba(148,163,184,0.25);
+  padding: 8px 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { border-color: var(--primary); background: rgba(56,189,248,0.1); }
+.btn.active { border-color: var(--primary); background: rgba(56,189,248,0.15); color: var(--primary); }
+.speed-label { color: var(--muted); font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+.speed-label input[type="range"] {
+  width: 80px;
+  accent-color: var(--primary);
+}
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+canvas {
+  border-radius: 12px;
+  background: rgba(15,23,42,0.5);
+  border: 1px solid rgba(148,163,184,0.12);
+  cursor: pointer;
+}
+.tooltip {
+  position: absolute;
+  background: rgba(15,23,42,0.97);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 14px 18px;
+  max-width: 340px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+  z-index: 10;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+}
+.tooltip.show { opacity: 1; }
+.tooltip .tt-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  display: block;
+}
+.tooltip .tt-title.blue { color: var(--primary); }
+.tooltip .tt-title.purple { color: var(--purple); }
+.tooltip .tt-title.green { color: var(--accent); }
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.footer-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Transformer 编码器-解码器架构</h1>
+  <p class="subtitle">"Attention Is All You Need" (Vaswani et al., 2017) 完整架构交互可视化</p>
+
+  <div class="controls">
+    <button class="btn active" id="btnPlay" onclick="toggleAnim()">
+      <span id="playIcon">&#9646;&#9646;</span>
+      <span id="playText">暂停</span>
+    </button>
+    <div class="speed-label">
+      速度
+      <input type="range" id="speedSlider" min="0.2" max="3" step="0.1" value="1">
+    </div>
+    <button class="btn" id="btnReset" onclick="resetView()">重置视图</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--primary)"></div> 编码器数据流</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> 解码器数据流</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> 交叉注意力</div>
+    <div class="legend-item"><div class="legend-dot" style="background:rgba(148,163,184,0.4)"></div> 残差连接</div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="mainCanvas"></canvas>
+    <div class="tooltip" id="tooltip">
+      <span class="tt-title"></span>
+      <span class="tt-body"></span>
+    </div>
+  </div>
+
+  <p class="footer-note">点击任意组件查看详细说明 | 粒子动画展示数据流向</p>
+</div>
+
+<script>
+/* =========================================================
+   Transformer Architecture - Interactive Canvas Visualization
+   ========================================================= */
+
+const COL = {
+  bg: '#0f172a',
+  card: 'rgba(30,41,59,0.7)',
+  text: '#e2e8f0',
+  muted: '#94a3b8',
+  primary: '#38bdf8',
+  accent: '#22c55e',
+  purple: '#8b5cf6',
+};
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const tooltipEl = document.getElementById('tooltip');
+const canvasWrap = document.getElementById('canvasWrap');
+
+let W, H, dpr;
+let animating = true;
+let speed = 1;
+let time = 0;
+let selectedBox = null;
+let hoveredBox = null;
+let boxes = [];
+let arrows = [];
+let particles = [];
+let residualArrows = [];
+let crossArrowData = null;
+
+// ---- Descriptions ----
+const descriptions = {
+  '输入嵌入': '将输入 token 序列通过嵌入矩阵转换为 d_model 维的稠密向量表示。嵌入权重通常乘以 sqrt(d_model) 进行缩放。',
+  '位置编码_enc': '使用正弦/余弦函数为每个位置生成固定的位置编码向量，与输入嵌入相加，使模型能感知序列中 token 的位置信息。\n\nPE(pos, 2i) = sin(pos / 10000^(2i/d_model))\nPE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))',
+  '多头自注意力': '编码器的核心模块。将输入投影为 Q、K、V 三个矩阵，通过 h 个注意力头并行计算 Scaled Dot-Product Attention，捕捉输入序列内部的全局依赖关系。\n\nAttention(Q,K,V) = softmax(QK^T / sqrt(d_k))V',
+  'Add & Norm_enc1': '残差连接 + 层归一化。将子层输入 x 与输出相加（残差），再进行 LayerNorm，稳定训练并帮助梯度流动。\n\nLayerNorm(x + Sublayer(x))',
+  '前馈网络_enc': '两层全连接网络 (FFN)：先升维到 d_ff=2048，经 ReLU 激活，再降回 d_model=512。对每个位置独立、相同地应用。\n\nFFN(x) = max(0, xW₁+b₁)W₂+b₂',
+  'Add & Norm_enc2': '第二个残差连接 + 层归一化，包裹前馈网络子层，结构与第一个 Add & Norm 完全相同。',
+  '输出嵌入(右移)': '解码器输入：训练时将目标序列右移一位（teacher forcing），确保位置 i 的预测只依赖位置 < i 的已知输出。',
+  '位置编码_dec': '与编码器相同的正弦位置编码方案，为解码器输入添加位置信息。',
+  '掩码多头自注意力': '带因果掩码 (causal mask) 的自注意力。通过将未来位置的注意力分数设为 -inf，确保自回归生成时每个位置只能关注当前及之前的位置。',
+  'Add & Norm_dec1': '解码器第一个残差连接 + 层归一化，包裹掩码自注意力子层。',
+  '多头交叉注意力': '解码器的关键桥梁模块。Q 来自解码器上一层输出，K 和 V 来自编码器最终输出，让解码器每个位置都能关注输入序列的所有位置。',
+  'Add & Norm_dec2': '解码器第二个残差连接 + 层归一化，包裹交叉注意力子层。',
+  '前馈网络_dec': '与编码器结构相同的两层 FFN (d_model -> d_ff -> d_model)，对每个解码器位置独立应用。',
+  'Add & Norm_dec3': '解码器第三个残差连接 + 层归一化，包裹前馈网络子层。',
+  '线性层': '将解码器输出的 d_model 维向量线性投影到词汇表大小 |V| 的维度，生成每个位置的 logits。',
+  'Softmax': '将 logits 转换为概率分布。训练时用交叉熵损失；推理时取 argmax 或用束搜索 (beam search) 选取最优输出 token。',
+  '输出概率': '最终的词汇表概率分布。每个位置输出下一个 token 的概率，构成自回归生成的基础。',
+  'Nx_enc': '编码器层重复 N 次（原论文 N=6）。每层包含多头自注意力和前馈网络两个子层，各带残差连接和层归一化。',
+  'Nx_dec': '解码器层重复 N 次（原论文 N=6）。每层包含掩码自注意力、交叉注意力和前馈网络三个子层。',
+  '+_enc': '位置编码与输入嵌入按元素相加 (element-wise add)，将位置信息注入到 token 表示中。',
+  '+_dec': '位置编码与输出嵌入按元素相加，将位置信息注入到解码器 token 表示中。',
+};
+
+// ---- Helpers ----
+function hexToRgba(hex, a) {
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+
+// ---- Sizing ----
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const maxW = Math.min(canvasWrap.clientWidth, 1060);
+  W = Math.max(maxW, 420);
+  H = 780;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  buildLayout();
+}
+
+// ---- Layout ----
+function buildLayout() {
+  boxes = [];
+  arrows = [];
+  residualArrows = [];
+  crossArrowData = null;
+
+  // Layout constants
+  var encCX = W * 0.27;
+  var decCX = W * 0.73;
+  var bw = Math.min(180, W * 0.21);
+  var bh = 34;
+  var smallH = 28;
+  var peW = bw * 0.58;
+  var peH = 26;
+  var plusSize = 28;
+
+  // Available vertical space (leave margins top and bottom)
+  var topMargin = 36;
+  var botMargin = 30;
+  var totalH = H - topMargin - botMargin;
+
+  // Decoder has 12 "slots" bottom to top:
+  // 0: 输出嵌入  1: +  2: 掩码自注意力  3: AN1  4: 交叉注意力  5: AN2
+  // 6: FFN  7: AN3  8: 线性层  9: Softmax  10: 输出概率
+  // We use 11 steps (10 gaps)
+  var decSlots = 11;
+  var decStep = totalH / decSlots;
+
+  // Y positions from bottom to top for decoder
+  var botY = H - botMargin;
+  function decY(slot) { return botY - slot * decStep; }
+
+  // Encoder has 6 slots:
+  // 0: 输入嵌入  1: +  2: 多头自注意力  3: AN1  4: FFN  5: AN2
+  // Encoder bottom aligns with decoder bottom,
+  // Encoder top (AN2) aligns with decoder cross-attention level (slot 4)
+  var encBotY = botY;
+  var encTopTargetY = decY(4);  // align enc output with cross-attention
+  var encTotalH = encBotY - encTopTargetY;
+  var encSlots = 6;
+  var encStep = encTotalH / (encSlots - 1);
+
+  function encY(slot) { return encBotY - slot * encStep; }
+
+  // ---- Helpers ----
+  function addBox(id, label, cx, cy, w, h, color) {
+    boxes.push({ id: id, label: label, cx: cx, cy: cy, w: w, h: h, color: color });
+  }
+
+  function findBox(id) {
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].id === id) return boxes[i];
+    }
+    return null;
+  }
+
+  // =============== ENCODER (left) ===============
+  addBox('输入嵌入', '输入嵌入', encCX, encY(0), bw, bh, COL.primary);
+  addBox('+_enc', '+', encCX, encY(1), plusSize, plusSize, COL.accent);
+  addBox('位置编码_enc', '位置编码', encCX - bw * 0.72, encY(1), peW, peH, COL.primary);
+
+  var nxEncTopY = encY(2) + bh / 2 + 8;
+  addBox('多头自注意力', '多头自注意力', encCX, encY(2), bw, bh, COL.primary);
+  addBox('Add & Norm_enc1', 'Add & Norm', encCX, encY(3), bw, smallH, COL.primary);
+  addBox('前馈网络_enc', '前馈网络 (FFN)', encCX, encY(4), bw, bh, COL.primary);
+  addBox('Add & Norm_enc2', 'Add & Norm', encCX, encY(5), bw, smallH, COL.primary);
+  var nxEncBotY = encY(5) - smallH / 2 - 8;
+  addBox('Nx_enc', 'N\u00d7', encCX + bw / 2 + 26, (nxEncTopY + nxEncBotY) / 2, 32, Math.abs(nxEncTopY - nxEncBotY), COL.muted);
+
+  // =============== DECODER (right) ===============
+  addBox('输出嵌入(右移)', '输出嵌入(右移)', decCX, decY(0), bw, bh, COL.purple);
+  addBox('+_dec', '+', decCX, decY(1), plusSize, plusSize, COL.accent);
+  addBox('位置编码_dec', '位置编码', decCX + bw * 0.72, decY(1), peW, peH, COL.purple);
+
+  var nxDecTopY = decY(2) + bh / 2 + 8;
+  addBox('掩码多头自注意力', '掩码多头自注意力', decCX, decY(2), bw, bh, COL.purple);
+  addBox('Add & Norm_dec1', 'Add & Norm', decCX, decY(3), bw, smallH, COL.purple);
+  addBox('多头交叉注意力', '多头交叉注意力', decCX, decY(4), bw, bh, COL.accent);
+  addBox('Add & Norm_dec2', 'Add & Norm', decCX, decY(5), bw, smallH, COL.purple);
+  addBox('前馈网络_dec', '前馈网络 (FFN)', decCX, decY(6), bw, bh, COL.purple);
+  addBox('Add & Norm_dec3', 'Add & Norm', decCX, decY(7), bw, smallH, COL.purple);
+  var nxDecBotY = decY(7) - smallH / 2 - 8;
+  addBox('Nx_dec', 'N\u00d7', decCX + bw / 2 + 26, (nxDecTopY + nxDecBotY) / 2, 32, Math.abs(nxDecTopY - nxDecBotY), COL.muted);
+
+  // Top output stack
+  addBox('线性层', '线性层', decCX, decY(8), bw * 0.72, bh, COL.text);
+  addBox('Softmax', 'Softmax', decCX, decY(9), bw * 0.72, bh, COL.text);
+  addBox('输出概率', '输出概率', decCX, decY(10), bw * 0.72, bh, COL.accent);
+
+  // =============== ARROWS ===============
+  function addArrow(fromId, toId, color) {
+    var f = findBox(fromId);
+    var t = findBox(toId);
+    if (!f || !t) return;
+    arrows.push({ x1: f.cx, y1: f.cy - f.h / 2, x2: t.cx, y2: t.cy + t.h / 2, color: color });
+  }
+
+  // Encoder vertical flow
+  addArrow('输入嵌入', '+_enc', COL.primary);
+  addArrow('+_enc', '多头自注意力', COL.primary);
+  addArrow('多头自注意力', 'Add & Norm_enc1', COL.primary);
+  addArrow('Add & Norm_enc1', '前馈网络_enc', COL.primary);
+  addArrow('前馈网络_enc', 'Add & Norm_enc2', COL.primary);
+
+  // Decoder vertical flow
+  addArrow('输出嵌入(右移)', '+_dec', COL.purple);
+  addArrow('+_dec', '掩码多头自注意力', COL.purple);
+  addArrow('掩码多头自注意力', 'Add & Norm_dec1', COL.purple);
+  addArrow('Add & Norm_dec1', '多头交叉注意力', COL.purple);
+  addArrow('多头交叉注意力', 'Add & Norm_dec2', COL.purple);
+  addArrow('Add & Norm_dec2', '前馈网络_dec', COL.purple);
+  addArrow('前馈网络_dec', 'Add & Norm_dec3', COL.purple);
+  addArrow('Add & Norm_dec3', '线性层', COL.purple);
+  addArrow('线性层', 'Softmax', COL.text);
+  addArrow('Softmax', '输出概率', COL.accent);
+
+  // Positional encoding horizontal arrows
+  var peEnc = findBox('位置编码_enc');
+  var plusEnc = findBox('+_enc');
+  if (peEnc && plusEnc) {
+    arrows.push({ x1: peEnc.cx + peEnc.w / 2, y1: peEnc.cy, x2: plusEnc.cx - plusEnc.w / 2, y2: plusEnc.cy, color: COL.primary });
+  }
+  var peDec = findBox('位置编码_dec');
+  var plusDec = findBox('+_dec');
+  if (peDec && plusDec) {
+    arrows.push({ x1: peDec.cx - peDec.w / 2, y1: peDec.cy, x2: plusDec.cx + plusDec.w / 2, y2: plusDec.cy, color: COL.purple });
+  }
+
+  // Cross-attention arrow (encoder -> decoder)
+  var an2Enc = findBox('Add & Norm_enc2');
+  var crossAttn = findBox('多头交叉注意力');
+  if (an2Enc && crossAttn) {
+    crossArrowData = {
+      x1: an2Enc.cx + an2Enc.w / 2 + 4,
+      y1: an2Enc.cy,
+      x2: crossAttn.cx - crossAttn.w / 2 - 4,
+      y2: crossAttn.cy,
+      color: COL.accent,
+    };
+  }
+
+  // =============== RESIDUAL CONNECTIONS ===============
+  // Encoder residuals
+  var mhsaEnc = findBox('多头自注意力');
+  var an1Enc = findBox('Add & Norm_enc1');
+  var ffnEnc = findBox('前馈网络_enc');
+  var an2EncB = findBox('Add & Norm_enc2');
+  var resXEnc = encCX - bw / 2 - 18;
+
+  if (mhsaEnc && an1Enc) {
+    residualArrows.push({
+      startY: mhsaEnc.cy + mhsaEnc.h / 2 + 4,
+      endY: an1Enc.cy - an1Enc.h / 2 - 4,
+      cx: resXEnc,
+      connectX: encCX - bw / 2,
+      color: 'rgba(56,189,248,0.3)',
+    });
+  }
+  if (ffnEnc && an2EncB) {
+    residualArrows.push({
+      startY: ffnEnc.cy + ffnEnc.h / 2 + 4,
+      endY: an2EncB.cy - an2EncB.h / 2 - 4,
+      cx: resXEnc,
+      connectX: encCX - bw / 2,
+      color: 'rgba(56,189,248,0.3)',
+    });
+  }
+
+  // Decoder residuals
+  var mmsaDec = findBox('掩码多头自注意力');
+  var an1Dec = findBox('Add & Norm_dec1');
+  var crossAttnB = findBox('多头交叉注意力');
+  var an2Dec = findBox('Add & Norm_dec2');
+  var ffnDec = findBox('前馈网络_dec');
+  var an3Dec = findBox('Add & Norm_dec3');
+  var resXDec = decCX - bw / 2 - 18;
+
+  if (mmsaDec && an1Dec) {
+    residualArrows.push({
+      startY: mmsaDec.cy + mmsaDec.h / 2 + 4,
+      endY: an1Dec.cy - an1Dec.h / 2 - 4,
+      cx: resXDec,
+      connectX: decCX - bw / 2,
+      color: 'rgba(139,92,246,0.3)',
+    });
+  }
+  if (crossAttnB && an2Dec) {
+    residualArrows.push({
+      startY: crossAttnB.cy + crossAttnB.h / 2 + 4,
+      endY: an2Dec.cy - an2Dec.h / 2 - 4,
+      cx: resXDec,
+      connectX: decCX - bw / 2,
+      color: 'rgba(139,92,246,0.3)',
+    });
+  }
+  if (ffnDec && an3Dec) {
+    residualArrows.push({
+      startY: ffnDec.cy + ffnDec.h / 2 + 4,
+      endY: an3Dec.cy - an3Dec.h / 2 - 4,
+      cx: resXDec,
+      connectX: decCX - bw / 2,
+      color: 'rgba(139,92,246,0.3)',
+    });
+  }
+
+  buildParticles();
+}
+
+// ---- Particle system ----
+function buildParticles() {
+  particles = [];
+
+  var encArrows = arrows.filter(function(a) { return a.color === COL.primary; });
+  var decArrows = arrows.filter(function(a) { return a.color === COL.purple; });
+
+  // Encoder particles
+  for (var i = 0; i < 20; i++) {
+    var idx = Math.floor(Math.random() * encArrows.length);
+    particles.push({
+      progress: Math.random(),
+      speed: 0.25 + Math.random() * 0.35,
+      color: COL.primary,
+      size: 2 + Math.random() * 2,
+      arrowIdx: idx,
+      arrowSet: encArrows,
+      isCross: false,
+    });
+  }
+
+  // Decoder particles
+  for (var i = 0; i < 24; i++) {
+    var idx = Math.floor(Math.random() * decArrows.length);
+    particles.push({
+      progress: Math.random(),
+      speed: 0.25 + Math.random() * 0.35,
+      color: COL.purple,
+      size: 2 + Math.random() * 2,
+      arrowIdx: idx,
+      arrowSet: decArrows,
+      isCross: false,
+    });
+  }
+
+  // Cross attention particles
+  if (crossArrowData) {
+    for (var i = 0; i < 7; i++) {
+      particles.push({
+        progress: Math.random(),
+        speed: 0.2 + Math.random() * 0.3,
+        color: COL.accent,
+        size: 2.5 + Math.random() * 1.5,
+        arrowIdx: 0,
+        arrowSet: [crossArrowData],
+        isCross: true,
+      });
+    }
+  }
+}
+
+// ---- Drawing helpers ----
+function drawRoundedRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawArrowhead(x, y, angle, size, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-size, -size * 0.45);
+  ctx.lineTo(-size * 0.7, 0);
+  ctx.lineTo(-size, size * 0.45);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---- Main draw ----
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  var font = '"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  // Background grid dots (subtle)
+  ctx.save();
+  ctx.fillStyle = 'rgba(148,163,184,0.035)';
+  for (var gx = 20; gx < W; gx += 40) {
+    for (var gy = 20; gy < H; gy += 40) {
+      ctx.beginPath();
+      ctx.arc(gx, gy, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Column background glows
+  ctx.save();
+  var encGlow = ctx.createRadialGradient(W * 0.27, H * 0.65, 30, W * 0.27, H * 0.65, H * 0.45);
+  encGlow.addColorStop(0, 'rgba(56,189,248,0.04)');
+  encGlow.addColorStop(1, 'rgba(56,189,248,0)');
+  ctx.fillStyle = encGlow;
+  ctx.fillRect(0, 0, W / 2, H);
+
+  var decGlow = ctx.createRadialGradient(W * 0.73, H * 0.45, 30, W * 0.73, H * 0.45, H * 0.52);
+  decGlow.addColorStop(0, 'rgba(139,92,246,0.035)');
+  decGlow.addColorStop(1, 'rgba(139,92,246,0)');
+  ctx.fillStyle = decGlow;
+  ctx.fillRect(W / 2, 0, W / 2, H);
+  ctx.restore();
+
+  // Section labels
+  ctx.save();
+  ctx.font = 'bold 15px ' + font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COL.primary;
+  ctx.fillText('编码器 (Encoder)', W * 0.27, 12);
+  ctx.fillStyle = COL.purple;
+  ctx.fillText('解码器 (Decoder)', W * 0.73, 12);
+  ctx.restore();
+
+  // Dashed separator
+  ctx.save();
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = 'rgba(148,163,184,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 32);
+  ctx.lineTo(W / 2, H - 12);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ---- Residual connections ----
+  residualArrows.forEach(function(ra) {
+    ctx.save();
+    ctx.strokeStyle = ra.color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(ra.connectX, ra.startY);
+    ctx.lineTo(ra.cx, ra.startY);
+    ctx.lineTo(ra.cx, ra.endY);
+    ctx.lineTo(ra.connectX, ra.endY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrowhead pointing right at the end
+    drawArrowhead(ra.connectX, ra.endY, 0, 5, ra.color);
+    ctx.restore();
+  });
+
+  // ---- Cross-attention arrow ----
+  if (crossArrowData) {
+    var ca = crossArrowData;
+    ctx.save();
+
+    var cpX = (ca.x1 + ca.x2) / 2;
+    var cpY = Math.min(ca.y1, ca.y2) - 32;
+
+    // Glow behind the arrow
+    ctx.strokeStyle = hexToRgba(COL.accent, 0.15);
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(ca.x1, ca.y1);
+    ctx.quadraticCurveTo(cpX, cpY, ca.x2, ca.y2);
+    ctx.stroke();
+
+    // Main arrow line
+    ctx.strokeStyle = COL.accent;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.moveTo(ca.x1, ca.y1);
+    ctx.quadraticCurveTo(cpX, cpY, ca.x2, ca.y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var angle = Math.atan2(ca.y2 - cpY, ca.x2 - cpX);
+    drawArrowhead(ca.x2, ca.y2, angle, 8, COL.accent);
+
+    // Label with background
+    ctx.font = 'bold 11px ' + font;
+    var labelW = ctx.measureText('K, V').width + 10;
+    drawRoundedRect(cpX - labelW / 2, cpY - 20, labelW, 16, 4);
+    ctx.fillStyle = 'rgba(15,23,42,0.85)';
+    ctx.fill();
+    ctx.fillStyle = COL.accent;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('K, V', cpX, cpY - 12);
+    ctx.restore();
+  }
+
+  // ---- Connection arrows ----
+  arrows.forEach(function(a) {
+    ctx.save();
+    ctx.strokeStyle = hexToRgba(a.color, 0.45);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(a.x1, a.y1);
+    ctx.lineTo(a.x2, a.y2);
+    ctx.stroke();
+    var angle = Math.atan2(a.y2 - a.y1, a.x2 - a.x1);
+    drawArrowhead(a.x2, a.y2, angle, 6, hexToRgba(a.color, 0.6));
+    ctx.restore();
+  });
+
+  // ---- Boxes ----
+  boxes.forEach(function(b) {
+    var isNx = (b.id === 'Nx_enc' || b.id === 'Nx_dec');
+    var isPlus = (b.id === '+_enc' || b.id === '+_dec');
+    var isSelected = selectedBox && selectedBox.id === b.id;
+    var isHovered = hoveredBox && hoveredBox.id === b.id;
+
+    ctx.save();
+
+    if (isNx) {
+      // Nx bracket - right-side curly bracket shape
+      var bracketX = b.cx - 6;
+      var topY = b.cy - b.h / 2;
+      var botY = b.cy + b.h / 2;
+      var midY = b.cy;
+      var bulge = 10;
+
+      ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+
+      // Top half of bracket
+      ctx.beginPath();
+      ctx.moveTo(bracketX - 4, topY);
+      ctx.quadraticCurveTo(bracketX + bulge, topY, bracketX + bulge, topY + 20);
+      ctx.lineTo(bracketX + bulge, midY - 12);
+      ctx.quadraticCurveTo(bracketX + bulge, midY, bracketX + bulge + 8, midY);
+      ctx.stroke();
+
+      // Bottom half of bracket
+      ctx.beginPath();
+      ctx.moveTo(bracketX - 4, botY);
+      ctx.quadraticCurveTo(bracketX + bulge, botY, bracketX + bulge, botY - 20);
+      ctx.lineTo(bracketX + bulge, midY + 12);
+      ctx.quadraticCurveTo(bracketX + bulge, midY, bracketX + bulge + 8, midY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Nx text
+      ctx.font = 'bold 13px ' + font;
+      ctx.fillStyle = COL.muted;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.label, bracketX + bulge + 12, midY);
+      ctx.restore();
+      return;
+    }
+
+    var x = b.cx - b.w / 2;
+    var y = b.cy - b.h / 2;
+    var radius = isPlus ? b.h / 2 : 8;
+
+    // Glow effect
+    if (isSelected || isHovered) {
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = isSelected ? 22 : 14;
+    }
+
+    // Background fill
+    drawRoundedRect(x, y, b.w, b.h, radius);
+    var grad = ctx.createLinearGradient(x, y, x + b.w, y + b.h);
+    if (isSelected) {
+      grad.addColorStop(0, hexToRgba(b.color, 0.28));
+      grad.addColorStop(1, hexToRgba(b.color, 0.12));
+    } else if (isHovered) {
+      grad.addColorStop(0, hexToRgba(b.color, 0.15));
+      grad.addColorStop(1, 'rgba(30,41,59,0.7)');
+    } else {
+      grad.addColorStop(0, 'rgba(30,41,59,0.85)');
+      grad.addColorStop(1, 'rgba(30,41,59,0.6)');
+    }
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = isSelected ? b.color : hexToRgba(b.color, isHovered ? 0.7 : 0.45);
+    ctx.lineWidth = isSelected ? 2.2 : (isHovered ? 1.8 : 1.2);
+    ctx.stroke();
+
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Label
+    var fontSize = isPlus ? 16 : (b.w < 110 ? 11 : 12.5);
+    ctx.font = (isPlus ? 'bold ' : '600 ') + fontSize + 'px ' + font;
+    ctx.fillStyle = isSelected ? b.color : (isHovered ? '#ffffff' : COL.text);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, b.cx, b.cy + 0.5);
+
+    ctx.restore();
+  });
+
+  // ---- Particles ----
+  particles.forEach(function(p) {
+    var a = p.arrowSet[p.arrowIdx];
+    if (!a) return;
+
+    var drawX, drawY;
+
+    if (p.isCross && crossArrowData) {
+      var ca = crossArrowData;
+      var cpX = (ca.x1 + ca.x2) / 2;
+      var cpY = Math.min(ca.y1, ca.y2) - 32;
+      var t = p.progress;
+      drawX = (1 - t) * (1 - t) * ca.x1 + 2 * (1 - t) * t * cpX + t * t * ca.x2;
+      drawY = (1 - t) * (1 - t) * ca.y1 + 2 * (1 - t) * t * cpY + t * t * ca.y2;
+    } else {
+      drawX = a.x1 + (a.x2 - a.x1) * p.progress;
+      drawY = a.y1 + (a.y2 - a.y1) * p.progress;
+    }
+
+    ctx.save();
+    var alpha = 0.6 + 0.4 * Math.sin(time * 4 + p.progress * 12);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+
+    // Trailing glow
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, p.size * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  });
+}
+
+// ---- Update ----
+function updateParticles(dt) {
+  particles.forEach(function(p) {
+    p.progress += p.speed * speed * dt * 0.7;
+    if (p.progress >= 1) {
+      if (p.isCross) {
+        p.progress = 0;
+        return;
+      }
+      var nextIdx = p.arrowIdx + 1;
+      if (nextIdx < p.arrowSet.length) {
+        p.arrowIdx = nextIdx;
+        p.progress = 0;
+      } else {
+        p.arrowIdx = 0;
+        p.progress = 0;
+      }
+    }
+  });
+}
+
+// ---- Interaction ----
+function getMousePos(e) {
+  var rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function hitTest(mx, my) {
+  // Check non-Nx boxes first
+  for (var i = boxes.length - 1; i >= 0; i--) {
+    var b = boxes[i];
+    if (b.id === 'Nx_enc' || b.id === 'Nx_dec') continue;
+    var pad = 5;
+    if (mx >= b.cx - b.w / 2 - pad && mx <= b.cx + b.w / 2 + pad &&
+        my >= b.cy - b.h / 2 - pad && my <= b.cy + b.h / 2 + pad) {
+      return b;
+    }
+  }
+  // Then check Nx
+  for (var i = boxes.length - 1; i >= 0; i--) {
+    var b = boxes[i];
+    if (b.id !== 'Nx_enc' && b.id !== 'Nx_dec') continue;
+    if (mx >= b.cx - b.w / 2 - 12 && mx <= b.cx + b.w / 2 + 12 &&
+        my >= b.cy - b.h / 2 - 4 && my <= b.cy + b.h / 2 + 4) {
+      return b;
+    }
+  }
+  return null;
+}
+
+function showTooltip(box, mx, my) {
+  var desc = descriptions[box.id];
+  if (!desc) { hideTooltip(); return; }
+
+  var titleEl = tooltipEl.querySelector('.tt-title');
+  var bodyEl = tooltipEl.querySelector('.tt-body');
+
+  var displayName = box.label;
+  if (box.id.indexOf('_enc') >= 0) displayName = '[编码器] ' + box.label;
+  else if (box.id.indexOf('_dec') >= 0) displayName = '[解码器] ' + box.label;
+  else if (box.id === '多头交叉注意力') displayName = '[解码器] ' + box.label;
+  else if (box.id === '掩码多头自注意力') displayName = '[解码器] ' + box.label;
+
+  titleEl.textContent = displayName;
+  titleEl.className = 'tt-title';
+  if (box.color === COL.primary) titleEl.classList.add('blue');
+  else if (box.color === COL.purple) titleEl.classList.add('purple');
+  else if (box.color === COL.accent) titleEl.classList.add('green');
+
+  bodyEl.textContent = desc;
+  tooltipEl.classList.add('show');
+
+  // Position tooltip
+  var wrapRect = canvasWrap.getBoundingClientRect();
+  var tx = mx + 18;
+  var ty = my - 30;
+  if (tx + 340 > wrapRect.width) tx = mx - 360;
+  if (tx < 4) tx = 4;
+  if (ty < 4) ty = 4;
+  if (ty + 180 > wrapRect.height) ty = wrapRect.height - 190;
+  tooltipEl.style.left = tx + 'px';
+  tooltipEl.style.top = ty + 'px';
+}
+
+function hideTooltip() {
+  tooltipEl.classList.remove('show');
+}
+
+canvas.addEventListener('click', function(e) {
+  var pos = getMousePos(e);
+  var box = hitTest(pos.x, pos.y);
+  if (box) {
+    selectedBox = (selectedBox && selectedBox.id === box.id) ? null : box;
+    if (selectedBox) showTooltip(selectedBox, pos.x, pos.y);
+    else hideTooltip();
+  } else {
+    selectedBox = null;
+    hideTooltip();
+  }
+});
+
+canvas.addEventListener('mousemove', function(e) {
+  var pos = getMousePos(e);
+  var box = hitTest(pos.x, pos.y);
+  hoveredBox = box;
+  canvas.style.cursor = box ? 'pointer' : 'default';
+  if (box && !selectedBox) {
+    showTooltip(box, pos.x, pos.y);
+  } else if (!box && !selectedBox) {
+    hideTooltip();
+  }
+});
+
+canvas.addEventListener('mouseleave', function() {
+  hoveredBox = null;
+  if (!selectedBox) hideTooltip();
+});
+
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  var touch = e.touches[0];
+  var rect = canvas.getBoundingClientRect();
+  var pos = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  var box = hitTest(pos.x, pos.y);
+  if (box) {
+    selectedBox = (selectedBox && selectedBox.id === box.id) ? null : box;
+    if (selectedBox) showTooltip(selectedBox, pos.x, pos.y);
+    else hideTooltip();
+  } else {
+    selectedBox = null;
+    hideTooltip();
+  }
+}, { passive: false });
+
+// ---- Controls ----
+function toggleAnim() {
+  animating = !animating;
+  document.getElementById('playIcon').innerHTML = animating ? '&#9646;&#9646;' : '&#9654;';
+  document.getElementById('playText').textContent = animating ? '暂停' : '播放';
+  document.getElementById('btnPlay').classList.toggle('active', animating);
+}
+
+function resetView() {
+  selectedBox = null;
+  hoveredBox = null;
+  hideTooltip();
+  time = 0;
+  buildParticles();
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  speed = parseFloat(this.value);
+});
+
+// ---- Animation loop ----
+var lastTime = 0;
+function loop(ts) {
+  var dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  if (animating) {
+    time += dt * speed;
+    updateParticles(dt);
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ---- Init ----
+window.addEventListener('resize', resize);
+resize();
+requestAnimationFrame(function(ts) {
+  lastTime = ts;
+  loop(ts);
+});
+
+// ---- Iframe height reporter ----
+(function(){var s=function(){if(window.parent===window)return;var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',s);window.addEventListener('resize',s);if('ResizeObserver' in window){var o=new ResizeObserver(s);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(s);setTimeout(s,250);setTimeout(s,1000)})();
+</script>
+</body>
+</html>

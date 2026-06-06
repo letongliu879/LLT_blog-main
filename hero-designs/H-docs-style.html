@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案H：技术文档风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace']
+        }
+      }}
+    }
+  </script>
+  <style>
+    .fade-in { animation: fadeIn 0.5s ease both; }
+    .d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.3s} .d4{animation-delay:.4s}
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .nav-link { position: relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:linear-gradient(90deg,#6366f1,#8b5cf6); transition:width 0.3s ease; }
+    .nav-link:hover::after, .nav-link.active::after { width:100%; }
+    .card-hover { transition: all 0.2s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .dark .card-hover:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .gradient-text { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  </style>
+</head>
+<body class="bg-white dark:bg-[#0f0f10] text-gray-900 dark:text-gray-100 font-sans transition-colors">
+  <!-- 导航 -->
+  <nav class="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-[#0f0f10]/80 border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-8">
+        <span class="text-xl font-bold">
+          <span class="gradient-text">Allen</span><span class="text-gray-400">.</span>
+        </span>
+        <div class="flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-400">
+          <a href="#" class="nav-link active text-gray-900 dark:text-white">首页</a>
+          <a href="#" class="nav-link hover:text-gray-900 dark:hover:text-white transition-colors">博客</a>
+          <a href="#" class="nav-link hover:text-gray-900 dark:hover:text-white transition-colors">项目</a>
+          <a href="#" class="nav-link hover:text-gray-900 dark:hover:text-white transition-colors">标签</a>
+          <a href="#" class="nav-link hover:text-gray-900 dark:hover:text-white transition-colors">关于</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </button>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <span class="dark:hidden">🌙</span>
+          <span class="hidden dark:inline">☀️</span>
+        </button>
+        <a href="#" class="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-6">
+    <!-- Hero -->
+    <section class="py-20 fade-in d1">
+      <div class="max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-sm font-medium mb-6">
+          <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+          RPA Developer @ Capgemini
+        </div>
+
+        <h1 class="text-5xl font-bold leading-tight tracking-tight">
+          Hi, I'm <span class="gradient-text">Allen Wang</span>
+        </h1>
+
+        <p class="mt-6 text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
+          探索 AI、机器学习与自动化技术。用代码理解世界，用文字记录思考。
+        </p>
+
+        <div class="mt-8 flex items-center gap-4">
+          <a href="#" class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/25">
+            开始阅读 →
+          </a>
+          <a href="#" class="px-6 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            查看项目
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 统计 -->
+    <section class="py-12 border-t border-gray-200 dark:border-gray-800 fade-in d2">
+      <div class="grid grid-cols-4 gap-8">
+        <div>
+          <div class="text-4xl font-bold gradient-text">50+</div>
+          <div class="mt-1 text-sm text-gray-500">技术文章</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold gradient-text">51</div>
+          <div class="mt-1 text-sm text-gray-500">技术标签</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold gradient-text">10+</div>
+          <div class="mt-1 text-sm text-gray-500">开源项目</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold gradient-text">3+</div>
+          <div class="mt-1 text-sm text-gray-500">年经验</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 快速入口 -->
+    <section class="py-12 fade-in d3">
+      <h2 class="text-2xl font-bold mb-6">快速入口</h2>
+      <div class="grid grid-cols-3 gap-6">
+        <a href="#" class="card-hover p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xl mb-4">
+            🤖
+          </div>
+          <h3 class="font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Machine Learning</h3>
+          <p class="mt-2 text-sm text-gray-500 leading-relaxed">深度学习、强化学习、NLP 相关文章</p>
+          <div class="mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            24 篇文章 →
+          </div>
+        </a>
+        <a href="#" class="card-hover p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl mb-4">
+            🔗
+          </div>
+          <h3 class="font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">AI Agents</h3>
+          <p class="mt-2 text-sm text-gray-500 leading-relaxed">LangChain、LangGraph、Multi-Agent 系统</p>
+          <div class="mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            12 篇文章 →
+          </div>
+        </a>
+        <a href="#" class="card-hover p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-xl mb-4">
+            ⚡
+          </div>
+          <h3 class="font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Automation</h3>
+          <p class="mt-2 text-sm text-gray-500 leading-relaxed">RPA、流程自动化、效率工具开发</p>
+          <div class="mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            8 篇文章 →
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 最新文章 -->
+    <section class="py-12 fade-in d4">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">最新文章</h2>
+        <a href="#" class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+          查看全部 →
+        </a>
+      </div>
+      <div class="space-y-4">
+        <a href="#" class="card-hover flex items-start gap-6 p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="shrink-0 w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 text-xl">
+            💭
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-medium">随笔</span>
+              <span class="text-sm text-gray-400">Jan 25, 2026 · 59 min read</span>
+            </div>
+            <h3 class="text-lg font-semibold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              深夜胡言：一个程序员在AI时代的身份危机
+            </h3>
+            <p class="mt-2 text-sm text-gray-500 line-clamp-2">
+              当 AI 能写出比我更好的代码时，我的价值在哪里？这是一个关于存在主义的深夜思考...
+            </p>
+          </div>
+        </a>
+        <a href="#" class="card-hover flex items-start gap-6 p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/20 flex items-center justify-center text-green-600 dark:text-green-400 text-xl">
+            🔄
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-xs font-medium">LangGraph</span>
+              <span class="text-sm text-gray-400">Jan 22, 2026 · 29 min read</span>
+            </div>
+            <h3 class="text-lg font-semibold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              LangGraph Reflection Agents 完全指南
+            </h3>
+            <p class="mt-2 text-sm text-gray-500 line-clamp-2">
+              深入解析 LangGraph 中的反思代理架构，从原理到实战的完整教程...
+            </p>
+          </div>
+        </a>
+        <a href="#" class="card-hover flex items-start gap-6 p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 group">
+          <div class="shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl">
+            🚀
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium">Reinforcement Learning</span>
+              <span class="text-sm text-gray-400">Jan 18, 2026 · 15 min read</span>
+            </div>
+            <h3 class="text-lg font-semibold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              基于深度Q学习的月球着陆
+            </h3>
+            <p class="mt-2 text-sm text-gray-500 line-clamp-2">
+              使用 DQN 算法解决 OpenAI Gym 的 LunarLander 环境，从零实现到训练调优...
+            </p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 技术栈 -->
+    <section class="py-12 border-t border-gray-200 dark:border-gray-800">
+      <h2 class="text-sm font-medium text-gray-500 mb-4">技术栈</h2>
+      <div class="flex flex-wrap gap-3">
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">Python</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">TensorFlow</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">PyTorch</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">LangChain</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">React</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">TypeScript</span>
+        <span class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">Next.js</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-200 dark:border-gray-800 mt-12">
+    <div class="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between text-sm text-gray-500">
+      <span>© 2026 Allen Wang. All rights reserved.</span>
+      <div class="flex items-center gap-6">
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">GitHub</a>
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">LinkedIn</a>
+        <a href="#" class="hover:text-gray-900 dark:hover:text-white transition-colors">Email</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

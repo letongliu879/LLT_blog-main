@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>逻辑回归正则化效果对比</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+    }
+    body {
+      background: radial-gradient(circle at 20% 15%, #163d69 0%, #020617 52%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(2, 6, 23, 0.65);
+    }
+    .controls { display: grid; gap: 14px; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type='range'] { width: 100%; accent-color: var(--primary); }
+    .value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--text);
+    }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.5);
+      padding: 10px;
+      text-align: center;
+    }
+    .kpi-card .name { color: var(--muted); font-size: 0.72rem; margin-bottom: 4px; }
+    .kpi-card .num {
+      color: var(--green);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .note {
+      margin-top: 12px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>正则化强度对决策边界的影响</h1>
+    <p class="subtitle">
+      用可调参数 \(\lambda\) 模拟 L2 正则：\(\mathbf{w}_{reg}=\mathbf{w}/(1+\lambda)\)。观察边界如何从“复杂贴点”逐步变得平滑，直观理解过拟合与欠拟合。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <canvas id="board" width="640" height="420"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:#22c55e"></i>正类样本</span>
+          <span><i class="dot" style="background:#ef4444"></i>负类样本</span>
+          <span><i class="dot" style="background:#38bdf8"></i>当前正则边界</span>
+        </div>
+      </section>
+
+      <section class="panel controls">
+        <div>
+          <label>基准 w1 <span id="w1Val" class="value">2.2</span></label>
+          <input id="w1" type="range" min="0.4" max="4" step="0.1" value="2.2" />
+        </div>
+        <div>
+          <label>基准 w2 <span id="w2Val" class="value">-2.0</span></label>
+          <input id="w2" type="range" min="-4" max="-0.4" step="0.1" value="-2.0" />
+        </div>
+        <div>
+          <label>偏置 b <span id="bVal" class="value">0.1</span></label>
+          <input id="b" type="range" min="-2" max="2" step="0.1" value="0.1" />
+        </div>
+        <div>
+          <label>正则化 λ <span id="lVal" class="value">0.0</span></label>
+          <input id="lambda" type="range" min="0" max="8" step="0.1" value="0" />
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-card">
+            <div class="name">有效 |w|</div>
+            <div id="wnorm" class="num">0.00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="name">训练准确率</div>
+            <div id="acc" class="num">0.00%</div>
+          </div>
+        </div>
+
+        <p class="note">
+          一般来说：λ 过小 → 可能过拟合；λ 适中 → 泛化更稳；λ 过大 → 权重被过度压缩，边界变“迟钝”，出现欠拟合。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+
+    const w1In = document.getElementById('w1');
+    const w2In = document.getElementById('w2');
+    const bIn = document.getElementById('b');
+    const lIn = document.getElementById('lambda');
+
+    const w1Val = document.getElementById('w1Val');
+    const w2Val = document.getElementById('w2Val');
+    const bVal = document.getElementById('bVal');
+    const lVal = document.getElementById('lVal');
+    const accEl = document.getElementById('acc');
+    const wnormEl = document.getElementById('wnorm');
+
+    const data = [];
+    function randn() {
+      let u = 0, v = 0;
+      while (!u) u = Math.random();
+      while (!v) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    for (let i = 0; i < 50; i++) {
+      data.push({ x: randn() * 0.75 - 1.25, y: randn() * 0.85 + 1.1, label: 1 });
+      data.push({ x: randn() * 0.78 + 1.2, y: randn() * 0.8 - 1.15, label: 0 });
+    }
+
+    function sx(x) { return 46 + ((x + 4) / 8) * (canvas.width - 92); }
+    function sy(y) { return canvas.height - 40 - ((y + 4) / 8) * (canvas.height - 82); }
+
+    function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+
+    function drawAxes() {
+      ctx.strokeStyle = 'rgba(148,163,184,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(46, canvas.height - 40);
+      ctx.lineTo(canvas.width - 24, canvas.height - 40);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(46, canvas.height - 40);
+      ctx.lineTo(46, 22);
+      ctx.stroke();
+    }
+
+    function drawSamples(w1, w2, b) {
+      let hit = 0;
+      for (const p of data) {
+        const prob = sigmoid(w1 * p.x + w2 * p.y + b);
+        const pred = prob >= 0.5 ? 1 : 0;
+        if (pred === p.label) hit += 1;
+
+        ctx.beginPath();
+        ctx.arc(sx(p.x), sy(p.y), 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = p.label === 1 ? '#22c55e' : '#ef4444';
+        ctx.fill();
+      }
+      const acc = (hit / data.length) * 100;
+      accEl.textContent = `${acc.toFixed(1)}%`;
+    }
+
+    function drawBoundary(w1, w2, b) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+
+      if (Math.abs(w2) < 1e-6) {
+        const x = -b / w1;
+        ctx.moveTo(sx(x), sy(-4));
+        ctx.lineTo(sx(x), sy(4));
+      } else {
+        const xLeft = -4;
+        const xRight = 4;
+        const yLeft = -(w1 * xLeft + b) / w2;
+        const yRight = -(w1 * xRight + b) / w2;
+        ctx.moveTo(sx(xLeft), sy(yLeft));
+        ctx.lineTo(sx(xRight), sy(yRight));
+      }
+      ctx.stroke();
+    }
+
+    function update() {
+      const baseW1 = Number(w1In.value);
+      const baseW2 = Number(w2In.value);
+      const b = Number(bIn.value);
+      const lambda = Number(lIn.value);
+
+      const scale = 1 / (1 + lambda);
+      const w1 = baseW1 * scale;
+      const w2 = baseW2 * scale;
+      const wnorm = Math.sqrt(w1 * w1 + w2 * w2);
+
+      w1Val.textContent = baseW1.toFixed(1);
+      w2Val.textContent = baseW2.toFixed(1);
+      bVal.textContent = b.toFixed(1);
+      lVal.textContent = lambda.toFixed(1);
+      wnormEl.textContent = wnorm.toFixed(2);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAxes();
+      drawSamples(w1, w2, b);
+      drawBoundary(w1, w2, b);
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    [w1In, w2In, bIn, lIn].forEach((el) => el.addEventListener('input', update));
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

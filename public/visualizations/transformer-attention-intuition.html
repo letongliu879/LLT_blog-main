@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer 注意力机制直觉 - 交互式可视化</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--purple);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Insight box */
+.insight-box {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.7;
+  transition: all 0.4s ease;
+}
+
+.insight-box.active {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: var(--text);
+}
+
+.insight-box .highlight {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.insight-box .accent-hl {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.insight-box .warn-hl {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* Word boxes */
+.sentence-area {
+  position: relative;
+  min-height: 80px;
+}
+
+.word-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.word-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(51, 65, 85, 0.5);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+}
+
+.word-box:hover {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.15);
+}
+
+.word-box.selected {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+  transform: translateY(-3px);
+}
+
+.word-box.selected::after {
+  content: 'Query';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.word-box .weight-indicator {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+  width: 0;
+}
+
+.word-box.attended .weight-indicator {
+  opacity: 1;
+}
+
+/* Canvas overlay for attention lines */
+.canvas-container {
+  position: relative;
+  margin: 20px 0;
+}
+
+#attention-canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+
+/* Bar chart */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 4px;
+  background: rgba(51, 65, 85, 0.4);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.toggle-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.toggle-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--primary);
+}
+
+.toggle-btn:hover:not(.active) {
+  color: var(--text);
+}
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 180px;
+  padding: 0 4px;
+  justify-content: center;
+}
+
+.bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 80px;
+  gap: 6px;
+}
+
+.bar-wrapper {
+  width: 100%;
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar {
+  width: 70%;
+  border-radius: 6px 6px 2px 2px;
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  min-height: 2px;
+  cursor: default;
+}
+
+.bar .bar-value {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bar:hover .bar-value,
+.bar.show-value .bar-value {
+  opacity: 1;
+}
+
+.bar-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.bar-label.highlight {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Value aggregation */
+.value-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.value-boxes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.value-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(51, 65, 85, 0.4);
+  font-size: 0.8rem;
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
+}
+
+.value-chip .color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  transition: background 0.4s ease;
+}
+
+.value-chip .weight-text {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.value-arrow {
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+
+.result-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  transition: all 0.6s ease;
+  position: relative;
+}
+
+.result-box .result-label {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Analogy card */
+.analogy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.analogy-item {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.analogy-item .analogy-concept {
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.analogy-item .analogy-explain {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.analogy-emoji {
+  font-size: 1.2rem;
+  margin-right: 4px;
+}
+
+/* Placeholder state */
+.placeholder-text {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 32px 0;
+}
+
+.placeholder-text .click-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* Attention matrix mini */
+.matrix-container {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.attention-matrix {
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  margin: 0 auto;
+}
+
+.attention-matrix th,
+.attention-matrix td {
+  padding: 6px 8px;
+  text-align: center;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  min-width: 42px;
+}
+
+.attention-matrix th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.72rem;
+}
+
+.attention-matrix th.row-header {
+  color: var(--primary);
+}
+
+.attention-matrix td {
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.attention-matrix td.cell-highlight {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.attention-matrix tr.row-highlight td {
+  background: rgba(56, 189, 248, 0.06);
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .container {
+    padding: 20px 12px 36px;
+  }
+  h1 {
+    font-size: 1.5rem;
+  }
+  .card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .word-box {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+  .analogy-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .bar-chart {
+    height: 150px;
+  }
+  .bar-wrapper {
+    height: 110px;
+  }
+  .bar-label {
+    font-size: 0.68rem;
+  }
+  .value-boxes {
+    gap: 4px;
+  }
+  .value-chip {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+  .attention-matrix th,
+  .attention-matrix td {
+    padding: 4px 5px;
+    font-size: 0.65rem;
+    min-width: 34px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Transformer 注意力机制直觉</h1>
+  <p class="subtitle">"鸡尾酒会"类比 -- 每个词都在倾听其他词，关注最相关的信息</p>
+
+  <!-- Insight Box -->
+  <div class="insight-box" id="insight-box">
+    点击下方句子中的任意词语，查看它作为 <span class="highlight">Query</span> 时对其他词语的注意力分布。
+    就像在嘈杂的鸡尾酒会上，你会自动聚焦于与你最相关的声音。
+  </div>
+
+  <!-- Sentence Card -->
+  <div class="card">
+    <div class="section-title">输入句子（点击选择 Query 词）</div>
+    <div class="sentence-area">
+      <div class="word-row" id="word-row"></div>
+    </div>
+  </div>
+
+  <!-- Canvas for attention lines -->
+  <div class="canvas-container">
+    <canvas id="attention-canvas"></canvas>
+  </div>
+
+  <!-- Bar Chart Card -->
+  <div class="card">
+    <div class="chart-header">
+      <div class="section-title" style="margin-bottom:0">注意力分数分布</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-mode="softmax" onclick="setScoreMode('softmax')">Softmax 后</button>
+        <button class="toggle-btn" data-mode="raw" onclick="setScoreMode('raw')">原始分数</button>
+      </div>
+    </div>
+    <div id="chart-area">
+      <div class="bar-chart" id="bar-chart"></div>
+    </div>
+  </div>
+
+  <!-- Value Aggregation Card -->
+  <div class="card">
+    <div class="section-title">加权聚合（Value 融合）</div>
+    <div id="value-area">
+      <p class="placeholder-text">选择一个 Query 词后，此处将展示注意力加权后的 Value 融合过程</p>
+    </div>
+  </div>
+
+  <!-- Attention Matrix Card -->
+  <div class="card">
+    <div class="section-title">完整注意力矩阵（Softmax 后）</div>
+    <div class="matrix-container" id="matrix-container"></div>
+  </div>
+
+  <!-- Analogy Card -->
+  <div class="card">
+    <div class="section-title">核心类比：字典查找 / 鸡尾酒会</div>
+    <div class="analogy-grid">
+      <div class="analogy-item">
+        <div class="analogy-concept"><span class="analogy-emoji">Q</span> Query（查询）</div>
+        <div class="analogy-explain">你在鸡尾酒会上的"兴趣"或"问题"。当前词想知道：谁跟我最相关？</div>
+      </div>
+      <div class="analogy-item">
+        <div class="analogy-concept"><span class="analogy-emoji">K</span> Key（键）</div>
+        <div class="analogy-explain">每个词的"自我介绍标签"。用来和 Query 做匹配，计算相关度。</div>
+      </div>
+      <div class="analogy-item">
+        <div class="analogy-concept"><span class="analogy-emoji">V</span> Value（值）</div>
+        <div class="analogy-explain">每个词携带的"实际信息"。匹配度高的词，其信息将被更多地采纳。</div>
+      </div>
+      <div class="analogy-item">
+        <div class="analogy-concept"><span class="analogy-emoji">A</span> Attention（注意力）</div>
+        <div class="analogy-explain">Softmax(QK<sup>T</sup>/sqrt(d)) * V -- 最终得到的是一个信息的加权混合。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== DATA =====
+  var words = ['动物', '没有', '穿过', '马路', '因为', '它', '太', '累', '了'];
+  var n = words.length;
+
+  // Pre-computed raw attention scores (before softmax).
+  // Row = Query, Col = Key. Designed to give meaningful patterns after softmax.
+  var rawScores = [
+    // 动物  没有  穿过  马路  因为   它    太    累    了
+    [ 3.8,  0.5,  1.2,  0.8,  0.2,  2.0,  0.1,  0.9,  0.1],  // 动物
+    [ 1.0,  2.5,  1.8,  0.4,  0.3,  0.5,  0.2,  0.3,  0.1],  // 没有
+    [ 2.8,  1.2,  3.2,  2.6,  0.3,  0.8,  0.1,  0.4,  0.1],  // 穿过
+    [ 1.5,  0.4,  2.2,  3.5,  0.3,  0.4,  0.1,  0.2,  0.1],  // 马路
+    [ 0.8,  0.5,  0.6,  0.5,  3.0,  1.2,  0.6,  0.8,  0.4],  // 因为
+    [ 3.5,  0.6,  0.8,  0.5,  0.8,  2.8,  0.4,  1.5,  0.3],  // 它
+    [ 0.4,  0.3,  0.2,  0.2,  0.3,  1.0,  2.8,  2.5,  0.8],  // 太
+    [ 2.2,  0.3,  0.5,  0.3,  0.5,  2.8,  1.5,  3.5,  0.6],  // 累
+    [ 0.3,  0.2,  0.2,  0.2,  0.3,  0.5,  1.2,  1.8,  2.8],  // 了
+  ];
+
+  // Compute softmax for each row
+  function softmaxRow(row) {
+    var maxVal = Math.max.apply(null, row);
+    var exps = row.map(function (v) { return Math.exp(v - maxVal); });
+    var sum = exps.reduce(function (a, b) { return a + b; }, 0);
+    return exps.map(function (e) { return e / sum; });
+  }
+
+  var softmaxScores = rawScores.map(softmaxRow);
+
+  // Assign a color to each word for Value visualization
+  var wordColors = [
+    '#ef4444', // 动物 - red
+    '#f59e0b', // 没有 - amber
+    '#22c55e', // 穿过 - green
+    '#06b6d4', // 马路 - cyan
+    '#8b5cf6', // 因为 - purple
+    '#ec4899', // 它 - pink
+    '#f97316', // 太 - orange
+    '#38bdf8', // 累 - sky
+    '#a3a3a3', // 了 - gray
+  ];
+
+  // ===== STATE =====
+  var selectedIdx = -1;
+  var scoreMode = 'softmax'; // 'softmax' | 'raw'
+  var particles = [];
+  var animFrame = null;
+
+  // ===== DOM REFS =====
+  var wordRow = document.getElementById('word-row');
+  var canvas = document.getElementById('attention-canvas');
+  var ctx = canvas.getContext('2d');
+  var barChart = document.getElementById('bar-chart');
+  var valueArea = document.getElementById('value-area');
+  var insightBox = document.getElementById('insight-box');
+  var matrixContainer = document.getElementById('matrix-container');
+
+  // ===== INIT =====
+  function init() {
+    buildWords();
+    buildBarChart();
+    buildMatrix();
+    resizeCanvas();
+    startAnimation();
+    window.addEventListener('resize', function () {
+      resizeCanvas();
+      if (selectedIdx >= 0) updateAttentionLines();
+    });
+  }
+
+  // ===== BUILD WORDS =====
+  function buildWords() {
+    wordRow.innerHTML = '';
+    words.forEach(function (w, i) {
+      var box = document.createElement('div');
+      box.className = 'word-box';
+      box.textContent = w;
+      box.setAttribute('data-idx', i);
+      var indicator = document.createElement('div');
+      indicator.className = 'weight-indicator';
+      box.appendChild(indicator);
+      box.addEventListener('click', function () { selectWord(i); });
+      wordRow.appendChild(box);
+    });
+  }
+
+  // ===== SELECT WORD =====
+  function selectWord(idx) {
+    selectedIdx = idx;
+    // Update word classes
+    var boxes = wordRow.querySelectorAll('.word-box');
+    var scores = scoreMode === 'softmax' ? softmaxScores[idx] : normalizeRaw(rawScores[idx]);
+    boxes.forEach(function (box, i) {
+      box.classList.toggle('selected', i === idx);
+      box.classList.add('attended');
+      var ind = box.querySelector('.weight-indicator');
+      var w = scores[i];
+      ind.style.width = Math.max(w * 100, 4) + '%';
+      ind.style.background = i === idx ? 'var(--primary)' : 'var(--accent)';
+    });
+    updateBarChart();
+    updateValueArea();
+    updateInsight();
+    updateAttentionLines();
+    updateMatrixHighlight();
+  }
+
+  function normalizeRaw(row) {
+    var maxVal = Math.max.apply(null, row);
+    if (maxVal === 0) return row.map(function () { return 0; });
+    return row.map(function (v) { return v / maxVal; });
+  }
+
+  // ===== INSIGHT =====
+  var insightTexts = {
+    0: '"<span class="highlight">动物</span>"作为 Query 时，主要关注自身和代词"<span class="accent-hl">它</span>"。这揭示了<span class="warn-hl">共指消解</span>：模型学会了"它"指代"动物"。',
+    1: '"<span class="highlight">没有</span>"作为否定词，注意力集中在动词"<span class="accent-hl">穿过</span>"上，体现了<span class="warn-hl">否定修饰</span>关系。',
+    2: '"<span class="highlight">穿过</span>"同时关注主语"<span class="accent-hl">动物</span>"和宾语"<span class="accent-hl">马路</span>"，完美捕捉了<span class="warn-hl">谓语-论元结构</span>。',
+    3: '"<span class="highlight">马路</span>"回看动词"<span class="accent-hl">穿过</span>"，建立了<span class="warn-hl">宾语-谓语</span>的语义连接。',
+    4: '"<span class="highlight">因为</span>"作为连接词，开始关注后续的原因从句，建立<span class="warn-hl">因果逻辑</span>关系。',
+    5: '"<span class="highlight">它</span>"强烈关注"<span class="accent-hl">动物</span>"，这是注意力机制最经典的案例：<span class="warn-hl">代词消解</span>。模型学会了"它"=>"动物"。',
+    6: '"<span class="highlight">太</span>"关注"<span class="accent-hl">累</span>"，建立了<span class="warn-hl">程度副词</span>和形容词的修饰关系。',
+    7: '"<span class="highlight">累</span>"同时关注"<span class="accent-hl">它</span>"和"<span class="accent-hl">动物</span>"，回溯到<span class="warn-hl">状态的承受者</span>：是动物累了。',
+    8: '"<span class="highlight">了</span>"作为语气助词，关注前方的"<span class="accent-hl">累</span>"和"<span class="accent-hl">太</span>"，标记<span class="warn-hl">完成态</span>。',
+  };
+
+  function updateInsight() {
+    insightBox.classList.add('active');
+    insightBox.innerHTML = insightTexts[selectedIdx] || '';
+  }
+
+  // ===== BAR CHART =====
+  function buildBarChart() {
+    barChart.innerHTML = '';
+    words.forEach(function (w, i) {
+      var col = document.createElement('div');
+      col.className = 'bar-col';
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'bar-wrapper';
+
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = '2px';
+      bar.style.background = wordColors[i];
+      bar.setAttribute('data-idx', i);
+
+      var val = document.createElement('span');
+      val.className = 'bar-value';
+      val.textContent = '0';
+      bar.appendChild(val);
+
+      wrapper.appendChild(bar);
+
+      var label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = w;
+
+      col.appendChild(wrapper);
+      col.appendChild(label);
+      barChart.appendChild(col);
+    });
+  }
+
+  function updateBarChart() {
+    if (selectedIdx < 0) return;
+    var scores = scoreMode === 'softmax' ? softmaxScores[selectedIdx] : rawScores[selectedIdx];
+    var maxVal = Math.max.apply(null, scores);
+    if (maxVal === 0) maxVal = 1;
+
+    var bars = barChart.querySelectorAll('.bar');
+    var labels = barChart.querySelectorAll('.bar-label');
+
+    bars.forEach(function (bar, i) {
+      var ratio = scores[i] / maxVal;
+      bar.style.height = Math.max(ratio * 130, 2) + 'px';
+      bar.classList.add('show-value');
+      var valEl = bar.querySelector('.bar-value');
+      if (scoreMode === 'softmax') {
+        valEl.textContent = (scores[i] * 100).toFixed(1) + '%';
+      } else {
+        valEl.textContent = scores[i].toFixed(2);
+      }
+    });
+
+    labels.forEach(function (lbl, i) {
+      lbl.classList.toggle('highlight', i === selectedIdx);
+    });
+  }
+
+  // ===== SCORE MODE TOGGLE =====
+  window.setScoreMode = function (mode) {
+    scoreMode = mode;
+    document.querySelectorAll('.toggle-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+    });
+    if (selectedIdx >= 0) {
+      selectWord(selectedIdx);
+    }
+  };
+
+  // ===== VALUE AGGREGATION =====
+  function updateValueArea() {
+    if (selectedIdx < 0) return;
+    var scores = softmaxScores[selectedIdx];
+    // Get top contributing words (weight > 5%)
+    var contributions = [];
+    scores.forEach(function (s, i) {
+      if (s > 0.05) {
+        contributions.push({ idx: i, weight: s });
+      }
+    });
+    contributions.sort(function (a, b) { return b.weight - a.weight; });
+
+    // Blend color
+    var r = 0, g = 0, b = 0;
+    scores.forEach(function (s, i) {
+      var c = hexToRgb(wordColors[i]);
+      r += c.r * s;
+      g += c.g * s;
+      b += c.b * s;
+    });
+    var blended = 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+
+    var html = '<div class="value-section">';
+    html += '<div class="value-boxes">';
+    contributions.forEach(function (c, ci) {
+      html += '<div class="value-chip" style="border-color:' + wordColors[c.idx] + '30">';
+      html += '<div class="color-dot" style="background:' + wordColors[c.idx] + '"></div>';
+      html += '<span>' + words[c.idx] + '</span>';
+      html += '<span class="weight-text">' + (c.weight * 100).toFixed(1) + '%</span>';
+      html += '</div>';
+      if (ci < contributions.length - 1) {
+        html += '<span style="color:var(--muted);font-size:0.8rem">+</span>';
+      }
+    });
+    html += '</div>';
+    html += '<span class="value-arrow">=</span>';
+    html += '<div class="result-box" style="background:' + blended + ';border-color:' + blended + '">';
+    html += '<span class="result-label">融合结果</span>';
+    html += '</div>';
+    html += '</div>';
+
+    valueArea.innerHTML = html;
+  }
+
+  function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 128, g: 128, b: 128 };
+  }
+
+  // ===== CANVAS / ATTENTION LINES =====
+  function resizeCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 120 * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = '120px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function getWordPositions() {
+    var boxes = wordRow.querySelectorAll('.word-box');
+    var canvasRect = canvas.getBoundingClientRect();
+    var positions = [];
+    boxes.forEach(function (box) {
+      var r = box.getBoundingClientRect();
+      positions.push({
+        x: r.left + r.width / 2 - canvasRect.left,
+        topY: r.bottom - canvasRect.top,
+        bottomY: 0
+      });
+    });
+    return positions;
+  }
+
+  function updateAttentionLines() {
+    particles = [];
+    if (selectedIdx < 0) return;
+
+    var scores = softmaxScores[selectedIdx];
+    var positions = getWordPositions();
+    var canvasH = 120;
+
+    // Create particles for each connection
+    scores.forEach(function (score, i) {
+      if (score < 0.02) return;
+      var count = Math.max(Math.round(score * 30), 1);
+      for (var p = 0; p < count; p++) {
+        particles.push({
+          fromIdx: selectedIdx,
+          toIdx: i,
+          progress: Math.random(),
+          speed: 0.003 + Math.random() * 0.004,
+          weight: score,
+          size: 1.5 + score * 4,
+        });
+      }
+    });
+  }
+
+  function drawAttention(timestamp) {
+    var w = canvas.width / (window.devicePixelRatio || 1);
+    var h = 120;
+    ctx.clearRect(0, 0, w, h);
+
+    if (selectedIdx < 0 || particles.length === 0) return;
+
+    var positions = getWordPositions();
+    var scores = softmaxScores[selectedIdx];
+
+    // Draw static lines first
+    scores.forEach(function (score, i) {
+      if (score < 0.02) return;
+      var from = positions[selectedIdx];
+      var to = positions[i];
+      if (!from || !to) return;
+
+      var cpY = h * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(from.x, 4);
+      ctx.quadraticCurveTo((from.x + to.x) / 2, cpY, to.x, 4);
+      ctx.strokeStyle = 'rgba(56, 189, 248,' + (score * 0.3) + ')';
+      ctx.lineWidth = Math.max(score * 6, 0.5);
+      ctx.stroke();
+    });
+
+    // Draw and update particles
+    particles.forEach(function (p) {
+      p.progress += p.speed;
+      if (p.progress > 1) p.progress -= 1;
+
+      var from = positions[p.fromIdx];
+      var to = positions[p.toIdx];
+      if (!from || !to) return;
+
+      var t = p.progress;
+      var cpY = h * 0.7;
+      // Quadratic bezier: B(t) = (1-t)^2*P0 + 2(1-t)t*CP + t^2*P1
+      var oneMinusT = 1 - t;
+      var px = oneMinusT * oneMinusT * from.x + 2 * oneMinusT * t * ((from.x + to.x) / 2) + t * t * to.x;
+      var py = oneMinusT * oneMinusT * 4 + 2 * oneMinusT * t * cpY + t * t * 4;
+
+      ctx.beginPath();
+      ctx.arc(px, py, p.size, 0, Math.PI * 2);
+      var alpha = Math.min(p.weight * 2, 0.9) * (0.5 + 0.5 * Math.sin(t * Math.PI));
+      ctx.fillStyle = 'rgba(56, 189, 248,' + alpha + ')';
+      ctx.fill();
+    });
+  }
+
+  function startAnimation() {
+    function loop(ts) {
+      drawAttention(ts);
+      animFrame = requestAnimationFrame(loop);
+    }
+    animFrame = requestAnimationFrame(loop);
+  }
+
+  // ===== ATTENTION MATRIX =====
+  function buildMatrix() {
+    var html = '<table class="attention-matrix">';
+    html += '<tr><th></th>';
+    words.forEach(function (w) {
+      html += '<th>' + w + '</th>';
+    });
+    html += '</tr>';
+
+    softmaxScores.forEach(function (row, qi) {
+      html += '<tr data-row="' + qi + '">';
+      html += '<th class="row-header">' + words[qi] + '</th>';
+      row.forEach(function (score, ki) {
+        var intensity = Math.min(score * 3, 1);
+        var bg = 'rgba(56, 189, 248,' + (intensity * 0.6) + ')';
+        html += '<td style="background:' + bg + '" data-row="' + qi + '" data-col="' + ki + '">' + (score * 100).toFixed(1) + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</table>';
+    matrixContainer.innerHTML = html;
+  }
+
+  function updateMatrixHighlight() {
+    var tds = matrixContainer.querySelectorAll('td');
+    tds.forEach(function (td) { td.classList.remove('cell-highlight'); });
+    var trs = matrixContainer.querySelectorAll('tr');
+    trs.forEach(function (tr) { tr.classList.remove('row-highlight'); });
+
+    if (selectedIdx < 0) return;
+
+    var targetRow = matrixContainer.querySelector('tr[data-row="' + selectedIdx + '"]');
+    if (targetRow) targetRow.classList.add('row-highlight');
+
+    tds.forEach(function (td) {
+      if (parseInt(td.getAttribute('data-row')) === selectedIdx) {
+        td.classList.add('cell-highlight');
+      }
+    });
+  }
+
+  // ===== GO =====
+  init();
+
+})();
+
+// iframe height reporting
+(function(){var sendHeight=function(){if(window.parent===window)return;var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',sendHeight);window.addEventListener('resize',sendHeight);if('ResizeObserver' in window){var o=new ResizeObserver(sendHeight);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(sendHeight);setTimeout(sendHeight,250);setTimeout(sendHeight,1000)})();
+</script>
+</body>
+</html>

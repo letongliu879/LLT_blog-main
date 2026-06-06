@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmax 概率分布可视化</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --text: #e2e8f0;
+    --primary: #3b82f6;
+    --accent: #10b981;
+    --frozen: #64748b;
+    --trainable: #ef4444;
+    --lora: #8b5cf6;
+    --card-bg: rgba(30, 41, 59, 0.7);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 0;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 {
+    text-align: center; font-size: 1.6rem; font-weight: 700; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--lora), var(--primary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .subtitle { text-align: center; font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px; }
+
+  .formula-bar {
+    text-align: center; padding: 14px 20px; margin-bottom: 24px;
+    background: var(--card-bg); border-radius: 12px; font-size: 1.1rem;
+    border: 1px solid rgba(139, 92, 246, 0.3); backdrop-filter: blur(10px);
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+  }
+  .formula-bar .f-primary { color: var(--primary); font-weight: 600; }
+  .formula-bar .f-accent { color: var(--accent); }
+  .formula-bar .f-lora { color: var(--lora); font-weight: 600; }
+
+  .section {
+    background: var(--card-bg); border-radius: 14px; padding: 20px;
+    margin-bottom: 20px; border: 1px solid rgba(100, 116, 139, 0.2);
+    backdrop-filter: blur(10px); position: relative; overflow: hidden;
+  }
+  .section::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--lora), var(--primary), var(--accent));
+  }
+  .section-title {
+    font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before { content: ''; width: 4px; height: 18px; background: var(--lora); border-radius: 2px; }
+
+  /* Slider */
+  .slider-group { display: flex; align-items: center; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+  .slider-label { font-size: 0.85rem; color: #94a3b8; min-width: 80px; }
+  .temp-slider {
+    flex: 1; min-width: 200px; -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px; outline: none;
+    background: linear-gradient(90deg, var(--trainable), var(--primary), var(--accent));
+  }
+  .temp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--primary); cursor: pointer; border: 3px solid var(--bg);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    transition: box-shadow 0.2s;
+  }
+  .temp-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 18px rgba(59, 130, 246, 0.8);
+  }
+  .temp-slider::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--primary);
+    cursor: pointer; border: 3px solid var(--bg);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+  .temp-value {
+    font-size: 1.4rem; font-weight: 700; color: var(--primary);
+    min-width: 48px; text-align: center;
+    font-family: 'Cambria Math', serif;
+  }
+  .temp-hint {
+    text-align: center; font-size: 0.72rem; color: #64748b; margin-bottom: 8px;
+  }
+
+  /* Logit Inputs */
+  .logits-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 12px;
+  }
+  .logit-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .logit-label {
+    font-size: 0.72rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .logit-input {
+    width: 100%; padding: 8px 4px; text-align: center; border-radius: 8px;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    background: rgba(15, 23, 42, 0.6); color: var(--text);
+    font-size: 0.9rem; font-family: 'Cambria Math', monospace;
+    outline: none; transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .logit-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Canvas Charts */
+  .canvas-wrapper { position: relative; width: 100%; }
+  canvas { display: block; width: 100%; border-radius: 8px; }
+
+  /* Stats Grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stat-card {
+    background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 14px;
+    border: 1px solid rgba(100,116,139,0.2); text-align: center;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .stat-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .stat-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 1.3rem; font-weight: 700; }
+  .stat-value.primary-c { color: var(--primary); }
+  .stat-value.accent-c { color: var(--accent); }
+  .stat-value.lora-c { color: var(--lora); }
+  .stat-value.trainable-c { color: var(--trainable); }
+
+  /* Insight Cards */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .insight-card {
+    background: rgba(15, 23, 42, 0.5); border-radius: 10px; padding: 16px;
+    border: 1px solid rgba(59, 130, 246, 0.15); position: relative;
+    backdrop-filter: blur(8px); transition: border-color 0.3s, transform 0.3s;
+  }
+  .insight-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .insight-card h4 { font-size: 0.88rem; color: var(--primary); margin-bottom: 6px; }
+  .insight-card p { font-size: 0.78rem; color: #cbd5e1; line-height: 1.55; }
+  .insight-card code {
+    background: rgba(59, 130, 246, 0.15); padding: 1px 6px; border-radius: 4px;
+    font-family: 'Cambria Math', monospace; font-size: 0.82rem; color: var(--primary);
+  }
+
+  /* Preset buttons */
+  .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .preset-btn {
+    padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
+    border: 1px solid rgba(100,116,139,0.3); background: rgba(15, 23, 42, 0.6);
+    color: #94a3b8; cursor: pointer; transition: all 0.3s;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+  .preset-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(59,130,246,0.15); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.3rem; }
+    .formula-bar { font-size: 0.9rem; padding: 10px 14px; }
+    .logits-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Softmax 概率分布可视化</h1>
+  <p class="subtitle">探索温度参数如何影响多分类神经网络的输出概率分布</p>
+
+  <div class="formula-bar">
+    <span class="f-primary">P(y=j)</span> =
+    <span class="f-lora">exp</span>(<span class="f-accent">z<sub>j</sub></span> / <span class="f-primary">T</span>)
+    / <span style="font-size:1.2em">&Sigma;</span>
+    <span class="f-lora">exp</span>(<span class="f-accent">z<sub>k</sub></span> / <span class="f-primary">T</span>)
+  </div>
+
+  <!-- Temperature Control -->
+  <div class="section">
+    <div class="section-title">温度参数控制</div>
+    <div class="slider-group">
+      <span class="slider-label">Temperature T =</span>
+      <input type="range" class="temp-slider" id="temperature" min="0.1" max="5.0" step="0.1" value="1.0">
+      <span class="temp-value" id="temp-display">1.0</span>
+    </div>
+    <div class="temp-hint">
+      T &lt; 1: 分布更尖锐，模型更自信 &nbsp;|&nbsp; T = 1: 标准 Softmax &nbsp;|&nbsp; T &gt; 1: 分布更平滑，模型更谨慎
+    </div>
+    <div class="preset-row">
+      <button class="preset-btn" data-temp="0.1">T = 0.1 (极度自信)</button>
+      <button class="preset-btn" data-temp="0.5">T = 0.5 (较自信)</button>
+      <button class="preset-btn active" data-temp="1.0">T = 1.0 (标准)</button>
+      <button class="preset-btn" data-temp="2.0">T = 2.0 (较平滑)</button>
+      <button class="preset-btn" data-temp="5.0">T = 5.0 (接近均匀)</button>
+    </div>
+  </div>
+
+  <!-- Logit Inputs -->
+  <div class="section">
+    <div class="section-title">Logits 原始输出值 (10 个类别)</div>
+    <div class="logits-grid" id="logits-grid"></div>
+    <div class="preset-row" style="margin-top:12px">
+      <button class="preset-btn" id="preset-one-hot">单类主导</button>
+      <button class="preset-btn" id="preset-uniform">均匀输出</button>
+      <button class="preset-btn" id="preset-two-peak">双峰竞争</button>
+      <button class="preset-btn" id="preset-random">随机生成</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section">
+    <div class="section-title">分布统计</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">最高概率类别</div>
+        <div class="stat-value primary-c" id="stat-top-class">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">最高概率值</div>
+        <div class="stat-value accent-c" id="stat-top-prob">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">分布熵</div>
+        <div class="stat-value lora-c" id="stat-entropy">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top-3 概率总和</div>
+        <div class="stat-value trainable-c" id="stat-top3">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar Chart -->
+  <div class="section">
+    <div class="section-title">概率分布柱状图</div>
+    <div class="canvas-wrapper">
+      <canvas id="bar-canvas" height="320"></canvas>
+    </div>
+  </div>
+
+  <!-- Donut Chart -->
+  <div class="section">
+    <div class="section-title">概率分布环形图</div>
+    <div class="canvas-wrapper">
+      <canvas id="donut-canvas" height="320"></canvas>
+    </div>
+  </div>
+
+  <!-- Key Insights -->
+  <div class="section">
+    <div class="section-title">核心洞察</div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <h4>T = 1.0 标准 Softmax</h4>
+        <p>标准的概率分布转换，平衡自信度与不确定性。这是神经网络训练和推理的默认配置。</p>
+      </div>
+      <div class="insight-card">
+        <h4>T &lt; 1.0 知识蒸馏 (Hard)</h4>
+        <p>概率集中于最大 logit 对应的类别。当 <code>T &rarr; 0</code> 时退化为 <code>argmax</code>，
+        适用于推理阶段获得确定性预测。</p>
+      </div>
+      <div class="insight-card">
+        <h4>T &gt; 1.0 知识蒸馏 (Soft)</h4>
+        <p>概率分布趋于平滑均匀。Hinton 的知识蒸馏方法使用较高温度产生 <strong>soft targets</strong>，
+        传递教师模型的 "暗知识"。</p>
+      </div>
+      <div class="insight-card">
+        <h4>数值稳定性技巧</h4>
+        <p>实际计算时先减去最大 logit：<code>exp(z<sub>j</sub> - max(z))</code>，
+        防止指数溢出，结果在数学上完全等价。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ Constants & State ============ */
+const CLASS_COLORS = [
+  '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+  '#eab308', '#84cc16', '#10b981', '#06b6d4', '#64748b'
+];
+const CLASS_NAMES = Array.from({ length: 10 }, function(_, i) { return 'Class ' + i; });
+const DEFAULT_LOGITS = [2.5, 1.8, 0.5, -0.3, 1.2, 0.8, -0.5, 1.5, 0.2, -0.8];
+
+/* ============ Init Logit Inputs ============ */
+(function initLogitInputs() {
+  var grid = document.getElementById('logits-grid');
+  for (var i = 0; i < 10; i++) {
+    var item = document.createElement('div');
+    item.className = 'logit-item';
+    var label = document.createElement('div');
+    label.className = 'logit-label';
+    label.textContent = CLASS_NAMES[i];
+    label.style.color = CLASS_COLORS[i];
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'logit-input';
+    input.id = 'logit-' + i;
+    input.value = DEFAULT_LOGITS[i];
+    input.step = '0.1';
+    input.addEventListener('input', update);
+    item.appendChild(label);
+    item.appendChild(input);
+    grid.appendChild(item);
+  }
+})();
+
+/* ============ Softmax ============ */
+function softmax(logits, temperature) {
+  var scaled = logits.map(function(z) { return z / temperature; });
+  var maxVal = Math.max.apply(null, scaled);
+  var exps = scaled.map(function(z) { return Math.exp(z - maxVal); });
+  var sum = exps.reduce(function(a, b) { return a + b; }, 0);
+  return exps.map(function(e) { return e / sum; });
+}
+
+function getLogits() {
+  var logits = [];
+  for (var i = 0; i < 10; i++) {
+    logits.push(parseFloat(document.getElementById('logit-' + i).value) || 0);
+  }
+  return logits;
+}
+
+function getTemperature() {
+  return parseFloat(document.getElementById('temperature').value);
+}
+
+/* ============ Stats ============ */
+function updateStats(probs) {
+  var maxIdx = 0;
+  var maxProb = probs[0];
+  for (var i = 1; i < probs.length; i++) {
+    if (probs[i] > maxProb) { maxProb = probs[i]; maxIdx = i; }
+  }
+  document.getElementById('stat-top-class').textContent = CLASS_NAMES[maxIdx];
+  document.getElementById('stat-top-class').style.color = CLASS_COLORS[maxIdx];
+  document.getElementById('stat-top-prob').textContent = (maxProb * 100).toFixed(2) + '%';
+
+  var entropy = 0;
+  for (var i = 0; i < probs.length; i++) {
+    if (probs[i] > 1e-10) entropy -= probs[i] * Math.log2(probs[i]);
+  }
+  document.getElementById('stat-entropy').textContent = entropy.toFixed(3) + ' bits';
+
+  var sorted = probs.slice().sort(function(a, b) { return b - a; });
+  var top3 = sorted[0] + sorted[1] + sorted[2];
+  document.getElementById('stat-top3').textContent = (top3 * 100).toFixed(1) + '%';
+}
+
+/* ============ Bar Chart (Canvas) ============ */
+function drawBarChart(probs) {
+  var canvas = document.getElementById('bar-canvas');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var w = rect.width;
+  var h = 320;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var padLeft = 50, padRight = 20, padTop = 20, padBottom = 50;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+  var barGap = 12;
+  var barWidth = (chartW - barGap * (probs.length + 1)) / probs.length;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Y axis gridlines
+  ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i <= 5; i++) {
+    var yVal = i * 0.2;
+    var yPos = padTop + chartH - (yVal * chartH);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, yPos);
+    ctx.lineTo(padLeft + chartW, yPos);
+    ctx.stroke();
+    ctx.fillText((yVal * 100).toFixed(0) + '%', padLeft - 8, yPos);
+  }
+
+  // Bars
+  var maxProb = Math.max.apply(null, probs);
+  for (var i = 0; i < probs.length; i++) {
+    var x = padLeft + barGap + i * (barWidth + barGap);
+    var barH = (probs[i] / 1.0) * chartH;
+    var y = padTop + chartH - barH;
+
+    // Bar gradient
+    var grad = ctx.createLinearGradient(x, y, x, padTop + chartH);
+    grad.addColorStop(0, CLASS_COLORS[i]);
+    grad.addColorStop(1, CLASS_COLORS[i] + '44');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(x, y, barWidth, barH, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Glow effect for highest bar
+    if (probs[i] === maxProb) {
+      ctx.shadowColor = CLASS_COLORS[i];
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = CLASS_COLORS[i] + '55';
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, barH, [4, 4, 0, 0]);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Value label on top
+    ctx.fillStyle = CLASS_COLORS[i];
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText((probs[i] * 100).toFixed(1) + '%', x + barWidth / 2, y - 4);
+
+    // Class label on bottom
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px system-ui';
+    ctx.textBaseline = 'top';
+    ctx.fillText(CLASS_NAMES[i], x + barWidth / 2, padTop + chartH + 8);
+  }
+
+  // Y axis label
+  ctx.save();
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.translate(14, padTop + chartH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Probability', 0, 0);
+  ctx.restore();
+}
+
+/* ============ Donut Chart (Canvas) ============ */
+function drawDonutChart(probs) {
+  var canvas = document.getElementById('donut-canvas');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var w = rect.width;
+  var h = 320;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  var cx = w * 0.42;
+  var cy = h / 2;
+  var outerR = Math.min(cx - 30, cy - 20);
+  var innerR = outerR * 0.55;
+
+  var startAngle = -Math.PI / 2;
+  var maxIdx = 0;
+  for (var i = 1; i < probs.length; i++) {
+    if (probs[i] > probs[maxIdx]) maxIdx = i;
+  }
+
+  for (var i = 0; i < probs.length; i++) {
+    var sliceAngle = probs[i] * Math.PI * 2;
+    var endAngle = startAngle + sliceAngle;
+    var midAngle = startAngle + sliceAngle / 2;
+
+    // Explode the largest slice slightly
+    var explode = (i === maxIdx) ? 6 : 0;
+    var ex = Math.cos(midAngle) * explode;
+    var ey = Math.sin(midAngle) * explode;
+
+    // Draw arc
+    ctx.beginPath();
+    ctx.moveTo(cx + ex + Math.cos(startAngle) * innerR, cy + ey + Math.sin(startAngle) * innerR);
+    ctx.arc(cx + ex, cy + ey, outerR, startAngle, endAngle);
+    ctx.arc(cx + ex, cy + ey, innerR, endAngle, startAngle, true);
+    ctx.closePath();
+
+    ctx.fillStyle = CLASS_COLORS[i];
+    ctx.globalAlpha = (i === maxIdx) ? 1.0 : 0.8;
+    ctx.fill();
+
+    // Glow for largest
+    if (i === maxIdx) {
+      ctx.shadowColor = CLASS_COLORS[i];
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.globalAlpha = 1.0;
+
+    // Percentage label on the slice if large enough
+    if (probs[i] > 0.04) {
+      var labelR = (outerR + innerR) / 2;
+      var lx = cx + ex + Math.cos(midAngle) * labelR;
+      var ly = cy + ey + Math.sin(midAngle) * labelR;
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText((probs[i] * 100).toFixed(1) + '%', lx, ly);
+    }
+
+    startAngle = endAngle;
+  }
+
+  // Center text
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Softmax', cx, cy - 8);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px system-ui';
+  ctx.fillText('T = ' + getTemperature().toFixed(1), cx, cy + 10);
+
+  // Legend on the right side
+  var legendX = w * 0.72;
+  var legendY = 30;
+  var legendSpacing = 26;
+  for (var i = 0; i < probs.length; i++) {
+    var ly = legendY + i * legendSpacing;
+    // Color dot
+    ctx.fillStyle = CLASS_COLORS[i];
+    ctx.beginPath();
+    ctx.roundRect(legendX, ly, 12, 12, 3);
+    ctx.fill();
+    // Label
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(CLASS_NAMES[i] + '  ' + (probs[i] * 100).toFixed(1) + '%', legendX + 18, ly + 6);
+  }
+}
+
+/* ============ Master Update ============ */
+function update() {
+  var T = getTemperature();
+  document.getElementById('temp-display').textContent = T.toFixed(1);
+
+  // Update preset button states
+  var btns = document.querySelectorAll('.preset-btn[data-temp]');
+  btns.forEach(function(btn) {
+    btn.classList.toggle('active', parseFloat(btn.dataset.temp) === Math.round(T * 10) / 10);
+  });
+
+  var logits = getLogits();
+  var probs = softmax(logits, T);
+
+  updateStats(probs);
+  drawBarChart(probs);
+  drawDonutChart(probs);
+}
+
+/* ============ Event Listeners ============ */
+document.getElementById('temperature').addEventListener('input', update);
+
+// Temperature preset buttons
+document.querySelectorAll('.preset-btn[data-temp]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('temperature').value = btn.dataset.temp;
+    update();
+  });
+});
+
+// Logit preset buttons
+document.getElementById('preset-one-hot').addEventListener('click', function() {
+  var vals = [5.0, 0.1, -0.5, -1.0, 0.2, -0.3, -0.8, 0.0, -0.4, -1.2];
+  for (var i = 0; i < 10; i++) document.getElementById('logit-' + i).value = vals[i];
+  update();
+});
+document.getElementById('preset-uniform').addEventListener('click', function() {
+  for (var i = 0; i < 10; i++) document.getElementById('logit-' + i).value = '1.0';
+  update();
+});
+document.getElementById('preset-two-peak').addEventListener('click', function() {
+  var vals = [3.0, -0.5, -1.0, 2.8, -0.3, -0.7, -0.2, -0.5, -1.0, -0.8];
+  for (var i = 0; i < 10; i++) document.getElementById('logit-' + i).value = vals[i];
+  update();
+});
+document.getElementById('preset-random').addEventListener('click', function() {
+  for (var i = 0; i < 10; i++) {
+    var v = (Math.random() * 6 - 3).toFixed(1);
+    document.getElementById('logit-' + i).value = v;
+  }
+  update();
+});
+
+window.addEventListener('resize', update);
+
+// Init
+update();
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>

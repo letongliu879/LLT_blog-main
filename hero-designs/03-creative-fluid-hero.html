@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allen's Blog - 创意艺术风格</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Syne:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Syne', 'sans-serif'],
+            'body': ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+          },
+          colors: {
+            'fluid-pink': '#ff6b9d',
+            'fluid-purple': '#c44dff',
+            'fluid-blue': '#4d79ff',
+            'fluid-cyan': '#00d4ff',
+            'fluid-orange': '#ff8c42',
+          },
+          animation: {
+            'morph': 'morph 15s ease-in-out infinite',
+            'morph-reverse': 'morph 15s ease-in-out infinite reverse',
+            'float-3d': 'float3d 6s ease-in-out infinite',
+            'rotate-slow': 'rotateSlow 20s linear infinite',
+            'gradient-shift': 'gradientShift 8s ease infinite',
+            'bounce-gentle': 'bounceGentle 2s ease-in-out infinite',
+            'scale-pulse': 'scalePulse 4s ease-in-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes morph {
+      0%, 100% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        transform: rotate(0deg) scale(1);
+      }
+      25% {
+        border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+      }
+      50% {
+        border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%;
+        transform: rotate(180deg) scale(1.05);
+      }
+      75% {
+        border-radius: 60% 40% 60% 30% / 70% 30% 50% 60%;
+      }
+    }
+
+    @keyframes float3d {
+      0%, 100% {
+        transform: translateY(0) rotateX(0deg) rotateY(0deg);
+      }
+      25% {
+        transform: translateY(-20px) rotateX(5deg) rotateY(5deg);
+      }
+      50% {
+        transform: translateY(-10px) rotateX(-5deg) rotateY(-5deg);
+      }
+      75% {
+        transform: translateY(-25px) rotateX(3deg) rotateY(-3deg);
+      }
+    }
+
+    @keyframes rotateSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes gradientShift {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes bounceGentle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes scalePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #ff6b9d, #c44dff, #4d79ff, #00d4ff);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 8s ease infinite;
+    }
+
+    .fluid-blob {
+      filter: blur(0px);
+      mix-blend-mode: multiply;
+    }
+
+    .dark .fluid-blob {
+      mix-blend-mode: screen;
+    }
+
+    .perspective-container {
+      perspective: 1000px;
+      transform-style: preserve-3d;
+    }
+
+    .card-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease;
+    }
+
+    .card-3d:hover {
+      transform: rotateY(10deg) rotateX(5deg) translateZ(20px);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dark .glass-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .hover-glow:hover {
+      box-shadow: 0 0 40px rgba(196, 77, 255, 0.4), 0 0 80px rgba(77, 121, 255, 0.2);
+    }
+
+    .text-stroke {
+      -webkit-text-stroke: 2px currentColor;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .magnetic-btn {
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    @keyframes particle-float {
+      0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.6;
+      }
+      50% {
+        transform: translateY(-100px) translateX(20px);
+        opacity: 0;
+      }
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.02;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    .stagger-1 { animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards; }
+    .stagger-2 { animation-delay: 0.2s; opacity: 0; animation-fill-mode: forwards; }
+    .stagger-3 { animation-delay: 0.3s; opacity: 0; animation-fill-mode: forwards; }
+    .stagger-4 { animation-delay: 0.4s; opacity: 0; animation-fill-mode: forwards; }
+    .stagger-5 { animation-delay: 0.5s; opacity: 0; animation-fill-mode: forwards; }
+    .stagger-6 { animation-delay: 0.6s; opacity: 0; animation-fill-mode: forwards; }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(60px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .tag-pill {
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .tag-pill:hover {
+      transform: translateY(-4px) scale(1.05);
+    }
+  </style>
+</head>
+<body class="bg-white dark:bg-gray-950 transition-colors duration-500 overflow-x-hidden">
+  <!-- 噪点覆盖层 -->
+  <div class="noise-overlay"></div>
+
+  <!-- 流体背景 -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <!-- 主流体块 -->
+    <div class="fluid-blob absolute -top-32 -left-32 w-[500px] h-[500px] bg-gradient-to-br from-fluid-pink/30 via-fluid-purple/20 to-fluid-blue/30 animate-morph"></div>
+    <div class="fluid-blob absolute top-1/3 -right-24 w-[400px] h-[400px] bg-gradient-to-br from-fluid-blue/25 via-fluid-cyan/20 to-fluid-purple/25 animate-morph-reverse" style="animation-delay: -5s;"></div>
+    <div class="fluid-blob absolute -bottom-32 left-1/3 w-[450px] h-[450px] bg-gradient-to-br from-fluid-orange/20 via-fluid-pink/25 to-fluid-purple/20 animate-morph" style="animation-delay: -10s;"></div>
+
+    <!-- 装饰粒子 -->
+    <div class="particle bg-fluid-pink top-1/4 left-1/4 animate-bounce-gentle" style="animation-delay: 0s;"></div>
+    <div class="particle bg-fluid-purple top-1/3 right-1/3 animate-bounce-gentle" style="animation-delay: -1s;"></div>
+    <div class="particle bg-fluid-cyan bottom-1/4 left-1/3 animate-bounce-gentle" style="animation-delay: -2s;"></div>
+    <div class="particle bg-fluid-blue top-2/3 right-1/4 animate-bounce-gentle" style="animation-delay: -0.5s;"></div>
+  </div>
+
+  <div class="relative min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-6">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <a href="#" class="font-display text-2xl font-bold gradient-text animate-slide-up stagger-1">
+          Allen.
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#" class="font-body text-gray-600 dark:text-gray-300 hover:text-fluid-purple transition-colors animate-slide-up stagger-2">博客</a>
+          <a href="#" class="font-body text-gray-600 dark:text-gray-300 hover:text-fluid-purple transition-colors animate-slide-up stagger-3">项目</a>
+          <a href="#" class="font-body text-gray-600 dark:text-gray-300 hover:text-fluid-purple transition-colors animate-slide-up stagger-4">标签</a>
+          <a href="#" class="font-body text-gray-600 dark:text-gray-300 hover:text-fluid-purple transition-colors animate-slide-up stagger-5">关于</a>
+        </div>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="w-12 h-12 glass-card rounded-2xl flex items-center justify-center hover-glow transition-all animate-slide-up stagger-6">
+          <svg class="w-5 h-5 text-gray-700 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path class="dark:hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            <path class="hidden dark:block" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="min-h-screen flex items-center px-6 md:px-12 pt-24 pb-12">
+      <div class="max-w-7xl mx-auto w-full">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+          <!-- 左侧内容 -->
+          <div class="space-y-8 perspective-container">
+            <!-- 标签 -->
+            <div class="animate-slide-up stagger-1">
+              <span class="inline-block px-4 py-2 glass-card rounded-full text-sm font-body text-gray-600 dark:text-gray-300">
+                ✨ RPA Developer & Tech Explorer
+              </span>
+            </div>
+
+            <!-- 主标题 -->
+            <div class="space-y-2">
+              <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-bold leading-none animate-slide-up stagger-2">
+                <span class="text-gray-900 dark:text-white">Hello,</span>
+              </h1>
+              <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-bold leading-none animate-slide-up stagger-3">
+                <span class="text-gray-900 dark:text-white">I'm </span>
+                <span class="gradient-text">Allen</span>
+              </h1>
+            </div>
+
+            <!-- 描述 -->
+            <p class="font-body text-xl text-gray-600 dark:text-gray-400 max-w-lg leading-relaxed animate-slide-up stagger-4">
+              用代码构建智能，用文字记录思考。探索 AI、机器学习与自动化的无限可能，分享技术之美。
+            </p>
+
+            <!-- 技能标签 -->
+            <div class="flex flex-wrap gap-3 animate-slide-up stagger-5">
+              <span class="tag-pill px-5 py-2 rounded-full bg-gradient-to-r from-fluid-pink/20 to-fluid-purple/20 text-fluid-purple font-body text-sm border border-fluid-purple/30 cursor-pointer">
+                机器学习
+              </span>
+              <span class="tag-pill px-5 py-2 rounded-full bg-gradient-to-r from-fluid-blue/20 to-fluid-cyan/20 text-fluid-blue font-body text-sm border border-fluid-blue/30 cursor-pointer">
+                Python
+              </span>
+              <span class="tag-pill px-5 py-2 rounded-full bg-gradient-to-r from-fluid-orange/20 to-fluid-pink/20 text-fluid-orange font-body text-sm border border-fluid-orange/30 cursor-pointer">
+                深度学习
+              </span>
+              <span class="tag-pill px-5 py-2 rounded-full bg-gradient-to-r from-fluid-cyan/20 to-fluid-blue/20 text-fluid-cyan dark:text-fluid-cyan font-body text-sm border border-fluid-cyan/30 cursor-pointer">
+                自动化
+              </span>
+            </div>
+
+            <!-- CTA 按钮 -->
+            <div class="flex gap-4 pt-4 animate-slide-up stagger-6">
+              <button class="magnetic-btn px-8 py-4 bg-gradient-to-r from-fluid-purple to-fluid-blue text-white font-body font-medium rounded-2xl hover-glow transition-all hover:scale-105">
+                探索博客
+              </button>
+              <button class="magnetic-btn px-8 py-4 glass-card text-gray-700 dark:text-white font-body font-medium rounded-2xl hover:bg-white/20 transition-all">
+                查看项目
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧 3D 卡片区 -->
+          <div class="perspective-container relative flex justify-center items-center py-12">
+            <!-- 旋转装饰环 -->
+            <div class="absolute w-[400px] h-[400px] border border-dashed border-fluid-purple/30 rounded-full animate-rotate-slow"></div>
+            <div class="absolute w-[340px] h-[340px] border border-dashed border-fluid-cyan/20 rounded-full animate-rotate-slow" style="animation-direction: reverse; animation-duration: 25s;"></div>
+
+            <!-- 主卡片 -->
+            <div class="card-3d relative w-72 h-96 glass-card rounded-3xl p-8 hover-glow animate-float-3d">
+              <!-- 头像区域 -->
+              <div class="relative w-32 h-32 mx-auto mb-6">
+                <div class="absolute inset-0 bg-gradient-to-br from-fluid-pink via-fluid-purple to-fluid-blue rounded-full animate-morph"></div>
+                <div class="absolute inset-2 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center">
+                  <span class="font-display text-4xl font-bold gradient-text">A</span>
+                </div>
+              </div>
+
+              <!-- 信息 -->
+              <div class="text-center space-y-2">
+                <h3 class="font-display text-2xl font-bold text-gray-900 dark:text-white">Allen Wang</h3>
+                <p class="font-body text-sm text-gray-500 dark:text-gray-400">@Capgemini</p>
+              </div>
+
+              <!-- 统计数据 -->
+              <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-200/50 dark:border-white/10">
+                <div class="text-center">
+                  <div class="font-display text-2xl font-bold gradient-text">50+</div>
+                  <div class="font-body text-xs text-gray-500 dark:text-gray-400">文章</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-display text-2xl font-bold gradient-text">10+</div>
+                  <div class="font-body text-xs text-gray-500 dark:text-gray-400">项目</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-display text-2xl font-bold gradient-text">51</div>
+                  <div class="font-body text-xs text-gray-500 dark:text-gray-400">标签</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 浮动小卡片 -->
+            <div class="absolute -top-4 -right-4 glass-card rounded-2xl p-4 animate-bounce-gentle">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🚀</span>
+                <span class="font-body text-sm text-gray-700 dark:text-white">新文章发布!</span>
+              </div>
+            </div>
+
+            <div class="absolute -bottom-4 -left-4 glass-card rounded-2xl p-4 animate-bounce-gentle" style="animation-delay: -1s;">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">💡</span>
+                <span class="font-body text-sm text-gray-700 dark:text-white">AI 探索</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部社交链接 -->
+    <footer class="fixed bottom-0 left-0 right-0 px-6 md:px-12 py-6">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div class="flex gap-6">
+          <a href="#" class="w-10 h-10 glass-card rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-fluid-purple transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="#" class="w-10 h-10 glass-card rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-fluid-blue transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+          </a>
+          <a href="#" class="w-10 h-10 glass-card rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-fluid-pink transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.104 10-8.104v11.817h-20z"/></svg>
+          </a>
+        </div>
+        <p class="font-body text-sm text-gray-500 dark:text-gray-500">
+          © 2026 Allen Wang
+        </p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

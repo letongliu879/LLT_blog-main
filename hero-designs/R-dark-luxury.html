@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案R：暗黑奢华风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    .display { font-family: 'Cormorant Garamond', serif; }
+    body { font-family: 'Montserrat', sans-serif; }
+    .gold { color: #D4AF37; }
+    .bg-gold { background-color: #D4AF37; }
+    .border-gold { border-color: #D4AF37; }
+    .gold-gradient { background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .shine { position: relative; overflow: hidden; }
+    .shine::before { content:''; position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(90deg,transparent,rgba(212,175,55,0.2),transparent); animation:shine 3s ease-in-out infinite; }
+    @keyframes shine { 0%{left:-100%} 50%,100%{left:100%} }
+    .fade-in { animation: fadeIn 1s ease both; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .d1{animation-delay:.2s} .d2{animation-delay:.4s} .d3{animation-delay:.6s}
+    .line-decoration { position: relative; }
+    .line-decoration::before, .line-decoration::after { content:''; position:absolute; top:50%; width:60px; height:1px; background:#D4AF37; }
+    .line-decoration::before { right:100%; margin-right:20px; }
+    .line-decoration::after { left:100%; margin-left:20px; }
+  </style>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen">
+  <!-- 顶部装饰线 -->
+  <div class="h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent"></div>
+
+  <!-- 导航 -->
+  <nav class="border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-8 py-6 flex items-center justify-between">
+      <span class="display text-3xl font-light tracking-wider gold">AW</span>
+      <div class="flex items-center gap-10 text-xs tracking-[0.2em] text-white/50">
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">BLOG</a>
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">PROJECTS</a>
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">TAGS</a>
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">ABOUT</a>
+      </div>
+      <a href="#" class="px-6 py-2 border border-[#D4AF37]/30 text-xs tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all">
+        GITHUB
+      </a>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-8">
+    <!-- Hero -->
+    <section class="py-32 text-center fade-in">
+      <p class="text-xs tracking-[0.3em] text-[#D4AF37]/60 mb-6">RPA DEVELOPER · CAPGEMINI</p>
+      <h1 class="display text-7xl font-light leading-tight mb-8">
+        <span class="gold-gradient">Allen Wang</span>
+      </h1>
+      <div class="w-16 h-px bg-[#D4AF37] mx-auto mb-8"></div>
+      <p class="text-lg text-white/40 font-light max-w-xl mx-auto leading-relaxed tracking-wide">
+        探索 AI、机器学习与自动化技术<br>
+        用代码理解世界，用文字记录思考
+      </p>
+
+      <div class="mt-12 flex items-center justify-center gap-6">
+        <a href="#" class="shine px-10 py-4 bg-[#D4AF37] text-black text-sm tracking-[0.2em] font-medium hover:bg-[#B38728] transition-colors">
+          EXPLORE
+        </a>
+        <a href="#" class="px-10 py-4 border border-white/20 text-sm tracking-[0.2em] text-white/60 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all">
+          PROJECTS
+        </a>
+      </div>
+    </section>
+
+    <!-- 统计 -->
+    <section class="py-16 border-y border-white/5 fade-in d1">
+      <div class="grid grid-cols-4 gap-8">
+        <div class="text-center">
+          <div class="display text-5xl font-light gold">50+</div>
+          <div class="mt-2 text-xs tracking-[0.2em] text-white/30">ARTICLES</div>
+        </div>
+        <div class="text-center">
+          <div class="display text-5xl font-light gold">51</div>
+          <div class="mt-2 text-xs tracking-[0.2em] text-white/30">TAGS</div>
+        </div>
+        <div class="text-center">
+          <div class="display text-5xl font-light gold">10+</div>
+          <div class="mt-2 text-xs tracking-[0.2em] text-white/30">PROJECTS</div>
+        </div>
+        <div class="text-center">
+          <div class="display text-5xl font-light gold">3+</div>
+          <div class="mt-2 text-xs tracking-[0.2em] text-white/30">YEARS</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 最新文章 -->
+    <section class="py-20 fade-in d2">
+      <div class="text-center mb-16">
+        <span class="display text-sm tracking-[0.3em] text-[#D4AF37]/60">WRITINGS</span>
+        <h2 class="display text-4xl font-light mt-2 line-decoration inline-block">Latest</h2>
+      </div>
+
+      <div class="space-y-6">
+        <a href="#" class="block p-8 border border-white/5 hover:border-[#D4AF37]/30 transition-all group">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-4 mb-3">
+                <span class="text-xs tracking-[0.2em] text-[#D4AF37]/60">ESSAY</span>
+                <span class="text-xs text-white/20">JAN 25, 2026</span>
+              </div>
+              <h3 class="display text-2xl font-light group-hover:text-[#D4AF37] transition-colors">
+                深夜胡言：一个程序员在AI时代的身份危机
+              </h3>
+            </div>
+            <span class="text-2xl text-white/10 group-hover:text-[#D4AF37] transition-colors">→</span>
+          </div>
+        </a>
+        <a href="#" class="block p-8 border border-white/5 hover:border-[#D4AF37]/30 transition-all group">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-4 mb-3">
+                <span class="text-xs tracking-[0.2em] text-[#D4AF37]/60">TECHNOLOGY</span>
+                <span class="text-xs text-white/20">JAN 22, 2026</span>
+              </div>
+              <h3 class="display text-2xl font-light group-hover:text-[#D4AF37] transition-colors">
+                LangGraph Reflection Agents 完全指南
+              </h3>
+            </div>
+            <span class="text-2xl text-white/10 group-hover:text-[#D4AF37] transition-colors">→</span>
+          </div>
+        </a>
+        <a href="#" class="block p-8 border border-white/5 hover:border-[#D4AF37]/30 transition-all group">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-4 mb-3">
+                <span class="text-xs tracking-[0.2em] text-[#D4AF37]/60">TECHNOLOGY</span>
+                <span class="text-xs text-white/20">JAN 18, 2026</span>
+              </div>
+              <h3 class="display text-2xl font-light group-hover:text-[#D4AF37] transition-colors">
+                基于深度Q学习的月球着陆
+              </h3>
+            </div>
+            <span class="text-2xl text-white/10 group-hover:text-[#D4AF37] transition-colors">→</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 技术栈 -->
+    <section class="py-16 border-t border-white/5 fade-in d3">
+      <div class="text-center">
+        <span class="text-xs tracking-[0.3em] text-white/20">EXPERTISE</span>
+        <div class="mt-6 flex flex-wrap justify-center gap-4">
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">PYTHON</span>
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">TENSORFLOW</span>
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">PYTORCH</span>
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">LANGCHAIN</span>
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">REACT</span>
+          <span class="px-5 py-2 border border-white/10 text-xs tracking-[0.15em] text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all">TYPESCRIPT</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 mt-12">
+    <div class="max-w-6xl mx-auto px-8 py-8 flex items-center justify-between">
+      <span class="text-xs tracking-[0.2em] text-white/20">© 2026 ALLEN WANG</span>
+      <div class="flex items-center gap-8 text-xs tracking-[0.2em] text-white/30">
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">GITHUB</a>
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">LINKEDIN</a>
+        <a href="#" class="hover:text-[#D4AF37] transition-colors">EMAIL</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 底部装饰线 -->
+  <div class="h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent"></div>
+</body>
+</html>

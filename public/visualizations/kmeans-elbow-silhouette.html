@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K值选择：Elbow 与 Silhouette</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:920px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>Elbow + Silhouette 双指标</h1>
+    <p>上图是 WCSS（越小越好），下图是 Silhouette（越大越好）。结合两者通常比只看单指标更稳。</p>
+    <canvas id="c" width="760" height="430"></canvas>
+  </div>
+  <script>
+    const c=document.getElementById('c'),ctx=c.getContext('2d');
+    const ks=[2,3,4,5,6,7,8,9], wcss=[420,290,210,170,150,138,131,127], sil=[0.42,0.51,0.58,0.55,0.49,0.44,0.41,0.39];
+    const sx=(k)=>80+((k-2)/7)*(c.width-120);
+    function plot(yArr,yMin,yMax,yBase,color,title,yOffset){
+      ctx.fillStyle='#94a3b8';ctx.font='12px Segoe UI';ctx.fillText(title,34,yOffset+20);
+      ctx.strokeStyle='rgba(148,163,184,.45)';ctx.beginPath();ctx.moveTo(60,yOffset+180);ctx.lineTo(c.width-30,yOffset+180);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(60,yOffset+20);ctx.lineTo(60,yOffset+180);ctx.stroke();
+      const py=(v)=>yOffset+180-((v-yMin)/(yMax-yMin))*150;
+      ctx.beginPath(); yArr.forEach((v,i)=>{const x=sx(ks[i]),y=py(v);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}); ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.stroke();
+      yArr.forEach((v,i)=>{ctx.beginPath();ctx.arc(sx(ks[i]),py(v),4.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()});
+      const bestIndex = title.includes('Silhouette') ? yArr.indexOf(Math.max(...yArr)) : 2;
+      ctx.fillStyle='#fbbf24';ctx.fillText(`推荐 K=${ks[bestIndex]}`,sx(ks[bestIndex])-24,py(yArr[bestIndex])-10);
+    }
+    function render(){ctx.clearRect(0,0,c.width,c.height);plot(wcss,120,450,0,'#38bdf8','Elbow: WCSS',0);plot(sil,0.35,0.62,0,'#22c55e','Silhouette',210);reportHeight()}
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    window.addEventListener('load',()=>{render();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

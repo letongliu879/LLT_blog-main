@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案P：报纸排版风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Source+Serif+4:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    .display { font-family: 'Playfair Display', serif; }
+    .serif { font-family: 'Source Serif 4', serif; }
+    body { font-family: 'Inter', sans-serif; background: #FDF9F3; }
+    .drop-cap::first-letter { float:left; font-size:4rem; line-height:1; margin-right:0.5rem; font-family:'Playfair Display',serif; font-weight:700; }
+    .column-rule { column-rule: 1px solid #1a1a1a20; }
+  </style>
+</head>
+<body class="text-[#1a1a1a] min-h-screen">
+  <!-- 报头 -->
+  <header class="border-b-2 border-[#1a1a1a]">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between text-xs tracking-wider">
+      <span>EST. 2023</span>
+      <span>SHANGHAI, CHINA</span>
+      <span>VOL. III · NO. 50</span>
+    </div>
+  </header>
+
+  <!-- 报名 -->
+  <div class="border-b-4 border-[#1a1a1a] border-double">
+    <div class="max-w-6xl mx-auto px-6 py-8 text-center">
+      <h1 class="display text-7xl font-black tracking-tight">The Allen Chronicle</h1>
+      <p class="mt-2 text-sm tracking-[0.5em] uppercase">Technology · AI · Automation · Thoughts</p>
+    </div>
+  </div>
+
+  <!-- 日期栏 -->
+  <div class="border-b border-[#1a1a1a]/20">
+    <div class="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between text-xs">
+      <span class="tracking-wider">MONDAY, JANUARY 27, 2026</span>
+      <div class="flex items-center gap-6">
+        <a href="#" class="hover:underline">Blog</a>
+        <a href="#" class="hover:underline">Projects</a>
+        <a href="#" class="hover:underline">Tags</a>
+        <a href="#" class="hover:underline">About</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- 头条 -->
+    <section class="grid grid-cols-12 gap-6 pb-8 border-b border-[#1a1a1a]/20">
+      <div class="col-span-8">
+        <span class="text-xs tracking-widest text-[#1a1a1a]/50 uppercase">Featured Essay</span>
+        <h2 class="display text-5xl font-bold leading-tight mt-2 mb-4">
+          深夜胡言：一个程序员在AI时代的身份危机
+        </h2>
+        <p class="serif text-lg text-[#1a1a1a]/70 leading-relaxed mb-4">
+          当 AI 能写出比我更好的代码时，我的价值在哪里？这是一个关于存在主义的深夜思考，关于技术、人性与未来的漫长独白。
+        </p>
+        <div class="flex items-center gap-4 text-sm text-[#1a1a1a]/50">
+          <span>By ALLEN WANG</span>
+          <span>·</span>
+          <span>59 MIN READ</span>
+          <span>·</span>
+          <span>JAN 25, 2026</span>
+        </div>
+      </div>
+      <div class="col-span-4 border-l border-[#1a1a1a]/20 pl-6">
+        <div class="bg-[#1a1a1a] text-white p-6">
+          <span class="text-xs tracking-widest opacity-60">ABOUT THE AUTHOR</span>
+          <h3 class="display text-2xl font-bold mt-2 mb-3">Allen Wang</h3>
+          <p class="text-sm opacity-80 leading-relaxed">
+            RPA Developer at Capgemini. Exploring AI, Machine Learning, and Automation technologies.
+          </p>
+          <div class="mt-4 pt-4 border-t border-white/20 grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div class="display text-2xl font-bold">50+</div>
+              <div class="text-xs opacity-60">Articles</div>
+            </div>
+            <div>
+              <div class="display text-2xl font-bold">51</div>
+              <div class="text-xs opacity-60">Tags</div>
+            </div>
+            <div>
+              <div class="display text-2xl font-bold">10+</div>
+              <div class="text-xs opacity-60">Projects</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 三栏文章 -->
+    <section class="grid grid-cols-3 gap-6 py-8 border-b border-[#1a1a1a]/20">
+      <article class="border-r border-[#1a1a1a]/20 pr-6">
+        <span class="text-xs tracking-widest text-[#1a1a1a]/50 uppercase">Machine Learning</span>
+        <h3 class="display text-xl font-bold mt-2 mb-3 hover:underline cursor-pointer">
+          LangGraph Reflection Agents 完全指南
+        </h3>
+        <p class="serif text-sm text-[#1a1a1a]/60 leading-relaxed drop-cap">
+          深入解析 LangGraph 中的反思代理架构，从原理到实战的完整教程。本文将带你了解如何构建能够自我反思和改进的智能代理系统。
+        </p>
+        <div class="mt-3 text-xs text-[#1a1a1a]/40">JAN 22 · 29 MIN</div>
+      </article>
+
+      <article class="border-r border-[#1a1a1a]/20 pr-6">
+        <span class="text-xs tracking-widest text-[#1a1a1a]/50 uppercase">Reinforcement Learning</span>
+        <h3 class="display text-xl font-bold mt-2 mb-3 hover:underline cursor-pointer">
+          基于深度Q学习的月球着陆
+        </h3>
+        <p class="serif text-sm text-[#1a1a1a]/60 leading-relaxed drop-cap">
+          使用 DQN 算法解决 OpenAI Gym 的 LunarLander 环境，从零实现到训练调优的完整过程，包含详细的代码解析。
+        </p>
+        <div class="mt-3 text-xs text-[#1a1a1a]/40">JAN 18 · 15 MIN</div>
+      </article>
+
+      <article>
+        <span class="text-xs tracking-widest text-[#1a1a1a]/50 uppercase">AI Agents</span>
+        <h3 class="display text-xl font-bold mt-2 mb-3 hover:underline cursor-pointer">
+          构建金融研究多智能体系统
+        </h3>
+        <p class="serif text-sm text-[#1a1a1a]/60 leading-relaxed drop-cap">
+          如何使用 LangGraph 构建一个能够自动进行金融分析和投资报告生成的多智能体系统，结合实时数据和历史分析。
+        </p>
+        <div class="mt-3 text-xs text-[#1a1a1a]/40">JAN 15 · 22 MIN</div>
+      </article>
+    </section>
+
+    <!-- 分类索引 -->
+    <section class="grid grid-cols-4 gap-6 py-8">
+      <div>
+        <h4 class="display text-lg font-bold border-b-2 border-[#1a1a1a] pb-2 mb-4">Categories</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="flex justify-between"><span>Machine Learning</span><span class="text-[#1a1a1a]/40">24</span></li>
+          <li class="flex justify-between"><span>AI Agents</span><span class="text-[#1a1a1a]/40">12</span></li>
+          <li class="flex justify-between"><span>Automation</span><span class="text-[#1a1a1a]/40">8</span></li>
+          <li class="flex justify-between"><span>Essays</span><span class="text-[#1a1a1a]/40">6</span></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="display text-lg font-bold border-b-2 border-[#1a1a1a] pb-2 mb-4">Tech Stack</h4>
+        <ul class="space-y-2 text-sm text-[#1a1a1a]/70">
+          <li>Python · TensorFlow</li>
+          <li>PyTorch · LangChain</li>
+          <li>React · TypeScript</li>
+          <li>Next.js · Node.js</li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="display text-lg font-bold border-b-2 border-[#1a1a1a] pb-2 mb-4">Projects</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="hover:underline cursor-pointer">FinSight →</li>
+          <li class="hover:underline cursor-pointer">ML Portfolio →</li>
+          <li class="hover:underline cursor-pointer">RPA Tools →</li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="display text-lg font-bold border-b-2 border-[#1a1a1a] pb-2 mb-4">Connect</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="hover:underline cursor-pointer">GitHub →</li>
+          <li class="hover:underline cursor-pointer">LinkedIn →</li>
+          <li class="hover:underline cursor-pointer">Email →</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t-2 border-[#1a1a1a]">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between text-xs">
+      <span>© 2026 The Allen Chronicle. All Rights Reserved.</span>
+      <span class="tracking-widest">PRINTED IN DIGITAL INK</span>
+    </div>
+  </footer>
+</body>
+</html>

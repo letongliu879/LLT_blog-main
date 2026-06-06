@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OLS 残差几何可视化</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:900px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    canvas{width:100%;border:1px solid #334155;border-radius:10px;background:#020617}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>投影点与残差向量</h1>
+    <p>橙色点是真实 y，蓝色线是列空间（简化为直线），绿色点是投影 \(\hat y\)，红色线段是残差 \(r=y-\hat y\)。</p>
+    <canvas id="c" width="760" height="380"></canvas>
+  </div>
+  <script>
+    const c=document.getElementById('c'),ctx=c.getContext('2d');
+    function render(){
+      ctx.clearRect(0,0,c.width,c.height);
+      const x1=120,y1=300,x2=660,y2=80;
+      ctx.strokeStyle='#38bdf8';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const px=460,py=120;
+      const dx=x2-x1,dy=y2-y1,t=((px-x1)*dx+(py-y1)*dy)/(dx*dx+dy*dy);
+      const hx=x1+t*dx,hy=y1+t*dy;
+      ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fillStyle='#f59e0b';ctx.fill();
+      ctx.beginPath();ctx.arc(hx,hy,7,0,Math.PI*2);ctx.fillStyle='#22c55e';ctx.fill();
+      ctx.strokeStyle='#ef4444';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(hx,hy);ctx.stroke();
+      reportHeight();
+    }
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    window.addEventListener('load',()=>{render();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

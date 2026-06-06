@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Head Attention 可视化</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+  --head1: #38bdf8;
+  --head2: #22c55e;
+  --head3: #8b5cf6;
+  --head4: #f59e0b;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 100%;
+  width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  box-sizing: border-box;
+}
+
+.page-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1rem;
+  margin-bottom: 36px;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--purple), var(--accent));
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.card-desc {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.comparison-panel {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.comparison-panel h4 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.panel-label-single {
+  color: var(--danger);
+}
+
+.panel-label-multi {
+  color: var(--accent);
+}
+
+.canvas-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.multi-heads-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mini-head-wrap {
+  text-align: center;
+}
+
+.mini-head-label {
+  font-size: 0.7rem;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* Section 2: Animation */
+.anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--primary);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.step-indicator {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.anim-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Section 3: Heatmaps */
+.heatmap-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.head-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  user-select: none;
+}
+
+.head-checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.head-checkbox input[type="checkbox"]:checked {
+  border-color: currentColor;
+  background: currentColor;
+}
+
+.head-checkbox input[type="checkbox"]:checked::after {
+  content: '\\2713';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.heatmaps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.heatmap-item {
+  text-align: center;
+}
+
+.heatmap-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.heatmap-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.tooltip {
+  position: fixed;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  display: none;
+  backdrop-filter: blur(8px);
+}
+
+/* Section 4: KPI */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.kpi-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.kpi-note {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+/* Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.slider-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 200px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.slider-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 30px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .heatmaps-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 20px 12px 36px;
+  }
+  .page-title {
+    font-size: 1.5rem;
+  }
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .heatmaps-grid {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 20px 14px;
+  }
+  input[type="range"] {
+    width: 140px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1 class="page-title">Multi-Head Attention 多头注意力</h1>
+  <p class="page-subtitle">为什么一个注意力头不够？多个头如何捕获不同关系？</p>
+
+  <!-- Section 1: Single vs Multi-Head -->
+  <div class="card" id="sec1">
+    <h2 class="card-title">一、单头 vs 多头注意力对比</h2>
+    <p class="card-desc">单个注意力头只能捕获一种关系模式，而多个头可以同时关注语法、位置、指代和语义等不同维度。</p>
+    <div class="comparison-grid">
+      <div class="comparison-panel">
+        <h4 class="panel-label-single">单头注意力 (Single Head)</h4>
+        <div class="canvas-wrap">
+          <canvas id="singleHeadCanvas"></canvas>
+        </div>
+        <p style="text-align:center;color:var(--muted);font-size:0.75rem;margin-top:8px;">仅捕获语法关系</p>
+      </div>
+      <div class="comparison-panel">
+        <h4 class="panel-label-multi">多头注意力 (Multi-Head)</h4>
+        <div class="multi-heads-row" id="multiHeadGrid">
+          <div class="mini-head-wrap">
+            <div class="mini-head-label" style="color:var(--head1)">Head 1: 语法</div>
+            <canvas id="mh1"></canvas>
+          </div>
+          <div class="mini-head-wrap">
+            <div class="mini-head-label" style="color:var(--head2)">Head 2: 位置</div>
+            <canvas id="mh2"></canvas>
+          </div>
+          <div class="mini-head-wrap">
+            <div class="mini-head-label" style="color:var(--head3)">Head 3: 指代</div>
+            <canvas id="mh3"></canvas>
+          </div>
+          <div class="mini-head-wrap">
+            <div class="mini-head-label" style="color:var(--head4)">Head 4: 语义</div>
+            <canvas id="mh4"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Split → Process → Concat Animation -->
+  <div class="card" id="sec2">
+    <h2 class="card-title">二、Split → Attend → Concat → Project 动画</h2>
+    <p class="card-desc">输入向量 (d_model=8) 被拆分为 h=4 个头 (d_k=2)，各自独立计算注意力后拼接，最终通过 W<sub>O</sub> 线性变换。</p>
+    <div class="anim-controls">
+      <button class="btn" id="playBtn" onclick="startAnimation()">&#9654; 播放</button>
+      <button class="btn" id="resetBtn" onclick="resetAnimation()">&#8635; 重置</button>
+      <span class="step-indicator" id="stepLabel">步骤 0 / 4</span>
+    </div>
+    <div class="anim-canvas-wrap">
+      <canvas id="animCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Section 3: Head Attention Heatmaps -->
+  <div class="card" id="sec3">
+    <h2 class="card-title">三、注意力热力图</h2>
+    <p class="card-desc">示例句子："我 喜欢 这个 红色 的 苹果"。每个头关注不同的词间关系，悬停查看注意力分数。</p>
+
+    <div class="slider-row">
+      <span class="slider-label">注意力头数 h：</span>
+      <input type="range" id="headSlider" min="0" max="3" step="1" value="2">
+      <span class="slider-value" id="headSliderVal">4</span>
+    </div>
+
+    <div class="heatmap-controls" id="heatmapControls">
+      <label class="head-checkbox" style="color:var(--head1)">
+        <input type="checkbox" id="chk1" checked style="color:var(--head1)"> Head 1 语法
+      </label>
+      <label class="head-checkbox" style="color:var(--head2)">
+        <input type="checkbox" id="chk2" checked style="color:var(--head2)"> Head 2 位置
+      </label>
+      <label class="head-checkbox" style="color:var(--head3)">
+        <input type="checkbox" id="chk3" checked style="color:var(--head3)"> Head 3 指代
+      </label>
+      <label class="head-checkbox" style="color:var(--head4)">
+        <input type="checkbox" id="chk4" checked style="color:var(--head4)"> Head 4 语义
+      </label>
+    </div>
+
+    <div class="heatmaps-grid" id="heatmapsContainer"></div>
+
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <!-- Section 4: KPI Stats -->
+  <div class="card" id="sec4">
+    <h2 class="card-title">四、参数统计</h2>
+    <p class="card-desc">多头注意力的关键参数一览</p>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiH">4</div>
+        <div class="kpi-label">注意力头数 h</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiDmodel">512</div>
+        <div class="kpi-label">d_model</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiDk">128</div>
+        <div class="kpi-label">d_k = d_model / h</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiParams">—</div>
+        <div class="kpi-label">总参数量</div>
+        <div class="kpi-note" id="kpiNote">与单头等价</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===============================
+// Constants & Utilities
+// ===============================
+const COLORS = {
+  head1: '#38bdf8',
+  head2: '#22c55e',
+  head3: '#8b5cf6',
+  head4: '#f59e0b',
+  bg: '#0f172a',
+  card: 'rgba(30,41,59,0.7)',
+  border: '#334155',
+  text: '#e2e8f0',
+  muted: '#94a3b8',
+  primary: '#38bdf8',
+  accent: '#22c55e',
+  danger: '#ef4444'
+};
+
+const HEAD_COLORS = [COLORS.head1, COLORS.head2, COLORS.head3, COLORS.head4];
+const HEAD_NAMES = ['语法', '位置', '指代', '语义'];
+
+const TOKENS_EN = ['She', 'likes', 'this', 'red', '-', 'apple'];
+const TOKENS = ['我', '喜欢', '这个', '红色', '的', '苹果'];
+const N = TOKENS.length;
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+function softmax(arr) {
+  const max = Math.max(...arr);
+  const exps = arr.map(x => Math.exp(x - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map(x => x / sum);
+}
+
+// ===============================
+// Attention Patterns (6x6)
+// ===============================
+// Head 1: Syntax (subject-verb, adj-noun)
+const ATTN_HEAD1 = [
+  [0.6, 0.3, 0.02, 0.02, 0.02, 0.04],
+  [0.35, 0.3, 0.05, 0.05, 0.05, 0.2],
+  [0.05, 0.05, 0.3, 0.15, 0.1, 0.35],
+  [0.02, 0.02, 0.08, 0.3, 0.15, 0.43],
+  [0.02, 0.02, 0.15, 0.25, 0.3, 0.26],
+  [0.05, 0.2, 0.15, 0.2, 0.15, 0.25]
+];
+
+// Head 2: Positional / local adjacency
+const ATTN_HEAD2 = [
+  [0.5, 0.35, 0.08, 0.03, 0.02, 0.02],
+  [0.3, 0.35, 0.25, 0.05, 0.03, 0.02],
+  [0.05, 0.25, 0.35, 0.25, 0.07, 0.03],
+  [0.02, 0.05, 0.25, 0.35, 0.25, 0.08],
+  [0.02, 0.03, 0.07, 0.25, 0.35, 0.28],
+  [0.02, 0.02, 0.03, 0.08, 0.3, 0.55]
+];
+
+// Head 3: Coreference (pronoun -> noun)
+const ATTN_HEAD3 = [
+  [0.7, 0.05, 0.05, 0.05, 0.05, 0.1],
+  [0.15, 0.5, 0.05, 0.05, 0.05, 0.2],
+  [0.1, 0.05, 0.4, 0.05, 0.05, 0.35],
+  [0.05, 0.05, 0.1, 0.4, 0.1, 0.3],
+  [0.05, 0.05, 0.2, 0.2, 0.3, 0.2],
+  [0.25, 0.1, 0.1, 0.1, 0.05, 0.4]
+];
+
+// Head 4: Semantic (related meanings)
+const ATTN_HEAD4 = [
+  [0.35, 0.25, 0.05, 0.05, 0.05, 0.25],
+  [0.15, 0.3, 0.1, 0.05, 0.05, 0.35],
+  [0.05, 0.05, 0.3, 0.2, 0.2, 0.2],
+  [0.03, 0.03, 0.1, 0.35, 0.15, 0.34],
+  [0.03, 0.03, 0.15, 0.2, 0.35, 0.24],
+  [0.2, 0.25, 0.1, 0.15, 0.05, 0.25]
+];
+
+const ALL_HEADS = [ATTN_HEAD1, ATTN_HEAD2, ATTN_HEAD3, ATTN_HEAD4];
+
+// ===============================
+// Section 1: Single vs Multi-Head Comparison
+// ===============================
+function drawAttentionArcs(canvasId, tokens, patterns, color, requestedW, requestedH) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  const w = Math.min(requestedW, container.clientWidth - 4);
+  const h = Math.round(requestedH * (w / requestedW));
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, w, h);
+
+  const n = tokens.length;
+  const padding = 20;
+  const usable = w - 2 * padding;
+  const gap = usable / (n - 1);
+  const yBase = h - 35;
+
+  // Draw arcs for attention
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const weight = patterns[i][j];
+      if (weight < 0.12) continue;
+
+      const x1 = padding + i * gap;
+      const x2 = padding + j * gap;
+      const midX = (x1 + x2) / 2;
+      const dist = Math.abs(x2 - x1);
+      const arcH = Math.min(dist * 0.5, h * 0.55);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, yBase);
+      ctx.quadraticCurveTo(midX, yBase - arcH, x2, yBase);
+
+      const rgb = hexToRgb(color);
+      ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(weight * 1.8, 0.9)})`;
+      ctx.lineWidth = weight * 5;
+      ctx.stroke();
+
+      // Arrow head
+      const t = 0.92;
+      const ax = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * midX + t * t * x2;
+      const ay = (1 - t) * (1 - t) * yBase + 2 * (1 - t) * t * (yBase - arcH) + t * t * yBase;
+      const angle = Math.atan2(yBase - ay, x2 - ax);
+      const arrowSize = 4 + weight * 4;
+      ctx.beginPath();
+      ctx.moveTo(x2, yBase);
+      ctx.lineTo(x2 - arrowSize * Math.cos(angle - 0.4), yBase - arrowSize * Math.sin(angle - 0.4));
+      ctx.lineTo(x2 - arrowSize * Math.cos(angle + 0.4), yBase - arrowSize * Math.sin(angle + 0.4));
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(weight * 2, 0.95)})`;
+      ctx.fill();
+    }
+  }
+
+  // Draw tokens
+  ctx.font = '600 13px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i < n; i++) {
+    const x = padding + i * gap;
+    // Circle
+    ctx.beginPath();
+    ctx.arc(x, yBase, 6, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // Label
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText(tokens[i], x, yBase + 10);
+  }
+}
+
+function drawSection1() {
+  drawAttentionArcs('singleHeadCanvas', TOKENS, ATTN_HEAD1, COLORS.danger, 380, 260);
+
+  const miniW = 170, miniH = 115;
+  for (let h = 0; h < 4; h++) {
+    drawAttentionArcs('mh' + (h + 1), TOKENS, ALL_HEADS[h], HEAD_COLORS[h], miniW, miniH);
+  }
+}
+
+// ===============================
+// Section 2: Split → Process → Concat Animation
+// ===============================
+let animStep = 0;
+let animTimer = null;
+let animProgress = 0;
+const ANIM_STEPS = 4;
+const STEP_LABELS = [
+  '输入向量 d_model = 8',
+  '拆分为 h=4 个头，每个 d_k=2',
+  '各头独立计算注意力',
+  '拼接 (Concat) 所有头的输出',
+  '线性变换 W_O 得到最终输出'
+];
+
+function drawAnimFrame() {
+  const canvas = document.getElementById('animCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const container = canvas.parentElement;
+  const W = Math.min(920, container.clientWidth - 4);
+  const scale = W / 920;
+  const H = Math.round(380 * scale);
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr * scale, dpr * scale);
+  ctx.clearRect(0, 0, 920, 380);
+
+  const p = animProgress;
+
+  // Layout (using original 920x380 coordinate system, scaled by ctx.scale)
+  const OW = 920, OH = 380;
+  const inputX = 40;
+  const splitX = 185;
+  const attnX = 380;
+  const concatX = 600;
+  const outputX = 780;
+  const midY = OH / 2;
+
+  const cellW = 20, cellH = 28;
+  const dmodel = 8;
+  const nHeads = 4;
+  const dk = 2;
+
+  // Helper: draw vector block
+  function drawVector(x, y, count, color, label, alpha) {
+    if (alpha <= 0) return;
+    ctx.globalAlpha = alpha;
+    const rgb = hexToRgb(color);
+    for (let i = 0; i < count; i++) {
+      const cy = y + i * (cellH + 2);
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.25)`;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, x, cy, cellW, cellH, 4, true, true);
+    }
+    if (label) {
+      ctx.fillStyle = COLORS.muted;
+      ctx.font = '12px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x + cellW / 2, y + count * (cellH + 2) + 6);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // Draw arrow
+  function drawArrow(x1, y1, x2, y2, color, alpha) {
+    if (alpha <= 0) return;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 8 * Math.cos(angle - 0.35), y2 - 8 * Math.sin(angle - 0.35));
+    ctx.lineTo(x2 - 8 * Math.cos(angle + 0.35), y2 - 8 * Math.sin(angle + 0.35));
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw small attention matrix
+  function drawMiniAttn(cx, cy, headIdx, alpha) {
+    if (alpha <= 0) return;
+    ctx.globalAlpha = alpha;
+    const sz = 3;
+    const cellSz = 12;
+    const startX = cx - (sz * cellSz) / 2;
+    const startY = cy - (sz * cellSz) / 2;
+    const rgb = hexToRgb(HEAD_COLORS[headIdx]);
+    for (let r = 0; r < sz; r++) {
+      for (let c = 0; c < sz; c++) {
+        const val = ALL_HEADS[headIdx][r][c] + ALL_HEADS[headIdx][r + 1][c + 1];
+        const a = Math.min(val, 1);
+        ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${a * 0.8})`;
+        ctx.fillRect(startX + c * cellSz, startY + r * cellSz, cellSz - 1, cellSz - 1);
+      }
+    }
+    ctx.strokeStyle = HEAD_COLORS[headIdx];
+    ctx.lineWidth = 1;
+    ctx.strokeRect(startX - 1, startY - 1, sz * cellSz + 1, sz * cellSz + 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // Step 0: input only
+  const inputTop = midY - (dmodel * (cellH + 2)) / 2;
+  drawVector(inputX, inputTop, dmodel, COLORS.primary, 'd_model=8', 1);
+
+  // Step label
+  ctx.fillStyle = COLORS.text;
+  ctx.font = '600 14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(STEP_LABELS[animStep], OW / 2, 24);
+
+  // Step 1+: split arrows and head vectors
+  const headGap = 70;
+  const headStartY = midY - ((nHeads - 1) * headGap) / 2;
+
+  if (animStep >= 1) {
+    const alpha1 = animStep === 1 ? p : 1;
+    // Split arrows
+    for (let h = 0; h < nHeads; h++) {
+      const hy = headStartY + h * headGap;
+      drawArrow(inputX + cellW + 8, midY, splitX - 4, hy, HEAD_COLORS[h], alpha1);
+      const vecTop = hy - dk * (cellH + 2) / 2;
+      drawVector(splitX, vecTop, dk, HEAD_COLORS[h], 'd_k=2', alpha1);
+    }
+  }
+
+  // Step 2: attention matrices
+  if (animStep >= 2) {
+    const alpha2 = animStep === 2 ? p : 1;
+    for (let h = 0; h < nHeads; h++) {
+      const hy = headStartY + h * headGap;
+      drawArrow(splitX + cellW + 8, hy, attnX - 24, hy, HEAD_COLORS[h], alpha2);
+      drawMiniAttn(attnX + 10, hy, h, alpha2);
+      // Output of attention
+      const vecTop = hy - dk * (cellH + 2) / 2;
+      drawVector(attnX + 45, vecTop, dk, HEAD_COLORS[h], '', alpha2);
+    }
+  }
+
+  // Step 3: concat
+  if (animStep >= 3) {
+    const alpha3 = animStep === 3 ? p : 1;
+    for (let h = 0; h < nHeads; h++) {
+      const hy = headStartY + h * headGap;
+      drawArrow(attnX + 45 + cellW + 8, hy, concatX - 4, midY, HEAD_COLORS[h], alpha3);
+    }
+    const concatTop = midY - (dmodel * (cellH + 2)) / 2;
+    // Concat vector: colored segments
+    for (let i = 0; i < dmodel; i++) {
+      const headIdx = Math.floor(i / dk);
+      const cy = concatTop + i * (cellH + 2);
+      const rgb = hexToRgb(HEAD_COLORS[headIdx]);
+      ctx.globalAlpha = alpha3;
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.3)`;
+      ctx.strokeStyle = HEAD_COLORS[headIdx];
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, concatX, cy, cellW, cellH, 4, true, true);
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = alpha3;
+    ctx.fillStyle = COLORS.muted;
+    ctx.font = '12px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Concat', concatX + cellW / 2, concatTop + dmodel * (cellH + 2) + 6);
+    ctx.globalAlpha = 1;
+  }
+
+  // Step 4: W_O projection
+  if (animStep >= 4) {
+    const alpha4 = animStep === 4 ? p : 1;
+    drawArrow(concatX + cellW + 8, midY, outputX - 4, midY, COLORS.primary, alpha4);
+
+    // W_O box
+    const woX = (concatX + cellW + 8 + outputX - 4) / 2 - 18;
+    ctx.globalAlpha = alpha4;
+    ctx.fillStyle = 'rgba(56,189,248,0.1)';
+    ctx.strokeStyle = COLORS.primary;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, woX, midY - 16, 36, 32, 6, true, true);
+    ctx.fillStyle = COLORS.primary;
+    ctx.font = '600 11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('W_O', woX + 18, midY);
+    ctx.textBaseline = 'alphabetic';
+
+    const outputTop = midY - (dmodel * (cellH + 2)) / 2;
+    drawVector(outputX, outputTop, dmodel, COLORS.accent, 'Output', alpha4);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function startAnimation() {
+  if (animTimer) return;
+  const playBtn = document.getElementById('playBtn');
+  playBtn.disabled = true;
+
+  function stepForward() {
+    if (animStep > ANIM_STEPS) {
+      clearInterval(animTimer);
+      animTimer = null;
+      playBtn.disabled = false;
+      return;
+    }
+    animProgress = 0;
+    const progressTimer = setInterval(function () {
+      animProgress += 0.04;
+      if (animProgress >= 1) {
+        animProgress = 1;
+        clearInterval(progressTimer);
+        animStep++;
+        document.getElementById('stepLabel').textContent =
+          '\u6B65\u9AA4 ' + Math.min(animStep, ANIM_STEPS) + ' / ' + ANIM_STEPS;
+        if (animStep <= ANIM_STEPS) {
+          setTimeout(stepForward, 400);
+        } else {
+          playBtn.disabled = false;
+        }
+      }
+      drawAnimFrame();
+    }, 30);
+  }
+
+  if (animStep > ANIM_STEPS) {
+    resetAnimation();
+  }
+  stepForward();
+}
+
+function resetAnimation() {
+  if (animTimer) {
+    clearInterval(animTimer);
+    animTimer = null;
+  }
+  animStep = 0;
+  animProgress = 1;
+  document.getElementById('playBtn').disabled = false;
+  document.getElementById('stepLabel').textContent = '\u6B65\u9AA4 0 / ' + ANIM_STEPS;
+  drawAnimFrame();
+}
+
+// ===============================
+// Section 3: Heatmaps
+// ===============================
+const headSliderMap = [1, 2, 4, 8];
+let currentHeadCount = 4;
+
+function generateHeadPatterns(nHeads) {
+  // For 1, 2, 4 use predefined; for 8, generate interpolated
+  if (nHeads <= 4) return ALL_HEADS.slice(0, nHeads);
+  const patterns = [...ALL_HEADS];
+  for (let i = 4; i < nHeads; i++) {
+    const base1 = ALL_HEADS[i % 4];
+    const base2 = ALL_HEADS[(i + 1) % 4];
+    const mixed = base1.map((row, r) =>
+      row.map((v, c) => {
+        const raw = v * 0.6 + base2[r][c] * 0.4 + (Math.random() - 0.5) * 0.05;
+        return Math.max(0, raw);
+      })
+    );
+    // Normalize rows
+    for (let r = 0; r < N; r++) {
+      const sum = mixed[r].reduce((a, b) => a + b, 0);
+      for (let c = 0; c < N; c++) mixed[r][c] /= sum;
+    }
+    patterns.push(mixed);
+  }
+  return patterns;
+}
+
+function buildHeatmaps() {
+  const container = document.getElementById('heatmapsContainer');
+  container.innerHTML = '';
+  const patterns = generateHeadPatterns(currentHeadCount);
+  const checks = [
+    document.getElementById('chk1'),
+    document.getElementById('chk2'),
+    document.getElementById('chk3'),
+    document.getElementById('chk4')
+  ];
+  const activeHeads = [];
+  for (let i = 0; i < currentHeadCount && i < 4; i++) {
+    if (checks[i] && checks[i].checked) activeHeads.push(i);
+  }
+  for (let i = 4; i < currentHeadCount; i++) {
+    activeHeads.push(i);
+  }
+
+  // Update checkbox visibility
+  const controlsDiv = document.getElementById('heatmapControls');
+  const labels = controlsDiv.querySelectorAll('.head-checkbox');
+  labels.forEach(function (lbl, idx) {
+    lbl.style.display = idx < currentHeadCount ? '' : 'none';
+  });
+
+  // Individual heads
+  for (let h = 0; h < currentHeadCount; h++) {
+    const item = document.createElement('div');
+    item.className = 'heatmap-item';
+    const colorIdx = h % 4;
+    const isActive = activeHeads.indexOf(h) !== -1;
+    item.innerHTML =
+      '<div class="heatmap-label" style="color:' + HEAD_COLORS[colorIdx] + '">' +
+      'Head ' + (h + 1) + ': ' + (h < 4 ? HEAD_NAMES[h] : '\u6DF7\u5408' + (h + 1)) +
+      '</div>' +
+      '<div class="heatmap-canvas-wrap">' +
+      '<canvas class="heatmap-cv" data-head="' + h + '" width="1" height="1"></canvas>' +
+      '</div>';
+    container.appendChild(item);
+    if (isActive) {
+      drawHeatmap(item.querySelector('canvas'), patterns[h], HEAD_COLORS[colorIdx]);
+    }
+  }
+
+  // Combined
+  if (activeHeads.length > 1) {
+    const combined = [];
+    for (let r = 0; r < N; r++) {
+      combined.push([]);
+      for (let c = 0; c < N; c++) {
+        let sum = 0;
+        for (let h = 0; h < activeHeads.length; h++) {
+          sum += patterns[activeHeads[h]][r][c];
+        }
+        combined[r].push(sum / activeHeads.length);
+      }
+    }
+    const combItem = document.createElement('div');
+    combItem.className = 'heatmap-item';
+    combItem.innerHTML =
+      '<div class="heatmap-label" style="color:var(--text)">\u5408\u5E76\u6CE8\u610F\u529B</div>' +
+      '<div class="heatmap-canvas-wrap">' +
+      '<canvas class="heatmap-cv" data-head="combined" width="1" height="1"></canvas>' +
+      '</div>';
+    container.appendChild(combItem);
+    drawHeatmap(combItem.querySelector('canvas'), combined, COLORS.primary);
+  }
+}
+
+function drawHeatmap(canvas, pattern, headColor) {
+  const dpr = window.devicePixelRatio || 1;
+  const container = canvas.parentElement;
+  const maxAvail = container.clientWidth - 4;
+  const labelSpace = 42;
+  const idealCellSz = 36;
+  const idealW = labelSpace + N * idealCellSz + 4;
+  const cellSz = idealW <= maxAvail ? idealCellSz : Math.floor((maxAvail - labelSpace - 4) / N);
+  const W = labelSpace + N * cellSz + 4;
+  const H = labelSpace + N * cellSz + 4;
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const rgb = hexToRgb(headColor);
+
+  // Column labels
+  ctx.font = '600 11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = COLORS.muted;
+  for (let c = 0; c < N; c++) {
+    ctx.fillText(TOKENS[c], labelSpace + c * cellSz + cellSz / 2, labelSpace - 4);
+  }
+
+  // Row labels
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let r = 0; r < N; r++) {
+    ctx.fillStyle = COLORS.muted;
+    ctx.fillText(TOKENS[r], labelSpace - 6, labelSpace + r * cellSz + cellSz / 2);
+  }
+
+  // Cells
+  let maxVal = 0;
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (pattern[r][c] > maxVal) maxVal = pattern[r][c];
+    }
+  }
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const val = pattern[r][c];
+      const norm = maxVal > 0 ? val / maxVal : 0;
+      const x = labelSpace + c * cellSz;
+      const y = labelSpace + r * cellSz;
+
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${norm * 0.85 + 0.03})`;
+      ctx.beginPath();
+      ctx.roundRect
+        ? ctx.roundRect(x + 1, y + 1, cellSz - 2, cellSz - 2, 3)
+        : ctx.rect(x + 1, y + 1, cellSz - 2, cellSz - 2);
+      ctx.fill();
+
+      // Value text
+      if (norm > 0.35) {
+        ctx.fillStyle = 'rgba(15,23,42,0.9)';
+      } else {
+        ctx.fillStyle = 'rgba(226,232,240,0.7)';
+      }
+      ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(val.toFixed(2), x + cellSz / 2, y + cellSz / 2);
+    }
+  }
+
+  // Hover handler
+  canvas.onmousemove = function (e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const col = Math.floor((mx - labelSpace) / cellSz);
+    const row = Math.floor((my - labelSpace) / cellSz);
+    const tooltip = document.getElementById('tooltip');
+    if (col >= 0 && col < N && row >= 0 && row < N) {
+      const val = pattern[row][col];
+      tooltip.innerHTML =
+        '<b>' + TOKENS[row] + '</b> \u2192 <b>' + TOKENS[col] +
+        '</b><br>\u6CE8\u610F\u529B\u5206\u6570\uFF1A<b style="color:' + headColor + '">' +
+        val.toFixed(4) + '</b>';
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+    } else {
+      tooltip.style.display = 'none';
+    }
+  };
+
+  canvas.onmouseleave = function () {
+    document.getElementById('tooltip').style.display = 'none';
+  };
+}
+
+// ===============================
+// Section 4: KPI
+// ===============================
+function updateKPI() {
+  const h = currentHeadCount;
+  const dmodel = 512;
+  const dk = Math.floor(dmodel / h);
+  // Params: 4 * dmodel^2 (W_Q, W_K, W_V, W_O) for both single and multi
+  const totalParams = 4 * dmodel * dmodel;
+  const formatted = (totalParams / 1000).toFixed(0) + 'K';
+
+  document.getElementById('kpiH').textContent = h;
+  document.getElementById('kpiDmodel').textContent = dmodel;
+  document.getElementById('kpiDk').textContent = dk;
+  document.getElementById('kpiParams').textContent = formatted;
+  document.getElementById('kpiNote').textContent =
+    '\u4E0E\u5355\u5934\u7B49\u4EF7 (' + formatted + ')';
+}
+
+// ===============================
+// Slider & Checkbox Handlers
+// ===============================
+document.getElementById('headSlider').addEventListener('input', function () {
+  const idx = parseInt(this.value, 10);
+  currentHeadCount = headSliderMap[idx];
+  document.getElementById('headSliderVal').textContent = currentHeadCount;
+  buildHeatmaps();
+  updateKPI();
+});
+
+['chk1', 'chk2', 'chk3', 'chk4'].forEach(function (id) {
+  document.getElementById(id).addEventListener('change', function () {
+    buildHeatmaps();
+  });
+});
+
+// ===============================
+// Init
+// ===============================
+function init() {
+  drawSection1();
+  resetAnimation();
+  buildHeatmaps();
+  updateKPI();
+}
+
+window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('resize', function () {
+  drawSection1();
+  drawAnimFrame();
+  buildHeatmaps();
+});
+
+// ===============================
+// Iframe height reporting
+// ===============================
+(function(){const sendHeight=()=>{if(window.parent===window)return;const h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',sendHeight);window.addEventListener('resize',sendHeight);if('ResizeObserver' in window){const o=new ResizeObserver(sendHeight);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(sendHeight);setTimeout(sendHeight,250);setTimeout(sendHeight,1000)})();
+</script>
+</body>
+</html>

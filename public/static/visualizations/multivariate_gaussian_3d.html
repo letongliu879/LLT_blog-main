@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多维高斯分布可视化</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --border: rgba(59, 130, 246, 0.2);
+            --primary: #3b82f6;
+            --accent: #10b981;
+            --lora: #8b5cf6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --text-bright: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            min-height: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.75em;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--lora), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.95em;
+            margin-bottom: 24px;
+        }
+
+        .section {
+            position: relative;
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--lora), var(--accent));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .section-title {
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .value-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--lora));
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+            min-width: 48px;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(59, 130, 246, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid var(--bg);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+            transition: transform 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid var(--bg);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+
+        .canvas-wrap {
+            position: relative;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .matrix-display {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .matrix-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            text-align: center;
+        }
+
+        .matrix-label {
+            font-size: 0.75em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 1em;
+        }
+
+        .matrix-cell {
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.08);
+            border-radius: 4px;
+            color: var(--primary);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .matrix-cell.highlight {
+            color: var(--lora);
+            background: rgba(139, 92, 246, 0.12);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.72em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8em;
+            color: var(--text-dim);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 2px;
+        }
+
+        .formula-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.82em;
+            color: var(--text);
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>多维高斯分布可视化</h1>
+        <p class="subtitle">探索二维高斯分布的协方差矩阵对分布形态的影响</p>
+
+        <div class="section">
+            <div class="section-title">参数控制</div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>
+                        <span>σ₁ (X 标准差)</span>
+                        <span class="value-badge" id="sigma1Value">1.0</span>
+                    </label>
+                    <input type="range" id="sigma1Slider" min="0.5" max="3" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>σ₂ (Y 标准差)</span>
+                        <span class="value-badge" id="sigma2Value">1.0</span>
+                    </label>
+                    <input type="range" id="sigma2Slider" min="0.5" max="3" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>相关系数 ρ</span>
+                        <span class="value-badge" id="rhoValue">0.0</span>
+                    </label>
+                    <input type="range" id="rhoSlider" min="-0.9" max="0.9" step="0.05" value="0">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>异常阈值 ε</span>
+                        <span class="value-badge" id="epsilonValue">0.050</span>
+                    </label>
+                    <input type="range" id="epsilonSlider" min="0.005" max="0.15" step="0.005" value="0.05">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span>样本点数</span>
+                        <span class="value-badge" id="samplesValue">200</span>
+                    </label>
+                    <input type="range" id="samplesSlider" min="50" max="500" step="25" value="200">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">协方差矩阵</div>
+            <div class="matrix-display">
+                <div class="matrix-card">
+                    <div class="matrix-label">协方差矩阵 Sigma</div>
+                    <div class="matrix-grid">
+                        <div class="matrix-cell" id="covXX">1.00</div>
+                        <div class="matrix-cell highlight" id="covXY">0.00</div>
+                        <div class="matrix-cell highlight" id="covYX">0.00</div>
+                        <div class="matrix-cell" id="covYY">1.00</div>
+                    </div>
+                </div>
+                <div class="stats-row" style="flex:1; min-width:200px;">
+                    <div class="stat-card">
+                        <div class="stat-label">行列式 |Sigma|</div>
+                        <div class="stat-value" id="detValue">1.000</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">正常样本</div>
+                        <div class="stat-value" style="color:var(--accent);" id="normalCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">异常样本</div>
+                        <div class="stat-value" style="color:var(--danger);" id="anomalyCount">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">二维高斯分布热力图与等高线</div>
+            <div class="canvas-wrap">
+                <canvas id="heatmapCanvas" width="1600" height="1200"></canvas>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:var(--accent);"></div>
+                    <span>正常样本</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:var(--danger);"></div>
+                    <span>异常样本</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:var(--danger); height:2px;"></div>
+                    <span>异常阈值等高线</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background:rgba(255,255,255,0.4); height:1px;"></div>
+                    <span>概率密度等高线</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">公式</div>
+            <div class="formula-card">
+                p(x) = (1 / (2pi)^(n/2) |Sigma|^(1/2)) * exp(-1/2 * (x - mu)^T Sigma^(-1) (x - mu))<br>
+                <br>
+                Sigma = [ sigma1^2,       rho*sigma1*sigma2 ]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ rho*sigma1*sigma2,  sigma2^2          ]
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var canvas = document.getElementById('heatmapCanvas');
+            var ctx = canvas.getContext('2d');
+
+            var COLORS = {
+                primary: '#3b82f6',
+                accent: '#10b981',
+                lora: '#8b5cf6',
+                danger: '#ef4444',
+                text: '#e2e8f0',
+                textDim: '#94a3b8',
+                gridLine: 'rgba(59, 130, 246, 0.08)',
+                bg: '#0f172a'
+            };
+
+            var cachedSamples = null;
+            var lastSampleCount = 0;
+
+            function randomGaussian(mu, sigma) {
+                var u1 = Math.random();
+                var u2 = Math.random();
+                var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                return z0 * sigma + mu;
+            }
+
+            function bivariateGaussianPDF(x, y, sigma1, sigma2, rho) {
+                var s1sq = sigma1 * sigma1;
+                var s2sq = sigma2 * sigma2;
+                var det = s1sq * s2sq * (1 - rho * rho);
+                if (det <= 0) return 0;
+
+                var z = (x * x / s1sq + y * y / s2sq - 2 * rho * x * y / (sigma1 * sigma2)) / (1 - rho * rho);
+                var coeff = 1 / (2 * Math.PI * Math.sqrt(det));
+                return coeff * Math.exp(-0.5 * z);
+            }
+
+            function generateBivariateSamples(sigma1, sigma2, rho, count) {
+                var samples = [];
+                for (var i = 0; i < count; i++) {
+                    var z1 = randomGaussian(0, 1);
+                    var z2 = randomGaussian(0, 1);
+                    var x = sigma1 * z1;
+                    var y = sigma2 * (rho * z1 + Math.sqrt(1 - rho * rho) * z2);
+                    samples.push({ x: x, y: y });
+                }
+                return samples;
+            }
+
+            function hslToRgb(h, s, l) {
+                h /= 360; s /= 100; l /= 100;
+                var r, g, b;
+                if (s === 0) { r = g = b = l; }
+                else {
+                    var hue2rgb = function (p, q, t) {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    var p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+            }
+
+            function densityToColor(val, maxVal) {
+                if (maxVal <= 0) return [15, 23, 42];
+                var t = Math.min(val / maxVal, 1);
+                // Dark blue -> blue -> purple -> cyan -> green -> yellow
+                // Using a perceptual ramp
+                var power = Math.pow(t, 0.55); // compress low values
+
+                if (power < 0.02) return [15, 23, 42]; // bg color for near-zero
+
+                var hue, sat, light;
+                if (power < 0.25) {
+                    // deep blue to blue
+                    hue = 240 - power * 40;
+                    sat = 60 + power * 100;
+                    light = 10 + power * 80;
+                } else if (power < 0.5) {
+                    // blue to purple/cyan
+                    var p2 = (power - 0.25) / 0.25;
+                    hue = 230 - p2 * 60;
+                    sat = 70 + p2 * 20;
+                    light = 30 + p2 * 15;
+                } else if (power < 0.75) {
+                    // cyan to green
+                    var p3 = (power - 0.5) / 0.25;
+                    hue = 170 - p3 * 50;
+                    sat = 70 + p3 * 15;
+                    light = 40 + p3 * 10;
+                } else {
+                    // green to yellow
+                    var p4 = (power - 0.75) / 0.25;
+                    hue = 120 - p4 * 60;
+                    sat = 80;
+                    light = 50 + p4 * 15;
+                }
+
+                return hslToRgb(hue, sat, light);
+            }
+
+            function update() {
+                var sigma1 = parseFloat(document.getElementById('sigma1Slider').value);
+                var sigma2 = parseFloat(document.getElementById('sigma2Slider').value);
+                var rho = parseFloat(document.getElementById('rhoSlider').value);
+                var epsilon = parseFloat(document.getElementById('epsilonSlider').value);
+                var numSamples = parseInt(document.getElementById('samplesSlider').value);
+
+                document.getElementById('sigma1Value').textContent = sigma1.toFixed(1);
+                document.getElementById('sigma2Value').textContent = sigma2.toFixed(1);
+                document.getElementById('rhoValue').textContent = rho.toFixed(2);
+                document.getElementById('epsilonValue').textContent = epsilon.toFixed(3);
+                document.getElementById('samplesValue').textContent = numSamples;
+
+                // Covariance matrix
+                var covXX = sigma1 * sigma1;
+                var covYY = sigma2 * sigma2;
+                var covXY = rho * sigma1 * sigma2;
+                var det = covXX * covYY - covXY * covXY;
+
+                document.getElementById('covXX').textContent = covXX.toFixed(2);
+                document.getElementById('covXY').textContent = covXY.toFixed(2);
+                document.getElementById('covYX').textContent = covXY.toFixed(2);
+                document.getElementById('covYY').textContent = covYY.toFixed(2);
+                document.getElementById('detValue').textContent = det.toFixed(3);
+
+                // Generate samples
+                if (!cachedSamples || lastSampleCount !== numSamples) {
+                    cachedSamples = generateBivariateSamples(sigma1, sigma2, rho, numSamples);
+                    lastSampleCount = numSamples;
+                }
+
+                // Re-generate with current params
+                var samples = generateBivariateSamples(sigma1, sigma2, rho, numSamples);
+
+                var W = canvas.width;
+                var H = canvas.height;
+                var pad = { top: 40, right: 80, bottom: 55, left: 70 };
+                var cw = W - pad.left - pad.right;
+                var ch = H - pad.top - pad.bottom;
+
+                ctx.clearRect(0, 0, W, H);
+
+                // Compute range
+                var range = Math.max(sigma1, sigma2) * 4;
+                var xMin = -range, xMax = range;
+                var yMin = -range, yMax = range;
+
+                function toCanvasX(v) { return pad.left + ((v - xMin) / (xMax - xMin)) * cw; }
+                function toCanvasY(v) { return pad.top + ch - ((v - yMin) / (yMax - yMin)) * ch; }
+
+                // Compute heatmap on a grid
+                var res = 200;
+                var grid = [];
+                var maxDensity = 0;
+                var xStep = (xMax - xMin) / res;
+                var yStep = (yMax - yMin) / res;
+
+                for (var j = 0; j < res; j++) {
+                    grid[j] = [];
+                    var gy = yMin + (j + 0.5) * yStep;
+                    for (var i = 0; i < res; i++) {
+                        var gx = xMin + (i + 0.5) * xStep;
+                        var d = bivariateGaussianPDF(gx, gy, sigma1, sigma2, rho);
+                        grid[j][i] = d;
+                        if (d > maxDensity) maxDensity = d;
+                    }
+                }
+
+                // Draw heatmap using ImageData
+                var cellW = cw / res;
+                var cellH = ch / res;
+                var imgData = ctx.createImageData(Math.ceil(cw), Math.ceil(ch));
+
+                for (var py = 0; py < Math.ceil(ch); py++) {
+                    var gridJ = res - 1 - Math.floor(py / ch * res);
+                    if (gridJ < 0) gridJ = 0;
+                    if (gridJ >= res) gridJ = res - 1;
+                    for (var px = 0; px < Math.ceil(cw); px++) {
+                        var gridI = Math.floor(px / cw * res);
+                        if (gridI < 0) gridI = 0;
+                        if (gridI >= res) gridI = res - 1;
+
+                        var val = grid[gridJ][gridI];
+                        var rgb = densityToColor(val, maxDensity);
+                        var idx = (py * Math.ceil(cw) + px) * 4;
+                        imgData.data[idx] = rgb[0];
+                        imgData.data[idx + 1] = rgb[1];
+                        imgData.data[idx + 2] = rgb[2];
+                        imgData.data[idx + 3] = 255;
+                    }
+                }
+
+                // Temporary canvas for heatmap
+                var tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = Math.ceil(cw);
+                tmpCanvas.height = Math.ceil(ch);
+                tmpCanvas.getContext('2d').putImageData(imgData, 0, 0);
+                ctx.drawImage(tmpCanvas, pad.left, pad.top, cw, ch);
+
+                // Draw contour lines using marching squares approximation
+                var thresholdProb = maxDensity * epsilon;
+                var contourLevels = [];
+
+                // Standard density contour levels
+                for (var cl = 0.1; cl <= 0.9; cl += 0.1) {
+                    contourLevels.push(maxDensity * cl);
+                }
+
+                // Draw standard contours
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 1;
+                for (var ci = 0; ci < contourLevels.length; ci++) {
+                    drawContourLevel(contourLevels[ci]);
+                }
+
+                // Draw anomaly threshold contour (emphasized)
+                ctx.strokeStyle = COLORS.danger;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([6, 4]);
+                drawContourLevel(thresholdProb);
+                ctx.setLineDash([]);
+
+                function drawContourLevel(level) {
+                    // Simple contour tracing: scan each cell and draw line segments
+                    for (var j = 0; j < res - 1; j++) {
+                        for (var i = 0; i < res - 1; i++) {
+                            var v00 = grid[j][i];
+                            var v10 = grid[j][i + 1];
+                            var v01 = grid[j + 1][i];
+                            var v11 = grid[j + 1][i + 1];
+
+                            // Marching squares case
+                            var msCase = 0;
+                            if (v00 >= level) msCase |= 1;
+                            if (v10 >= level) msCase |= 2;
+                            if (v11 >= level) msCase |= 4;
+                            if (v01 >= level) msCase |= 8;
+
+                            if (msCase === 0 || msCase === 15) continue;
+
+                            var gx0 = xMin + i * xStep;
+                            var gx1 = xMin + (i + 1) * xStep;
+                            var gy0 = yMin + j * yStep;
+                            var gy1 = yMin + (j + 1) * yStep;
+
+                            // Interpolation helper
+                            function interp(va, vb, a, b) {
+                                if (Math.abs(vb - va) < 1e-15) return (a + b) / 2;
+                                return a + (level - va) / (vb - va) * (b - a);
+                            }
+
+                            var segments = getMarchingSquaresSegments(msCase, v00, v10, v01, v11, gx0, gx1, gy0, gy1, level);
+                            for (var si = 0; si < segments.length; si += 2) {
+                                ctx.beginPath();
+                                ctx.moveTo(toCanvasX(segments[si][0]), toCanvasY(segments[si][1]));
+                                ctx.lineTo(toCanvasX(segments[si + 1][0]), toCanvasY(segments[si + 1][1]));
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+
+                function getMarchingSquaresSegments(msCase, v00, v10, v01, v11, x0, x1, y0, y1, level) {
+                    function lerpX(va, vb, ya, yb) {
+                        if (Math.abs(vb - va) < 1e-15) return (ya + yb) / 2;
+                        return ya + (level - va) / (vb - va) * (yb - ya);
+                    }
+                    // Edge midpoints with interpolation
+                    var top = [x0 + (level - v00) / (v10 - v00) * (x1 - x0), y0]; // between v00 and v10
+                    var bottom = [x0 + (level - v01) / (v11 - v01) * (x1 - x0), y1]; // between v01 and v11
+                    var left = [x0, y0 + (level - v00) / (v01 - v00) * (y1 - y0)]; // between v00 and v01
+                    var right = [x1, y0 + (level - v10) / (v11 - v10) * (y1 - y0)]; // between v10 and v11
+
+                    var segs = [];
+                    switch (msCase) {
+                        case 1: segs = [top, left]; break;
+                        case 2: segs = [top, right]; break;
+                        case 3: segs = [left, right]; break;
+                        case 4: segs = [right, bottom]; break;
+                        case 5: segs = [top, right, left, bottom]; break;
+                        case 6: segs = [top, bottom]; break;
+                        case 7: segs = [left, bottom]; break;
+                        case 8: segs = [left, bottom]; break;
+                        case 9: segs = [top, bottom]; break;
+                        case 10: segs = [top, left, right, bottom]; break;
+                        case 11: segs = [right, bottom]; break;
+                        case 12: segs = [left, right]; break;
+                        case 13: segs = [top, right]; break;
+                        case 14: segs = [top, left]; break;
+                    }
+                    return segs;
+                }
+
+                // Classify and draw sample points
+                var normalCount = 0;
+                var anomalyCount = 0;
+
+                for (var si = 0; si < samples.length; si++) {
+                    var s = samples[si];
+                    var prob = bivariateGaussianPDF(s.x, s.y, sigma1, sigma2, rho);
+                    var isAnomaly = prob < thresholdProb;
+
+                    if (isAnomaly) {
+                        anomalyCount++;
+                    } else {
+                        normalCount++;
+                    }
+                }
+
+                // Draw normal first
+                for (var si = 0; si < samples.length; si++) {
+                    var s = samples[si];
+                    var prob = bivariateGaussianPDF(s.x, s.y, sigma1, sigma2, rho);
+                    if (prob >= thresholdProb) {
+                        var cx = toCanvasX(s.x);
+                        var cy = toCanvasY(s.y);
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.5)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+
+                // Draw anomalies on top
+                for (var si = 0; si < samples.length; si++) {
+                    var s = samples[si];
+                    var prob = bivariateGaussianPDF(s.x, s.y, sigma1, sigma2, rho);
+                    if (prob < thresholdProb) {
+                        var cx = toCanvasX(s.x);
+                        var cy = toCanvasY(s.y);
+
+                        // Glow
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+                        ctx.fill();
+
+                        // X marker
+                        ctx.strokeStyle = COLORS.danger;
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.moveTo(cx - 5, cy - 5); ctx.lineTo(cx + 5, cy + 5);
+                        ctx.moveTo(cx + 5, cy - 5); ctx.lineTo(cx - 5, cy + 5);
+                        ctx.stroke();
+                    }
+                }
+
+                // Grid overlay
+                ctx.strokeStyle = COLORS.gridLine;
+                ctx.lineWidth = 1;
+                var gridCount = 8;
+                for (var i = 0; i <= gridCount; i++) {
+                    var xv = xMin + (i / gridCount) * (xMax - xMin);
+                    var yv = yMin + (i / gridCount) * (yMax - yMin);
+                    ctx.beginPath(); ctx.moveTo(toCanvasX(xv), pad.top); ctx.lineTo(toCanvasX(xv), pad.top + ch); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(pad.left, toCanvasY(yv)); ctx.lineTo(pad.left + cw, toCanvasY(yv)); ctx.stroke();
+                }
+
+                // Axis labels
+                ctx.fillStyle = COLORS.textDim;
+                ctx.font = '22px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                for (var i = 0; i <= gridCount; i++) {
+                    var xv = xMin + (i / gridCount) * (xMax - xMin);
+                    ctx.fillText(xv.toFixed(1), toCanvasX(xv), pad.top + ch + 30);
+                }
+                ctx.textAlign = 'right';
+                for (var i = 0; i <= gridCount; i++) {
+                    var yv = yMin + (i / gridCount) * (yMax - yMin);
+                    ctx.fillText(yv.toFixed(1), pad.left - 10, toCanvasY(yv) + 6);
+                }
+
+                // Axis titles
+                ctx.fillStyle = COLORS.text;
+                ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('X₁', pad.left + cw / 2, H - 8);
+                ctx.save();
+                ctx.translate(18, pad.top + ch / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('X₂', 0, 0);
+                ctx.restore();
+
+                // Color bar
+                var barX = pad.left + cw + 12;
+                var barW = 18;
+                var barH = ch;
+                var barY = pad.top;
+
+                for (var py = 0; py < barH; py++) {
+                    var t = 1 - py / barH;
+                    var rgb = densityToColor(t * maxDensity, maxDensity);
+                    ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+                    ctx.fillRect(barX, barY + py, barW, 1);
+                }
+
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barW, barH);
+
+                ctx.fillStyle = COLORS.textDim;
+                ctx.font = '18px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(maxDensity.toFixed(3), barX + barW + 6, barY + 8);
+                ctx.fillText('0', barX + barW + 6, barY + barH);
+
+                // Threshold marker on color bar
+                var threshFrac = thresholdProb / maxDensity;
+                var threshBarY = barY + barH * (1 - threshFrac);
+                if (threshBarY > barY && threshBarY < barY + barH) {
+                    ctx.strokeStyle = COLORS.danger;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(barX - 4, threshBarY);
+                    ctx.lineTo(barX + barW + 4, threshBarY);
+                    ctx.stroke();
+                    ctx.fillStyle = COLORS.danger;
+                    ctx.font = '16px -apple-system, BlinkMacSystemFont, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('ε', barX + barW + 6, threshBarY + 5);
+                }
+
+                // Update stats
+                document.getElementById('normalCount').textContent = normalCount;
+                document.getElementById('anomalyCount').textContent = anomalyCount;
+            }
+
+            document.getElementById('sigma1Slider').addEventListener('input', update);
+            document.getElementById('sigma2Slider').addEventListener('input', update);
+            document.getElementById('rhoSlider').addEventListener('input', update);
+            document.getElementById('epsilonSlider').addEventListener('input', update);
+            document.getElementById('samplesSlider').addEventListener('input', update);
+
+            update();
+        })();
+    </script>
+
+    <script>
+    (function () {
+        var sendHeight = function () {
+            if (window.parent === window) return;
+            var body = document.body;
+            var root = document.documentElement;
+            var height = Math.max(
+                body ? body.scrollHeight : 0,
+                body ? body.offsetHeight : 0,
+                root ? root.scrollHeight : 0,
+                root ? root.offsetHeight : 0
+            );
+            window.parent.postMessage({ type: 'iframe-height', height: height }, '*');
+        };
+        window.addEventListener('load', sendHeight);
+        window.addEventListener('resize', sendHeight);
+        if ('ResizeObserver' in window) {
+            var observer = new ResizeObserver(sendHeight);
+            if (document.body) observer.observe(document.body);
+            if (document.documentElement) observer.observe(document.documentElement);
+        }
+        requestAnimationFrame(sendHeight);
+        setTimeout(sendHeight, 250);
+        setTimeout(sendHeight, 1000);
+    })();
+    </script>
+</body>
+</html>

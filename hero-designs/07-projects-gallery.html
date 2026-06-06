@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allen's Blog - 项目展示（高级画廊风格）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Bebas Neue', 'sans-serif'],
+            'body': ['Inter', 'Noto Sans SC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .project-card {
+      transition: all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .project-card:hover {
+      transform: scale(1.02);
+    }
+
+    .project-card:hover .project-image {
+      transform: scale(1.1);
+    }
+
+    .project-card:hover .project-overlay {
+      opacity: 1;
+    }
+
+    .project-card:hover .project-number {
+      transform: translateX(-10px);
+      opacity: 0.3;
+    }
+
+    .project-card:hover .project-content {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .project-image {
+      transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .project-overlay {
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .project-number {
+      transition: all 0.5s ease;
+    }
+
+    .project-content {
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.5s ease 0.1s;
+    }
+
+    .tech-tag {
+      transition: all 0.3s ease;
+    }
+
+    .tech-tag:hover {
+      transform: translateY(-2px);
+    }
+
+    .horizontal-scroll {
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .horizontal-scroll > * {
+      scroll-snap-align: start;
+    }
+
+    .gradient-border {
+      position: relative;
+    }
+
+    .gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+
+    .cursor-dot {
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.1s ease;
+    }
+
+    .cursor-ring {
+      width: 40px;
+      height: 40px;
+      border: 2px solid white;
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transition: all 0.15s ease;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body class="dark bg-black text-white">
+  <!-- 自定义光标 -->
+  <div class="cursor-dot hidden lg:block"></div>
+  <div class="cursor-ring hidden lg:block"></div>
+
+  <div class="min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 mix-blend-difference">
+      <div class="max-w-7xl mx-auto px-8 py-6 flex justify-between items-center">
+        <a href="#" class="font-display text-3xl tracking-wider">ALLEN</a>
+        <div class="flex items-center gap-8">
+          <a href="#" class="font-body text-sm tracking-wider hover:opacity-60 transition-opacity">博客</a>
+          <a href="#" class="font-body text-sm tracking-wider hover:opacity-60 transition-opacity">标签</a>
+          <a href="#" class="font-body text-sm tracking-wider font-medium">项目</a>
+          <a href="#" class="font-body text-sm tracking-wider hover:opacity-60 transition-opacity">关于</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero 区域 -->
+    <header class="min-h-[60vh] flex items-center justify-center relative overflow-hidden">
+      <!-- 背景装饰 -->
+      <div class="absolute inset-0">
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div class="relative text-center px-6">
+        <p class="font-body text-sm tracking-[0.5em] text-gray-500 uppercase mb-6">Selected Works</p>
+        <h1 class="font-display text-8xl md:text-[12rem] leading-none tracking-wide">
+          PROJECTS
+        </h1>
+        <p class="font-body text-gray-400 mt-6 max-w-xl mx-auto">
+          从智能数据分析到AI代码评审，探索技术与创新的交汇点
+        </p>
+      </div>
+
+      <!-- 滚动指示器 -->
+      <div class="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <span class="font-body text-xs tracking-widest text-gray-500">SCROLL</span>
+        <div class="w-px h-12 bg-gradient-to-b from-white to-transparent"></div>
+      </div>
+    </header>
+
+    <!-- 项目展示区 -->
+    <section class="py-24 px-6">
+      <div class="max-w-7xl mx-auto space-y-32">
+        <!-- 项目 1 - 大展示 -->
+        <article class="project-card relative group cursor-pointer">
+          <div class="grid lg:grid-cols-12 gap-8 items-center">
+            <!-- 项目编号 -->
+            <div class="lg:col-span-2">
+              <span class="project-number font-display text-9xl text-gray-800 transition-all">01</span>
+            </div>
+
+            <!-- 项目图片 -->
+            <div class="lg:col-span-6 relative overflow-hidden rounded-2xl aspect-video">
+              <div class="project-image absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center">
+                <div class="text-center">
+                  <span class="text-6xl mb-4 block">📊</span>
+                  <span class="font-display text-4xl">AIGC BI</span>
+                </div>
+              </div>
+              <div class="project-overlay absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span class="px-6 py-3 border-2 border-white rounded-full font-body text-sm tracking-wider">
+                  查看详情
+                </span>
+              </div>
+            </div>
+
+            <!-- 项目信息 -->
+            <div class="lg:col-span-4 space-y-6">
+              <h2 class="font-display text-5xl">AIGC BI</h2>
+              <p class="font-body text-gray-400 leading-relaxed">
+                基于 Spring Boot + MQ + AIGC（+ React）的智能数据分析平台。利用AI自动生成分析报告和可视化图表。
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <span class="tech-tag px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-body">Spring Boot</span>
+                <span class="tech-tag px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-body">React</span>
+                <span class="tech-tag px-3 py-1 bg-pink-500/20 text-pink-400 rounded-full text-sm font-body">AIGC</span>
+                <span class="tech-tag px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-body">MQ</span>
+              </div>
+              <div class="flex items-center gap-4 pt-4">
+                <a href="#" class="flex items-center gap-2 font-body text-sm text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                  GitHub
+                </a>
+                <a href="#" class="flex items-center gap-2 font-body text-sm text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  在线演示
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 项目 2 - 反向布局 -->
+        <article class="project-card relative group cursor-pointer">
+          <div class="grid lg:grid-cols-12 gap-8 items-center">
+            <!-- 项目信息 -->
+            <div class="lg:col-span-4 lg:order-1 space-y-6">
+              <h2 class="font-display text-5xl">AI CODE REVIEW</h2>
+              <p class="font-body text-gray-400 leading-relaxed">
+                基于 GitHub Actions + OpenAI(ChatGLM) 的 AI 代码评审功能，自动分析代码质量并提供改进建议。
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <span class="tech-tag px-3 py-1 bg-gray-500/20 text-gray-400 rounded-full text-sm font-body">GitHub Actions</span>
+                <span class="tech-tag px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-body">OpenAI</span>
+                <span class="tech-tag px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm font-body">ChatGLM</span>
+              </div>
+              <div class="flex items-center gap-4 pt-4">
+                <a href="#" class="flex items-center gap-2 font-body text-sm text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                  GitHub
+                </a>
+              </div>
+            </div>
+
+            <!-- 项目图片 -->
+            <div class="lg:col-span-6 lg:order-2 relative overflow-hidden rounded-2xl aspect-video">
+              <div class="project-image absolute inset-0 bg-gradient-to-br from-green-600 via-emerald-600 to-teal-500 flex items-center justify-center">
+                <div class="text-center">
+                  <span class="text-6xl mb-4 block">🤖</span>
+                  <span class="font-display text-4xl">CODE REVIEW</span>
+                </div>
+              </div>
+              <div class="project-overlay absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span class="px-6 py-3 border-2 border-white rounded-full font-body text-sm tracking-wider">
+                  查看详情
+                </span>
+              </div>
+            </div>
+
+            <!-- 项目编号 -->
+            <div class="lg:col-span-2 lg:order-3 lg:text-right">
+              <span class="project-number font-display text-9xl text-gray-800 transition-all">02</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 更多项目预告 -->
+    <section class="py-24 bg-gray-950">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <h2 class="font-display text-6xl mb-4">MORE PROJECTS</h2>
+          <p class="font-body text-gray-500">更多项目正在进行中...</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="gradient-border rounded-2xl p-6 bg-black">
+            <span class="text-4xl mb-4 block">🧠</span>
+            <h3 class="font-display text-2xl mb-2">ML PLAYGROUND</h3>
+            <p class="font-body text-sm text-gray-500">机器学习实验平台</p>
+            <span class="inline-block mt-4 text-xs text-yellow-500 font-body">开发中</span>
+          </div>
+
+          <div class="gradient-border rounded-2xl p-6 bg-black">
+            <span class="text-4xl mb-4 block">⚡</span>
+            <h3 class="font-display text-2xl mb-2">AUTO WORKFLOW</h3>
+            <p class="font-body text-sm text-gray-500">自动化工作流引擎</p>
+            <span class="inline-block mt-4 text-xs text-blue-500 font-body">规划中</span>
+          </div>
+
+          <div class="gradient-border rounded-2xl p-6 bg-black">
+            <span class="text-4xl mb-4 block">📈</span>
+            <h3 class="font-display text-2xl mb-2">DATA VISION</h3>
+            <p class="font-body text-sm text-gray-500">数据可视化工具箱</p>
+            <span class="inline-block mt-4 text-xs text-purple-500 font-body">即将推出</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 页脚 CTA -->
+    <footer class="py-24 text-center">
+      <h2 class="font-display text-4xl mb-6">想要合作？</h2>
+      <a href="#" class="inline-flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-body font-medium hover:bg-gray-200 transition-colors">
+        联系我
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+        </svg>
+      </a>
+    </footer>
+  </div>
+
+  <script>
+    // 自定义光标跟随
+    const dot = document.querySelector('.cursor-dot');
+    const ring = document.querySelector('.cursor-ring');
+
+    document.addEventListener('mousemove', (e) => {
+      dot.style.left = e.clientX - 4 + 'px';
+      dot.style.top = e.clientY - 4 + 'px';
+      ring.style.left = e.clientX - 20 + 'px';
+      ring.style.top = e.clientY - 20 + 'px';
+    });
+
+    // 悬停效果
+    document.querySelectorAll('a, button, .project-card').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        ring.style.transform = 'scale(1.5)';
+        ring.style.opacity = '0.3';
+      });
+      el.addEventListener('mouseleave', () => {
+        ring.style.transform = 'scale(1)';
+        ring.style.opacity = '0.5';
+      });
+    });
+  </script>
+</body>
+</html>

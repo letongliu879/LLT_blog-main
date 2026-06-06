@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LangGraph Reflection 流程图动态演示</title>
+  <style>
+    :root {
+      --bg-1: #080f2d;
+      --bg-2: #101b44;
+      --card-bg: rgba(10, 20, 54, 0.88);
+      --card-border: #2f4aa2;
+      --text-main: #ebf1ff;
+      --text-sub: #afc0ee;
+      --accent: #7aa2ff;
+      --line: #3f5cb8;
+      --line-active: #ffbf5e;
+      --node-gen: #4c7bff;
+      --node-crit: #8d65ff;
+      --node-rev: #2ec7a1;
+      --node-stop: #f26d6d;
+      --ok: #2dd4bf;
+      --warn: #fbbf24;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      min-height: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at 12% 8%, #223881 0%, transparent 42%),
+        radial-gradient(circle at 92% 88%, #1e2f6d 0%, transparent 36%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      background: var(--card-bg);
+      padding: 16px;
+      box-shadow: 0 26px 56px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(5px);
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.45rem;
+      line-height: 1.25;
+      color: #8ec6ff;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 8px 0 14px;
+      color: var(--text-sub);
+      font-size: 0.92rem;
+      line-height: 1.56;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid #2a4294;
+      border-radius: 12px;
+      background: rgba(10, 20, 60, 0.72);
+      padding: 12px;
+    }
+
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      color: #cfe0ff;
+      letter-spacing: 0.2px;
+    }
+
+    .flow-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid #344f9f;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(95, 125, 224, 0.18), transparent 60%),
+        linear-gradient(180deg, rgba(7, 15, 40, 0.9), rgba(7, 12, 30, 0.95));
+    }
+
+    .node {
+      fill: #15285f;
+      stroke: #4a66c4;
+      stroke-width: 2;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
+      transition: fill 0.2s ease, stroke 0.2s ease, opacity 0.2s ease;
+    }
+
+    .node-label {
+      font-size: 14px;
+      fill: #e9f1ff;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .node-sub {
+      font-size: 11px;
+      fill: #b5c7f6;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .edge {
+      stroke: var(--line);
+      stroke-width: 3;
+      fill: none;
+      marker-end: url(#arrow);
+      opacity: 0.75;
+      transition: stroke 0.2s ease, opacity 0.2s ease;
+    }
+
+    .edge-label {
+      fill: #9fb5ec;
+      font-size: 11px;
+      text-anchor: middle;
+    }
+
+    .edge.active {
+      stroke: var(--line-active);
+      opacity: 1;
+      filter: drop-shadow(0 0 4px rgba(255, 191, 94, 0.55));
+    }
+
+    .node.active {
+      stroke: #ffcb7c;
+      stroke-width: 3;
+      filter: drop-shadow(0 0 10px rgba(255, 205, 126, 0.45));
+    }
+
+    .node.done {
+      stroke: #48e0bd;
+      fill: #173d5b;
+    }
+
+    .node.gen.active {
+      fill: #1f3f95;
+    }
+
+    .node.crit.active {
+      fill: #392c85;
+    }
+
+    .node.rev.active {
+      fill: #174a46;
+    }
+
+    .node.stop.active {
+      fill: #5d2333;
+    }
+
+    .status-box {
+      border: 1px solid #304a9d;
+      border-radius: 10px;
+      background: rgba(11, 19, 52, 0.85);
+      padding: 10px;
+      min-height: 100px;
+      color: #d8e5ff;
+      line-height: 1.55;
+      font-size: 0.9rem;
+    }
+
+    .status-box strong {
+      color: #f8fbff;
+    }
+
+    .controls {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .control {
+      display: grid;
+      gap: 6px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #c6d6ff;
+      font-size: 0.83rem;
+    }
+
+    .val {
+      color: #ffdca7;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    input[type='range'] {
+      width: 100%;
+      accent-color: #7f9fff;
+    }
+
+    .btn-row {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid #4f6fcf;
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: linear-gradient(135deg, #3c5ec6, #7058dc);
+      color: #eff4ff;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(65, 96, 196, 0.32);
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, #2c3f80, #2b346a);
+      border-color: #4f6098;
+    }
+
+    .metrics {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid #334f9f;
+      border-radius: 10px;
+      padding: 9px;
+      background: rgba(20, 34, 86, 0.5);
+    }
+
+    .metric-k {
+      color: #aac0f3;
+      font-size: 0.76rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-v {
+      color: #f7faff;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .log {
+      margin-top: 10px;
+      border: 1px solid #2a4391;
+      border-radius: 10px;
+      background: #0a1336;
+      padding: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #cbd9fe;
+      font-size: 0.78rem;
+      line-height: 1.56;
+      max-height: 170px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .legend {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      border: 1px solid #3656ad;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.74rem;
+      color: #b9ccf7;
+      background: rgba(16, 28, 73, 0.64);
+    }
+
+    .chip.ok {
+      border-color: rgba(45, 212, 191, 0.5);
+      color: #9ef2e4;
+    }
+
+    .chip.warn {
+      border-color: rgba(251, 191, 36, 0.5);
+      color: #ffe1a3;
+    }
+
+    @media (max-width: 930px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      body {
+        padding: 12px;
+      }
+
+      .title {
+        font-size: 1.22rem;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">🔁 LangGraph Reflection：流程图 + 文字联动演示</h1>
+    <p class="subtitle">通过流程图把 Reflection 的状态流转可视化：节点会高亮、路径会联动、并在 Stop 节点根据条件决定“结束”或“进入下一轮”。</p>
+
+    <div class="layout">
+      <div class="panel">
+        <h3>流程图动态视图</h3>
+        <svg class="flow-svg" viewBox="0 0 760 420" aria-label="LangGraph Reflection Flow">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,10 L10,5 z" fill="#5f7fd8"></path>
+            </marker>
+          </defs>
+
+          <path id="edge-gc" class="edge" d="M230,95 C292,76 332,76 392,95"></path>
+          <path id="edge-cr" class="edge" d="M477,138 C532,160 532,182 477,202"></path>
+          <path id="edge-rs" class="edge" d="M477,288 C477,322 477,330 477,350"></path>
+          <path id="edge-sg" class="edge" d="M385,378 C248,404 84,336 84,250 C84,188 98,162 126,142"></path>
+
+          <text class="edge-label" x="310" y="70">草稿 + 意图</text>
+          <text class="edge-label" x="548" y="176">批评建议</text>
+          <text class="edge-label" x="520" y="336">停止判定</text>
+          <text class="edge-label" x="190" y="360">继续下一轮</text>
+
+          <rect id="node-generator" class="node gen" x="60" y="52" rx="16" ry="16" width="170" height="86"></rect>
+          <text class="node-label" x="145" y="85">Generator</text>
+          <text class="node-sub" x="145" y="106">快速产出初稿</text>
+
+          <rect id="node-critic" class="node crit" x="392" y="52" rx="16" ry="16" width="170" height="86"></rect>
+          <text class="node-label" x="477" y="85">Critic</text>
+          <text class="node-sub" x="477" y="106">批评与建议</text>
+
+          <rect id="node-revise" class="node rev" x="392" y="202" rx="16" ry="16" width="170" height="86"></rect>
+          <text class="node-label" x="477" y="235">Revise</text>
+          <text class="node-sub" x="477" y="256">改写与修正</text>
+
+          <rect id="node-stop" class="node stop" x="385" y="350" rx="14" ry="14" width="184" height="56"></rect>
+          <text class="node-label" x="477" y="380">Stop or Next Round</text>
+        </svg>
+
+        <div class="legend">
+          <span class="chip">蓝线：正常流转</span>
+          <span class="chip warn">橙线：当前激活路径</span>
+          <span class="chip ok">青边：该节点本轮完成</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>文字解释与控制</h3>
+        <div class="status-box" id="statusBox">
+          <strong>准备就绪</strong><br />
+          点击“单步执行”或“自动播放”，观察流程图节点和连线如何变化。
+        </div>
+
+        <div class="controls">
+          <div class="control">
+            <div class="control-label">最大轮次 <span id="roundsVal" class="val">3</span></div>
+            <input id="maxRounds" type="range" min="1" max="8" step="1" value="3" />
+          </div>
+          <div class="control">
+            <div class="control-label">质量阈值 <span id="qualityVal" class="val">88</span></div>
+            <input id="qualityThreshold" type="range" min="70" max="98" step="1" value="88" />
+          </div>
+          <div class="control">
+            <div class="control-label">批评强度 <span id="critVal" class="val">1.20</span></div>
+            <input id="criticStrength" type="range" min="0.6" max="2.0" step="0.1" value="1.2" />
+          </div>
+          <div class="control">
+            <div class="control-label">播放速度 <span id="speedVal" class="val">1.00</span></div>
+            <input id="playSpeed" type="range" min="0.6" max="2.4" step="0.1" value="1.0" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="stepBtn">⏭ 单步执行</button>
+          <button id="playBtn">▶ 自动播放</button>
+          <button class="secondary" id="resetBtn">↺ 重置</button>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="metric-k">当前轮次</div><div id="mRound" class="metric-v">0</div></div>
+          <div class="metric"><div class="metric-k">当前阶段</div><div id="mStage" class="metric-v">Idle</div></div>
+          <div class="metric"><div class="metric-k">质量评分</div><div id="mQuality" class="metric-v">52</div></div>
+          <div class="metric"><div class="metric-k">累计 Token</div><div id="mToken" class="metric-v">0</div></div>
+          <div class="metric"><div class="metric-k">预计延迟(ms)</div><div id="mLatency" class="metric-v">180</div></div>
+          <div class="metric"><div class="metric-k">停止原因</div><div id="mStop" class="metric-v">-</div></div>
+        </div>
+
+        <div id="logBox" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const stages = ['generator', 'critic', 'revise', 'stop'];
+
+      const stageConfig = {
+        generator: {
+          nodeId: 'node-generator',
+          edgeId: 'edge-gc',
+          label: 'Generator',
+          text: 'Generator 生成初稿：快速覆盖问题空间，但可能有事实遗漏或结构松散。',
+          tokenDelta: 190,
+          qualityDelta: 3,
+        },
+        critic: {
+          nodeId: 'node-critic',
+          edgeId: 'edge-cr',
+          label: 'Critic',
+          text: 'Critic 给出结构化反馈：指出证据不足、逻辑跳步、表达冗长等问题。',
+          tokenDelta: 130,
+          qualityDelta: 4,
+        },
+        revise: {
+          nodeId: 'node-revise',
+          edgeId: 'edge-rs',
+          label: 'Revise',
+          text: 'Revise 按反馈重写：补证据、修逻辑、提炼表达，形成新版本。',
+          tokenDelta: 165,
+          qualityDelta: 6,
+        },
+        stop: {
+          nodeId: 'node-stop',
+          edgeId: 'edge-sg',
+          label: 'Stop Check',
+          text: '进入停止判定：若质量达到阈值或轮次用尽则结束，否则回到 Generator 开启下一轮。',
+          tokenDelta: 28,
+          qualityDelta: 0,
+        },
+      };
+
+      const nodes = {
+        generator: document.getElementById('node-generator'),
+        critic: document.getElementById('node-critic'),
+        revise: document.getElementById('node-revise'),
+        stop: document.getElementById('node-stop'),
+      };
+
+      const edges = {
+        'edge-gc': document.getElementById('edge-gc'),
+        'edge-cr': document.getElementById('edge-cr'),
+        'edge-rs': document.getElementById('edge-rs'),
+        'edge-sg': document.getElementById('edge-sg'),
+      };
+
+      const controls = {
+        maxRounds: document.getElementById('maxRounds'),
+        qualityThreshold: document.getElementById('qualityThreshold'),
+        criticStrength: document.getElementById('criticStrength'),
+        playSpeed: document.getElementById('playSpeed'),
+      };
+
+      const controlVals = {
+        maxRounds: document.getElementById('roundsVal'),
+        qualityThreshold: document.getElementById('qualityVal'),
+        criticStrength: document.getElementById('critVal'),
+        playSpeed: document.getElementById('speedVal'),
+      };
+
+      const metrics = {
+        round: document.getElementById('mRound'),
+        stage: document.getElementById('mStage'),
+        quality: document.getElementById('mQuality'),
+        token: document.getElementById('mToken'),
+        latency: document.getElementById('mLatency'),
+        stop: document.getElementById('mStop'),
+      };
+
+      const statusBox = document.getElementById('statusBox');
+      const logBox = document.getElementById('logBox');
+
+      const stepButton = document.getElementById('stepBtn');
+      const playButton = document.getElementById('playBtn');
+      const resetButton = document.getElementById('resetBtn');
+
+      let runState = {
+        round: 0,
+        stageIndex: 0,
+        quality: 52,
+        token: 0,
+        running: false,
+        stopReason: '-',
+      };
+
+      let autoTimer = null;
+
+      function nowString() {
+        const now = new Date();
+        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      }
+
+      function addLog(line) {
+        const prefix = `[${nowString()}] `;
+        logBox.textContent += `${prefix}${line}\n`;
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      function syncControlText() {
+        controlVals.maxRounds.textContent = controls.maxRounds.value;
+        controlVals.qualityThreshold.textContent = controls.qualityThreshold.value;
+        controlVals.criticStrength.textContent = Number(controls.criticStrength.value).toFixed(2);
+        controlVals.playSpeed.textContent = Number(controls.playSpeed.value).toFixed(2);
+      }
+
+      function clearHighlights() {
+        Object.values(nodes).forEach((node) => node.classList.remove('active'));
+        Object.values(edges).forEach((edge) => edge.classList.remove('active'));
+      }
+
+      function markDoneStages() {
+        const stagesDone = Math.max(0, runState.round);
+        nodes.generator.classList.toggle('done', stagesDone > 0);
+        nodes.critic.classList.toggle('done', stagesDone > 0);
+        nodes.revise.classList.toggle('done', stagesDone > 0);
+      }
+
+      function updateMetrics(stageLabel) {
+        metrics.round.textContent = String(runState.round);
+        metrics.stage.textContent = stageLabel || 'Idle';
+        metrics.quality.textContent = String(Math.min(99, Math.round(runState.quality)));
+        metrics.token.textContent = String(Math.round(runState.token));
+        metrics.latency.textContent = String(Math.round(180 + runState.token * 0.2 + runState.round * 36));
+        metrics.stop.textContent = runState.stopReason;
+      }
+
+      function updateStatus(title, content) {
+        statusBox.innerHTML = `<strong>${title}</strong><br />${content}`;
+      }
+
+      function stopAutoPlay() {
+        runState.running = false;
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+        playButton.textContent = '▶ 自动播放';
+      }
+
+      function startAutoPlay() {
+        if (runState.running) {
+          stopAutoPlay();
+          return;
+        }
+        runState.running = true;
+        playButton.textContent = '⏸ 暂停';
+
+        const speed = Number(controls.playSpeed.value);
+        const intervalMs = Math.round(900 / Math.max(0.6, speed));
+        autoTimer = setInterval(() => {
+          const finished = executeStep();
+          if (finished) {
+            stopAutoPlay();
+          }
+        }, intervalMs);
+      }
+
+      function handleStopDecision() {
+        const maxRounds = Number(controls.maxRounds.value);
+        const qualityThreshold = Number(controls.qualityThreshold.value);
+
+        if (runState.quality >= qualityThreshold) {
+          runState.stopReason = '质量达标';
+          updateStatus('✅ 停止：质量已达阈值', `当前质量 ${Math.round(runState.quality)} ≥ 阈值 ${qualityThreshold}，结束迭代。`);
+          addLog(`Stop: quality ${Math.round(runState.quality)} >= threshold ${qualityThreshold}.`);
+          updateMetrics('Stop');
+          return true;
+        }
+
+        if (runState.round >= maxRounds) {
+          runState.stopReason = '达到最大轮次';
+          updateStatus('🛑 停止：达到轮次上限', `当前轮次 ${runState.round}，已达到最大轮次 ${maxRounds}。`);
+          addLog(`Stop: reached max rounds ${maxRounds}.`);
+          updateMetrics('Stop');
+          return true;
+        }
+
+        runState.stopReason = `继续第 ${runState.round + 1} 轮`;
+        addLog(`Continue: round ${runState.round + 1} starts.`);
+        return false;
+      }
+
+      function executeStep() {
+        const stageName = stages[runState.stageIndex];
+        const config = stageConfig[stageName];
+        const criticStrength = Number(controls.criticStrength.value);
+
+        clearHighlights();
+        nodes[stageName].classList.add('active');
+        if (config.edgeId && edges[config.edgeId]) {
+          edges[config.edgeId].classList.add('active');
+        }
+
+        let qualityGain = config.qualityDelta;
+        if (stageName === 'critic') {
+          qualityGain *= criticStrength;
+        }
+        if (stageName === 'revise') {
+          qualityGain *= 0.85 + criticStrength * 0.25;
+        }
+
+        runState.token += config.tokenDelta;
+        runState.quality += qualityGain;
+
+        if (stageName === 'revise') {
+          runState.round += 1;
+        }
+
+        updateStatus(`${config.label} 阶段`, config.text);
+        addLog(`${config.label}: +${config.tokenDelta} tokens, quality +${qualityGain.toFixed(1)}.`);
+
+        markDoneStages();
+        updateMetrics(config.label);
+
+        let shouldStop = false;
+        if (stageName === 'stop') {
+          shouldStop = handleStopDecision();
+        }
+
+        runState.stageIndex = (runState.stageIndex + 1) % stages.length;
+        reportHeight();
+        return shouldStop;
+      }
+
+      function resetAll() {
+        stopAutoPlay();
+
+        runState = {
+          round: 0,
+          stageIndex: 0,
+          quality: 52,
+          token: 0,
+          running: false,
+          stopReason: '-',
+        };
+
+        Object.values(nodes).forEach((node) => {
+          node.classList.remove('active');
+          node.classList.remove('done');
+        });
+        Object.values(edges).forEach((edge) => edge.classList.remove('active'));
+
+        logBox.textContent = '';
+        addLog('Ready. 点击“单步执行”或“自动播放”开始。');
+        updateStatus('准备就绪', '当前是 Idle 状态。你可以通过单步方式理解每个节点职责，或自动播放观察完整多轮迭代。');
+        updateMetrics('Idle');
+        syncControlText();
+        reportHeight();
+      }
+
+      function bindEvents() {
+        stepButton.addEventListener('click', () => {
+          const stopped = executeStep();
+          if (stopped) {
+            stopAutoPlay();
+          }
+        });
+
+        playButton.addEventListener('click', startAutoPlay);
+        resetButton.addEventListener('click', resetAll);
+
+        Object.values(controls).forEach((control) => {
+          control.addEventListener('input', () => {
+            syncControlText();
+            if (control === controls.playSpeed && runState.running) {
+              stopAutoPlay();
+              startAutoPlay();
+            }
+            reportHeight();
+          });
+        });
+
+        window.addEventListener('resize', reportHeight, { passive: true });
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(reportHeight);
+          observer.observe(document.body);
+          observer.observe(document.documentElement);
+        }
+      }
+
+      function reportHeight() {
+        if (window.parent === window) {
+          return;
+        }
+
+        const body = document.body;
+        const root = document.documentElement;
+        const h = Math.max(
+          body ? body.scrollHeight : 0,
+          body ? body.offsetHeight : 0,
+          root ? root.scrollHeight : 0,
+          root ? root.offsetHeight : 0
+        );
+
+        window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
+      }
+
+      function init() {
+        bindEvents();
+        resetAll();
+        setTimeout(reportHeight, 100);
+        setTimeout(reportHeight, 450);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

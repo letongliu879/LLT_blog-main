@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OLS 正规方程推导步骤</title>
+  <style>
+    body{margin:0;padding:20px;background:#020617;color:#e5e7eb;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+    .w{max-width:900px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px}
+    h1{font-size:1.2rem;color:#38bdf8;margin-bottom:8px}
+    p{color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:12px}
+    .card{border:1px solid #334155;border-radius:10px;background:#020617;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.8}
+    .row{display:flex;gap:10px;align-items:center;margin:10px 0}
+    button{border:1px solid #334155;background:#111827;color:#e5e7eb;border-radius:8px;padding:8px 12px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>一步步到正规方程</h1>
+    <p>点击“下一步”查看从目标函数展开到闭式解的关键步骤。</p>
+    <div class="row"><button id="next">下一步</button><button id="reset">重置</button></div>
+    <div id="box" class="card"></div>
+  </div>
+  <script>
+    const steps=[
+      'J(β) = (y - Xβ)^T(y - Xβ)',
+      'J(β) = y^Ty - 2β^TX^Ty + β^TX^TXβ',
+      '∇βJ(β) = -2X^Ty + 2X^TXβ',
+      '令梯度为 0:  X^TXβ = X^Ty',
+      '若 X^TX 可逆:  β̂ = (X^TX)^(-1)X^Ty'
+    ];
+    let i=0; const box=document.getElementById('box');
+    function render(){box.textContent=steps[i]; reportHeight();}
+    document.getElementById('next').addEventListener('click',()=>{i=Math.min(steps.length-1,i+1);render()});
+    document.getElementById('reset').addEventListener('click',()=>{i=0;render()});
+    function reportHeight(){const b=document.body,d=document.documentElement,c=document.querySelector('.w,.wrap,.container,.panel,.card')||b,s=getComputedStyle(b),p=(parseFloat(s.paddingTop)||0)+(parseFloat(s.paddingBottom)||0),ch=Math.ceil((c.getBoundingClientRect?c.getBoundingClientRect().height:0)+p),bh=Math.max(b.scrollHeight,b.offsetHeight),dh=Math.max(d.scrollHeight,d.offsetHeight),vh=window.innerHeight||d.clientHeight||0,dc=Math.abs(dh-vh)<=24?0:dh,h=Math.max(ch,bh,dc);window.parent.postMessage({type:'iframe-height',height:h},'*')}
+    window.addEventListener('load',()=>{render();const ro=new ResizeObserver(reportHeight);ro.observe(document.body);ro.observe(document.documentElement);setTimeout(reportHeight,120);setTimeout(reportHeight,300)});
+  </script>
+</body>
+</html>

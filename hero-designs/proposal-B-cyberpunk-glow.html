@@ -1,0 +1,852 @@
+<!-- Proposal B: Cyberpunk Glow - 赛博朋克发光风 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Allen's Blog - Cyberpunk Glow</title>
+  <style>
+    /* ============================================
+       CSS Custom Properties
+       ============================================ */
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-card: rgba(15, 23, 42, 0.7);
+      --bg-card-hover: rgba(15, 23, 42, 0.85);
+      --neon-cyan: #06b6d4;
+      --neon-purple: #a855f7;
+      --neon-cyan-dim: rgba(6, 182, 212, 0.3);
+      --neon-purple-dim: rgba(168, 85, 247, 0.3);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-glow: rgba(6, 182, 212, 0.15);
+      --border-glow-hover: rgba(6, 182, 212, 0.5);
+      --glass-blur: 16px;
+      --font-mono: 'Courier New', 'Fira Code', monospace;
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ============================================
+       Reset & Base
+       ============================================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ============================================
+       Reading Progress Bar
+       ============================================ */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+      z-index: 9999;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px var(--neon-cyan), 0 0 16px var(--neon-purple-dim);
+    }
+
+    /* ============================================
+       Navigation
+       ============================================ */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(var(--glass-blur));
+      border-bottom: 1px solid var(--border-glow);
+    }
+
+    .nav-brand {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px var(--neon-cyan-dim);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      position: relative;
+      padding-bottom: 4px;
+      transition: color 0.3s ease;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+      box-shadow: 0 0 6px var(--neon-cyan-dim);
+      transition: width 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--neon-cyan);
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    /* ============================================
+       Hero Section
+       ============================================ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .hero-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* Floating Orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .orb-1 {
+      width: 350px;
+      height: 350px;
+      background: var(--neon-cyan);
+      top: 15%;
+      left: 10%;
+      animation: orbDrift1 18s ease-in-out infinite alternate;
+    }
+
+    .orb-2 {
+      width: 280px;
+      height: 280px;
+      background: var(--neon-purple);
+      bottom: 20%;
+      right: 8%;
+      animation: orbDrift2 22s ease-in-out infinite alternate;
+    }
+
+    .orb-3 {
+      width: 200px;
+      height: 200px;
+      background: var(--neon-cyan);
+      top: 55%;
+      left: 55%;
+      animation: orbDrift3 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbDrift1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, -40px) scale(1.1); }
+      100% { transform: translate(-30px, 50px) scale(0.9); }
+    }
+
+    @keyframes orbDrift2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-50px, 30px) scale(1.15); }
+      100% { transform: translate(40px, -60px) scale(0.95); }
+    }
+
+    @keyframes orbDrift3 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(35px, 45px) scale(1.08); }
+      100% { transform: translate(-45px, -25px) scale(0.92); }
+    }
+
+    /* Hero Content */
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+      padding: 0 2rem;
+    }
+
+    .hero-tag {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--neon-purple);
+      text-shadow: 0 0 10px var(--neon-purple-dim);
+      margin-bottom: 1rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* Neon Glow Title */
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      color: #fff;
+      text-shadow:
+        0 0 7px var(--neon-cyan),
+        0 0 15px var(--neon-cyan),
+        0 0 30px var(--neon-cyan),
+        0 0 60px var(--neon-cyan-dim);
+      letter-spacing: 0.04em;
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: inline-block;
+      cursor: default;
+    }
+
+    /* Glitch Effect on Hover */
+    .hero-title:hover {
+      animation: glitch 0.4s ease-in-out;
+    }
+
+    @keyframes glitch {
+      0% { transform: translate(0); }
+      10% { transform: translate(-3px, 2px); text-shadow: 0 0 7px var(--neon-purple), 0 0 15px var(--neon-purple); }
+      20% { transform: translate(3px, -1px); text-shadow: 0 0 7px var(--neon-cyan), 0 0 30px var(--neon-cyan); }
+      30% { transform: translate(-2px, -2px); }
+      40% { transform: translate(2px, 3px); text-shadow: 0 0 7px var(--neon-purple), 0 0 15px var(--neon-purple), 0 0 30px var(--neon-purple); }
+      50% { transform: translate(-1px, 1px); }
+      60% { transform: translate(3px, -1px); text-shadow: 0 0 7px var(--neon-cyan), 0 0 15px var(--neon-cyan), 0 0 60px var(--neon-cyan-dim); }
+      70% { transform: translate(-2px, 2px); }
+      80% { transform: translate(1px, -3px); text-shadow: 0 0 7px var(--neon-purple), 0 0 20px var(--neon-purple-dim); }
+      90% { transform: translate(-1px, 1px); }
+      100% { transform: translate(0); text-shadow: 0 0 7px var(--neon-cyan), 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan), 0 0 60px var(--neon-cyan-dim); }
+    }
+
+    /* Typewriter Subtitle */
+    .hero-subtitle {
+      font-family: var(--font-mono);
+      font-size: clamp(0.95rem, 2vw, 1.2rem);
+      color: var(--text-secondary);
+      margin-bottom: 2.5rem;
+      min-height: 1.8em;
+    }
+
+    .typewriter-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.2em;
+      background: var(--neon-cyan);
+      margin-left: 3px;
+      vertical-align: text-bottom;
+      animation: cursorBlink 0.8s step-end infinite;
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    @keyframes cursorBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-cta {
+      display: inline-block;
+      padding: 0.8rem 2.2rem;
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+      transition: color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 0 10px var(--neon-cyan-dim), inset 0 0 10px var(--neon-cyan-dim);
+    }
+
+    .hero-cta:hover {
+      color: var(--bg-primary);
+      box-shadow: 0 0 20px var(--neon-cyan), inset 0 0 20px var(--neon-cyan-dim);
+    }
+
+    .hero-cta::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--neon-cyan);
+      transition: left 0.3s ease;
+      z-index: -1;
+    }
+
+    .hero-cta:hover::before {
+      left: 0;
+    }
+
+    /* ============================================
+       Articles Section
+       ============================================ */
+    .articles {
+      position: relative;
+      z-index: 2;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 3rem;
+    }
+
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.8rem;
+    }
+
+    /* Glassmorphism Card with Animated Gradient Border */
+    .article-card {
+      position: relative;
+      border-radius: 12px;
+      padding: 2px;
+      background: linear-gradient(135deg, var(--neon-cyan-dim), var(--neon-purple-dim), var(--neon-cyan-dim));
+      background-size: 300% 300%;
+      animation: gradientBorder 6s ease infinite;
+      transition: box-shadow 0.4s ease;
+    }
+
+    .article-card:hover {
+      box-shadow: 0 0 25px var(--neon-cyan-dim), 0 0 50px rgba(6, 182, 212, 0.1);
+    }
+
+    @keyframes gradientBorder {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .article-card-inner {
+      background: var(--bg-card);
+      backdrop-filter: blur(var(--glass-blur));
+      border-radius: 11px;
+      padding: 1.8rem;
+      height: 100%;
+      transition: background 0.3s ease;
+    }
+
+    .article-card:hover .article-card-inner {
+      background: var(--bg-card-hover);
+    }
+
+    .card-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--neon-purple);
+      border: 1px solid var(--neon-purple-dim);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.8rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.6rem;
+      transition: color 0.3s ease;
+    }
+
+    .article-card:hover .card-title {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 6px var(--neon-cyan-dim);
+    }
+
+    .card-excerpt {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.2rem;
+      line-height: 1.6;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .card-read-more {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      transition: text-shadow 0.3s ease;
+    }
+
+    .card-read-more:hover {
+      text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    /* ============================================
+       Footer
+       ============================================ */
+    footer {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .footer-divider {
+      width: 60%;
+      max-width: 500px;
+      height: 1px;
+      margin: 0 auto 2rem;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--neon-cyan),
+        var(--neon-purple),
+        var(--neon-cyan),
+        transparent
+      );
+      box-shadow: 0 0 10px var(--neon-cyan-dim);
+    }
+
+    .footer-text {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer-text a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+    }
+
+    .footer-text a:hover {
+      text-shadow: 0 0 6px var(--neon-cyan-dim);
+    }
+
+    /* ============================================
+       Responsive
+       ============================================ */
+    @media (max-width: 768px) {
+      nav {
+        padding: 0.8rem 1rem;
+      }
+
+      .nav-links {
+        gap: 1rem;
+      }
+
+      .nav-links a {
+        font-size: 0.8rem;
+      }
+
+      .hero-content {
+        padding: 0 1.2rem;
+      }
+
+      .articles-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .orb-1 { width: 200px; height: 200px; }
+      .orb-2 { width: 160px; height: 160px; }
+      .orb-3 { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links {
+        gap: 0.7rem;
+      }
+
+      .hero-tag {
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Reading Progress Bar -->
+  <div class="reading-progress" id="readingProgress"></div>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="#" class="nav-brand">&gt;_ Allen's Blog</a>
+    <ul class="nav-links">
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Articles</a></li>
+      <li><a href="#">Projects</a></li>
+      <li><a href="#">About</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <canvas class="hero-canvas" id="particleCanvas"></canvas>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="hero-content">
+      <p class="hero-tag">// Machine Learning &amp; Software Engineering</p>
+      <h1 class="hero-title">Allen's Blog</h1>
+      <p class="hero-subtitle">
+        <span id="typewriterText"></span><span class="typewriter-cursor"></span>
+      </p>
+      <a href="#articles" class="hero-cta">Explore Articles</a>
+    </div>
+  </section>
+
+  <!-- Articles Section -->
+  <section class="articles" id="articles">
+    <h2 class="section-title">// Latest Posts</h2>
+    <p class="section-subtitle">Recent explorations in ML, systems design, and engineering</p>
+
+    <div class="articles-grid">
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">Deep Learning</span>
+          <h3 class="card-title">Transformer Attention Mechanisms Demystified</h3>
+          <p class="card-excerpt">
+            A visual walkthrough of multi-head self-attention, positional encodings,
+            and why transformers dominate modern NLP.
+          </p>
+          <div class="card-meta">
+            <span>2026-01-28</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">Systems</span>
+          <h3 class="card-title">Building Low-Latency ML Inference Pipelines</h3>
+          <p class="card-excerpt">
+            Practical techniques for deploying models at scale: batching strategies,
+            model quantization, and GPU memory management.
+          </p>
+          <div class="card-meta">
+            <span>2026-01-15</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">Frontend</span>
+          <h3 class="card-title">React Server Components in Production</h3>
+          <p class="card-excerpt">
+            Lessons learned from migrating a dashboard to RSC, including streaming
+            patterns, caching pitfalls, and bundle size wins.
+          </p>
+          <div class="card-meta">
+            <span>2025-12-30</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">MLOps</span>
+          <h3 class="card-title">Feature Stores: From Concept to Implementation</h3>
+          <p class="card-excerpt">
+            How we built a real-time feature store serving 10K QPS with sub-5ms
+            p99 latency using Redis and Apache Arrow.
+          </p>
+          <div class="card-meta">
+            <span>2025-12-12</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">Rust</span>
+          <h3 class="card-title">Writing a Tokenizer in Rust for Fun and Speed</h3>
+          <p class="card-excerpt">
+            Exploring Rust's zero-cost abstractions to build a BPE tokenizer that
+            outperforms the Python equivalent by 40x.
+          </p>
+          <div class="card-meta">
+            <span>2025-11-20</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="article-card">
+        <div class="article-card-inner">
+          <span class="card-tag">Research</span>
+          <h3 class="card-title">Diffusion Models for Structured Data Generation</h3>
+          <p class="card-excerpt">
+            Adapting image diffusion techniques for tabular data synthesis: architecture
+            choices, training tricks, and evaluation metrics.
+          </p>
+          <div class="card-meta">
+            <span>2025-11-05</span>
+            <a href="#" class="card-read-more">Read &rarr;</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-divider"></div>
+    <p class="footer-text">
+      &copy; 2026 <a href="#">Allen's Blog</a> &mdash; Built with curiosity and caffeine
+    </p>
+  </footer>
+
+  <!-- ============================================
+       JavaScript: Particle System, Typewriter, Progress Bar
+       ============================================ -->
+  <script>
+    (function () {
+      /* ------------------------------------------
+         Particle System (Canvas)
+         ------------------------------------------ */
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      let animFrameId = null;
+      const CONNECTION_DIST = 120;
+      const CYAN = { r: 6, g: 182, b: 212 };
+      const PURPLE = { r: 168, g: 85, b: 247 };
+
+      function isMobile() {
+        return window.innerWidth < 768;
+      }
+
+      function getParticleCount() {
+        return isMobile() ? 25 : 50;
+      }
+
+      function resizeCanvas() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+
+      function createParticle() {
+        const useCyan = Math.random() > 0.4;
+        const color = useCyan ? CYAN : PURPLE;
+        return {
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          radius: Math.random() * 1.8 + 0.5,
+          color: color,
+          alpha: Math.random() * 0.5 + 0.3
+        };
+      }
+
+      function initParticles() {
+        particles = [];
+        const count = getParticleCount();
+        for (let i = 0; i < count; i++) {
+          particles.push(createParticle());
+        }
+      }
+
+      function drawParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < 0) p.x = canvas.width;
+          if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height;
+          if (p.y > canvas.height) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(' + p.color.r + ',' + p.color.g + ',' + p.color.b + ',' + p.alpha + ')';
+          ctx.fill();
+
+          for (let j = i + 1; j < particles.length; j++) {
+            const q = particles[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < CONNECTION_DIST) {
+              const opacity = (1 - dist / CONNECTION_DIST) * 0.2;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.strokeStyle = 'rgba(' + CYAN.r + ',' + CYAN.g + ',' + CYAN.b + ',' + opacity + ')';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+
+        animFrameId = requestAnimationFrame(drawParticles);
+      }
+
+      function startParticleSystem() {
+        resizeCanvas();
+        initParticles();
+        drawParticles();
+      }
+
+      window.addEventListener('resize', function () {
+        resizeCanvas();
+        initParticles();
+      });
+
+      startParticleSystem();
+
+      /* ------------------------------------------
+         Typewriter Effect
+         ------------------------------------------ */
+      var typewriterEl = document.getElementById('typewriterText');
+      var phrases = [
+        'Exploring ML, one gradient at a time.',
+        'Building intelligent systems with code.',
+        'From neural nets to production pipelines.',
+        'Where curiosity meets computation.'
+      ];
+      var phraseIndex = 0;
+      var charIndex = 0;
+      var isDeleting = false;
+      var typeSpeed = 60;
+      var deleteSpeed = 35;
+      var pauseAfterType = 2000;
+      var pauseAfterDelete = 500;
+
+      function typewrite() {
+        var current = phrases[phraseIndex];
+
+        if (!isDeleting) {
+          typewriterEl.textContent = current.substring(0, charIndex + 1);
+          charIndex++;
+
+          if (charIndex === current.length) {
+            isDeleting = true;
+            setTimeout(typewrite, pauseAfterType);
+            return;
+          }
+          setTimeout(typewrite, typeSpeed);
+        } else {
+          typewriterEl.textContent = current.substring(0, charIndex - 1);
+          charIndex--;
+
+          if (charIndex === 0) {
+            isDeleting = false;
+            phraseIndex = (phraseIndex + 1) % phrases.length;
+            setTimeout(typewrite, pauseAfterDelete);
+            return;
+          }
+          setTimeout(typewrite, deleteSpeed);
+        }
+      }
+
+      setTimeout(typewrite, 800);
+
+      /* ------------------------------------------
+         Reading Progress Bar
+         ------------------------------------------ */
+      var progressBar = document.getElementById('readingProgress');
+
+      function updateProgress() {
+        var scrollTop = window.scrollY || document.documentElement.scrollTop;
+        var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        if (docHeight > 0) {
+          var progress = (scrollTop / docHeight) * 100;
+          progressBar.style.width = progress + '%';
+        }
+      }
+
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      updateProgress();
+
+      /* ------------------------------------------
+         iframe Height PostMessage
+         ------------------------------------------ */
+      function postHeight() {
+        var height = document.documentElement.scrollHeight;
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(
+            { type: 'resize', height: height },
+            '*'
+          );
+        }
+      }
+
+      window.addEventListener('load', postHeight);
+      window.addEventListener('resize', postHeight);
+      new MutationObserver(postHeight).observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+    })();
+  </script>
+</body>
+</html>

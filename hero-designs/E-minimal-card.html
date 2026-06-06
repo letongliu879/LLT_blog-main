@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案E：极简名片风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans:['Bricolage Grotesque','Noto Sans SC','sans-serif'] } } }
+    }
+  </script>
+  <style>
+    .fade { animation: fadeIn 1s ease both; }
+    .f1{animation-delay:.2s} .f2{animation-delay:.4s} .f3{animation-delay:.6s}
+    .f4{animation-delay:.8s} .f5{animation-delay:1s}
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .post-link { transition: all 0.25s ease; }
+    .post-link:hover { padding-left: 12px; }
+    a.slim-underline {
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.25s ease;
+    }
+    a.slim-underline:hover { border-bottom-color: currentColor; }
+  </style>
+</head>
+<body class="bg-white dark:bg-[#111] text-[#111] dark:text-[#eee] transition-colors duration-500">
+  <div class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+    <div class="w-full max-w-xl">
+      <!-- 核心信息 - 极简 -->
+      <div class="fade f1 mb-16">
+        <h1 class="text-5xl md:text-6xl font-bold leading-tight tracking-tight">
+          Allen Wang
+        </h1>
+        <p class="text-lg text-[#111]/50 dark:text-white/40 mt-3">
+          RPA Developer @ Capgemini
+        </p>
+      </div>
+
+      <!-- 一句话介绍 -->
+      <p class="fade f2 text-xl leading-relaxed text-[#111]/70 dark:text-white/60 mb-16 max-w-md">
+        探索 AI、机器学习与自动化技术。用代码理解世界，用文字记录思考。
+      </p>
+
+      <!-- 最新文章 -->
+      <div class="fade f3 mb-16">
+        <p class="text-xs tracking-[0.2em] uppercase text-[#111]/30 dark:text-white/25 mb-6">最近写的</p>
+        <div class="space-y-4">
+          <a href="#" class="post-link block group">
+            <div class="flex items-baseline justify-between">
+              <span class="text-lg font-medium group-hover:text-[#111]/60 dark:group-hover:text-white/60 transition-colors">深夜胡言：程序员的身份危机</span>
+              <span class="text-sm text-[#111]/25 dark:text-white/20 shrink-0 ml-4">01.25</span>
+            </div>
+          </a>
+          <a href="#" class="post-link block group">
+            <div class="flex items-baseline justify-between">
+              <span class="text-lg font-medium group-hover:text-[#111]/60 dark:group-hover:text-white/60 transition-colors">LangGraph Reflection Agents</span>
+              <span class="text-sm text-[#111]/25 dark:text-white/20 shrink-0 ml-4">01.22</span>
+            </div>
+          </a>
+          <a href="#" class="post-link block group">
+            <div class="flex items-baseline justify-between">
+              <span class="text-lg font-medium group-hover:text-[#111]/60 dark:group-hover:text-white/60 transition-colors">基于深度Q学习的月球着陆</span>
+              <span class="text-sm text-[#111]/25 dark:text-white/20 shrink-0 ml-4">01.18</span>
+            </div>
+          </a>
+        </div>
+        <a href="#" class="slim-underline inline-block mt-6 text-sm text-[#111]/40 dark:text-white/30 hover:text-[#111] dark:hover:text-white transition-colors">
+          查看全部文章 →
+        </a>
+      </div>
+
+      <!-- 数字 -->
+      <div class="fade f4 flex gap-12 mb-16">
+        <div>
+          <div class="text-3xl font-bold">50+</div>
+          <div class="text-xs text-[#111]/30 dark:text-white/25 mt-1">文章</div>
+        </div>
+        <div>
+          <div class="text-3xl font-bold">51</div>
+          <div class="text-xs text-[#111]/30 dark:text-white/25 mt-1">标签</div>
+        </div>
+        <div>
+          <div class="text-3xl font-bold">10+</div>
+          <div class="text-xs text-[#111]/30 dark:text-white/25 mt-1">项目</div>
+        </div>
+      </div>
+
+      <!-- 链接 -->
+      <div class="fade f5 flex gap-6 text-sm text-[#111]/35 dark:text-white/25">
+        <a href="#" class="slim-underline hover:text-[#111] dark:hover:text-white transition-colors">GitHub</a>
+        <a href="#" class="slim-underline hover:text-[#111] dark:hover:text-white transition-colors">LinkedIn</a>
+        <a href="#" class="slim-underline hover:text-[#111] dark:hover:text-white transition-colors">Email</a>
+        <span class="ml-auto">
+          <button onclick="document.documentElement.classList.toggle('dark')" class="hover:text-[#111] dark:hover:text-white transition-colors">
+            <span class="dark:hidden">暗色</span><span class="hidden dark:inline">亮色</span>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecSysNN 嵌入空间可视化</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --card: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --u: #38bdf8;
+      --m: #22c55e;
+      --hl: #f59e0b;
+    }
+    body {
+      background: radial-gradient(circle at 20% 10%, #173e63 0%, #020617 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.52);
+    }
+    h1 {
+      font-size: 1.32rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--u), var(--m));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(2, 6, 23, 0.65);
+    }
+    .controls { display: grid; gap: 12px; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type='range'] { width: 100%; accent-color: var(--u); }
+    .value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      background: rgba(30, 41, 59, 0.5);
+    }
+    .card .name { color: var(--muted); font-size: 0.72rem; margin-bottom: 4px; }
+    .card .num {
+      color: var(--hl);
+      font-weight: 700;
+      font-size: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .hint {
+      margin-top: 8px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-size: 0.84rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>用户-电影嵌入空间</h1>
+    <p class="sub">
+      每个点代表一个用户或电影在 2D 隐空间中的位置。用户点越接近某类电影点，说明该用户对该类型的偏好越强。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <canvas id="space" width="660" height="440"></canvas>
+      </section>
+
+      <section class="panel controls">
+        <div>
+          <label>用户偏好旋转 θ <span id="thetaVal" class="value">0°</span></label>
+          <input id="theta" type="range" min="-180" max="180" step="1" value="0" />
+        </div>
+        <div>
+          <label>偏好强度 scale <span id="scaleVal" class="value">1.0</span></label>
+          <input id="scale" type="range" min="0.4" max="2.2" step="0.1" value="1.0" />
+        </div>
+
+        <div class="kpi">
+          <div class="card">
+            <div class="name">动作类匹配分</div>
+            <div id="actScore" class="num">0.00</div>
+          </div>
+          <div class="card">
+            <div class="name">剧情类匹配分</div>
+            <div id="dramaScore" class="num">0.00</div>
+          </div>
+        </div>
+
+        <p class="hint">
+          观察：旋转用户向量相当于“改变偏好方向”；缩放相当于“偏好强度”。
+          在真实模型里，这些向量由损失函数自动学习得到。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('space');
+    const ctx = canvas.getContext('2d');
+
+    const thetaInput = document.getElementById('theta');
+    const scaleInput = document.getElementById('scale');
+    const thetaVal = document.getElementById('thetaVal');
+    const scaleVal = document.getElementById('scaleVal');
+    const actScore = document.getElementById('actScore');
+    const dramaScore = document.getElementById('dramaScore');
+
+    const movies = [
+      { x: 1.8, y: 0.3, genre: 'action' },
+      { x: 1.4, y: 0.8, genre: 'action' },
+      { x: 1.6, y: -0.3, genre: 'action' },
+      { x: -1.7, y: 0.4, genre: 'drama' },
+      { x: -1.5, y: 1.0, genre: 'drama' },
+      { x: -1.8, y: -0.4, genre: 'drama' },
+    ];
+
+    function sx(x) { return canvas.width / 2 + x * 90; }
+    function sy(y) { return canvas.height / 2 - y * 90; }
+
+    function dot(a, b) {
+      return a.x * b.x + a.y * b.y;
+    }
+
+    function drawAxes() {
+      ctx.strokeStyle = 'rgba(148,163,184,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(30, canvas.height / 2);
+      ctx.lineTo(canvas.width - 30, canvas.height / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 25);
+      ctx.lineTo(canvas.width / 2, canvas.height - 25);
+      ctx.stroke();
+    }
+
+    function drawPoints() {
+      for (const m of movies) {
+        ctx.beginPath();
+        ctx.arc(sx(m.x), sy(m.y), 6, 0, Math.PI * 2);
+        ctx.fillStyle = m.genre === 'action' ? '#22c55e' : '#38bdf8';
+        ctx.fill();
+      }
+    }
+
+    function drawVector(v, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, canvas.height / 2);
+      ctx.lineTo(sx(v.x), sy(v.y));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(sx(v.x), sy(v.y), 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function update() {
+      const theta = Number(thetaInput.value) * (Math.PI / 180);
+      const scale = Number(scaleInput.value);
+
+      const user = {
+        x: Math.cos(theta) * scale,
+        y: Math.sin(theta) * scale,
+      };
+
+      let actionDot = 0;
+      let dramaDot = 0;
+      let actionCount = 0;
+      let dramaCount = 0;
+
+      for (const m of movies) {
+        const s = dot(user, m);
+        if (m.genre === 'action') {
+          actionDot += s;
+          actionCount += 1;
+        } else {
+          dramaDot += s;
+          dramaCount += 1;
+        }
+      }
+
+      thetaVal.textContent = `${Math.round((theta * 180) / Math.PI)}°`;
+      scaleVal.textContent = scale.toFixed(1);
+      actScore.textContent = (actionDot / actionCount).toFixed(2);
+      dramaScore.textContent = (dramaDot / dramaCount).toFixed(2);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAxes();
+      drawPoints();
+      drawVector(user, '#f59e0b');
+
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    thetaInput.addEventListener('input', update);
+    scaleInput.addEventListener('input', update);
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

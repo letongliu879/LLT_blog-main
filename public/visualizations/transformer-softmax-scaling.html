@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer Softmax 缩放可视化</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--warn));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 36px;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--purple), var(--warn));
+  border-radius: 16px 16px 0 0;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title .icon {
+  font-size: 1.3rem;
+}
+
+/* Slider area */
+.slider-area {
+  margin-bottom: 24px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.slider-label span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.dk-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+}
+
+.slider-track {
+  position: relative;
+  width: 100%;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  transition: box-shadow 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.7);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Raw scores display */
+.raw-scores {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.score-chip {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+/* Side by side charts */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.chart-col {
+  min-width: 0;
+}
+
+.chart-title {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+
+.chart-title.unscaled { color: var(--danger); }
+.chart-title.scaled { color: var(--accent); }
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  height: 200px;
+  padding: 0 4px;
+  position: relative;
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 60px;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 6px 6px 2px 2px;
+  transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.bar.unscaled {
+  background: linear-gradient(180deg, var(--danger), #b91c1c);
+}
+
+.bar.scaled {
+  background: linear-gradient(180deg, var(--accent), #15803d);
+}
+
+.bar-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 6px;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+}
+
+.bar-value {
+  font-size: 0.72rem;
+  color: var(--text);
+  margin-bottom: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.bar-wrapper:hover .bar-value {
+  opacity: 1;
+}
+
+.bar-wrapper:hover .bar {
+  filter: brightness(1.3);
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.15s;
+  backdrop-filter: blur(8px);
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+/* KPI cards */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.kpi-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+}
+
+.kpi-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.kpi-value.danger { color: var(--danger); }
+.kpi-value.accent { color: var(--accent); }
+.kpi-value.warn { color: var(--warn); }
+.kpi-value.primary { color: var(--primary); }
+.kpi-value.purple { color: var(--purple); }
+
+/* Toggle button */
+.toggle-area {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.toggle-btn {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--primary);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.toggle-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: var(--primary);
+}
+
+/* Canvas chart */
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border);
+}
+
+.canvas-wrapper canvas {
+  display: block;
+  width: 100%;
+}
+
+.canvas-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+/* Gradient section collapse */
+.gradient-section {
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
+  max-height: 600px;
+  opacity: 1;
+}
+
+.gradient-section.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Insight box */
+.insight-box {
+  background: rgba(139, 92, 246, 0.08);
+  border-left: 4px solid var(--purple);
+  border-radius: 0 12px 12px 0;
+  padding: 20px 24px;
+  margin-top: 4px;
+}
+
+.insight-text {
+  font-size: 0.92rem;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.7;
+}
+
+.insight-text strong {
+  color: var(--warn);
+}
+
+.formula-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: center;
+  margin-top: 14px;
+}
+
+.formula {
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-size: 1.15rem;
+  color: var(--primary);
+  line-height: 1.8;
+}
+
+.formula .highlight {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.math-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  body { padding: 28px 14px; }
+  h1 { font-size: 1.6rem; }
+  .card { padding: 22px; }
+  .charts-row { gap: 14px; }
+  .bar-chart { height: 170px; gap: 6px; }
+  .kpi-row { gap: 10px; }
+  .kpi-value { font-size: 1.2rem; }
+}
+
+@media (max-width: 600px) {
+  h1 { font-size: 1.3rem; }
+  .subtitle { font-size: 0.82rem; }
+  .card { padding: 16px; border-radius: 12px; }
+  .charts-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .bar-chart { height: 150px; }
+  .kpi-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 1.1rem; }
+  .raw-scores { gap: 6px; }
+  .score-chip { padding: 4px 10px; font-size: 0.9rem; }
+  .formula { font-size: 1rem; }
+  .canvas-legend { gap: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Transformer 注意力缩放机制</h1>
+  <p class="subtitle">为什么 Attention 公式中需要除以 &radic;d<sub>k</sub>？不缩放会怎样？</p>
+
+  <!-- Section 1: Softmax Temperature Demo -->
+  <div class="card">
+    <div class="section-title">
+      <span class="icon">&#x1F321;</span>
+      <span>Softmax 温度效应演示</span>
+    </div>
+
+    <!-- Raw scores -->
+    <div style="margin-bottom: 6px; color: var(--muted); font-size: 0.85rem; text-align: center;">
+      原始注意力分数 (raw scores)
+    </div>
+    <div class="raw-scores" id="rawScores"></div>
+
+    <!-- Slider -->
+    <div class="slider-area">
+      <div class="slider-label">
+        <span>键向量维度 d<sub>k</sub></span>
+        <span class="dk-value" id="dkDisplay">64</span>
+      </div>
+      <div class="slider-track">
+        <input type="range" id="dkSlider" min="1" max="512" value="64" step="1">
+      </div>
+      <div class="slider-ticks">
+        <span>1</span>
+        <span>64</span>
+        <span>128</span>
+        <span>256</span>
+        <span>384</span>
+        <span>512</span>
+      </div>
+    </div>
+
+    <!-- Bar charts -->
+    <div class="charts-row">
+      <div class="chart-col">
+        <div class="chart-title unscaled">&#x274C; 未缩放的 Softmax</div>
+        <div class="bar-chart" id="unscaledChart"></div>
+      </div>
+      <div class="chart-col">
+        <div class="chart-title scaled">&#x2705; 缩放后的 Softmax</div>
+        <div class="bar-chart" id="scaledChart"></div>
+      </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">最大注意力权重</div>
+        <div class="kpi-value danger" id="kpiMaxUnscaled">--</div>
+        <div class="kpi-sub">未缩放</div>
+        <div style="margin-top:6px;font-size:0.75rem;color:var(--accent);" id="kpiMaxScaled">缩放: --</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">信息熵 (分布均匀度)</div>
+        <div class="kpi-value warn" id="kpiEntropyUnscaled">--</div>
+        <div class="kpi-sub">未缩放</div>
+        <div style="margin-top:6px;font-size:0.75rem;color:var(--accent);" id="kpiEntropyScaled">缩放: --</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">梯度量级</div>
+        <div class="kpi-value purple" id="kpiGradUnscaled">--</div>
+        <div class="kpi-sub">未缩放</div>
+        <div style="margin-top:6px;font-size:0.75rem;color:var(--accent);" id="kpiGradScaled">缩放: --</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Gradient Vanishing -->
+  <div class="card">
+    <div class="section-title">
+      <span class="icon">&#x1F4C9;</span>
+      <span>梯度消失可视化</span>
+    </div>
+
+    <div class="toggle-area">
+      <button class="toggle-btn active" id="toggleGradient" type="button">
+        &#x1F441; 显示 / 隐藏梯度图
+      </button>
+    </div>
+
+    <div class="gradient-section" id="gradientSection">
+      <div class="canvas-wrapper">
+        <canvas id="gradientCanvas" height="320"></canvas>
+      </div>
+      <div class="canvas-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--danger);"></div>
+          <span>未缩放梯度</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--accent);"></div>
+          <span>缩放后梯度</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--primary);"></div>
+          <span>当前 d<sub>k</sub> 位置</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Insight -->
+  <div class="card">
+    <div class="section-title">
+      <span class="icon">&#x1F4A1;</span>
+      <span>核心直觉</span>
+    </div>
+
+    <div class="insight-box">
+      <p class="insight-text">
+        当 d<sub>k</sub> 很大时，Query 和 Key 的点积 <strong>q &middot; k</strong> 的数值会变得很大，
+        导致 Softmax 函数进入<strong>饱和区域</strong>，输出接近 one-hot 分布，
+        进而造成<strong>梯度消失</strong>，模型难以学习。
+      </p>
+      <p class="insight-text">
+        数学直觉：如果 q 和 k 的各分量独立、均值为 0、方差为 1，
+        则点积 <strong>q &middot; k = &sum; q<sub>i</sub>k<sub>i</sub></strong> 的方差为 <strong>d<sub>k</sub></strong>。
+        因此除以 <strong>&radic;d<sub>k</sub></strong> 可将方差归一化为 1，保持梯度健康。
+      </p>
+
+      <div class="formula-box">
+        <div class="formula">
+          Attention(Q, K, V) = softmax( QK<sup>T</sup> / <span class="highlight">&radic;d<sub>k</sub></span> ) &middot; V
+        </div>
+        <div class="math-note">
+          Var(q &middot; k) = d<sub>k</sub> &nbsp;&nbsp;&rArr;&nbsp;&nbsp;
+          Var(q &middot; k / &radic;d<sub>k</sub>) = 1
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- Constants ---
+  var RAW_SCORES = [2.1, 0.5, -0.3, 1.8, 0.1];
+  var SCORE_LABELS = ['s\u2081', 's\u2082', 's\u2083', 's\u2084', 's\u2085'];
+
+  // --- DOM refs ---
+  var dkSlider = document.getElementById('dkSlider');
+  var dkDisplay = document.getElementById('dkDisplay');
+  var rawScoresEl = document.getElementById('rawScores');
+  var unscaledChart = document.getElementById('unscaledChart');
+  var scaledChart = document.getElementById('scaledChart');
+  var kpiMaxUnscaled = document.getElementById('kpiMaxUnscaled');
+  var kpiMaxScaled = document.getElementById('kpiMaxScaled');
+  var kpiEntropyUnscaled = document.getElementById('kpiEntropyUnscaled');
+  var kpiEntropyScaled = document.getElementById('kpiEntropyScaled');
+  var kpiGradUnscaled = document.getElementById('kpiGradUnscaled');
+  var kpiGradScaled = document.getElementById('kpiGradScaled');
+  var toggleBtn = document.getElementById('toggleGradient');
+  var gradientSection = document.getElementById('gradientSection');
+  var gradientCanvas = document.getElementById('gradientCanvas');
+  var tooltip = document.getElementById('tooltip');
+
+  // --- Math helpers ---
+  function softmax(scores) {
+    var maxS = Math.max.apply(null, scores);
+    var exps = scores.map(function (s) { return Math.exp(s - maxS); });
+    var sumExp = exps.reduce(function (a, b) { return a + b; }, 0);
+    return exps.map(function (e) { return e / sumExp; });
+  }
+
+  function entropy(probs) {
+    var h = 0;
+    for (var i = 0; i < probs.length; i++) {
+      if (probs[i] > 1e-12) {
+        h -= probs[i] * Math.log2(probs[i]);
+      }
+    }
+    return h;
+  }
+
+  // Approximate gradient magnitude of softmax w.r.t. logits
+  // The Jacobian of softmax: diag(p) - p*p^T
+  // The "gradient magnitude" we show is the Frobenius norm of this Jacobian
+  function softmaxGradMagnitude(probs) {
+    var n = probs.length;
+    var frobSq = 0;
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        var val = (i === j ? probs[i] : 0) - probs[i] * probs[j];
+        frobSq += val * val;
+      }
+    }
+    return Math.sqrt(frobSq);
+  }
+
+  function scaleScores(scores, dk) {
+    var factor = Math.sqrt(dk);
+    return scores.map(function (s) { return s * factor; });
+  }
+
+  // --- Build raw scores display ---
+  function buildRawScores() {
+    rawScoresEl.innerHTML = '';
+    for (var i = 0; i < RAW_SCORES.length; i++) {
+      var chip = document.createElement('div');
+      chip.className = 'score-chip';
+      chip.textContent = SCORE_LABELS[i] + ' = ' + RAW_SCORES[i].toFixed(1);
+      rawScoresEl.appendChild(chip);
+    }
+  }
+
+  // --- Build bar chart DOM ---
+  function buildBarChart(container, cssClass) {
+    container.innerHTML = '';
+    var wrappers = [];
+    for (var i = 0; i < RAW_SCORES.length; i++) {
+      var wrapper = document.createElement('div');
+      wrapper.className = 'bar-wrapper';
+
+      var valueEl = document.createElement('div');
+      valueEl.className = 'bar-value';
+      valueEl.textContent = '0.00';
+
+      var bar = document.createElement('div');
+      bar.className = 'bar ' + cssClass;
+      bar.style.height = '2px';
+      bar.dataset.index = i;
+
+      var label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = SCORE_LABELS[i];
+
+      wrapper.appendChild(valueEl);
+      wrapper.appendChild(bar);
+      wrapper.appendChild(label);
+      container.appendChild(wrapper);
+
+      // Hover tooltip
+      (function (idx, barEl) {
+        barEl.addEventListener('mouseenter', function (e) {
+          tooltip.style.opacity = '1';
+          tooltip.classList.add('visible');
+        });
+        barEl.addEventListener('mousemove', function (e) {
+          tooltip.textContent = SCORE_LABELS[idx] + ': ' + barEl.dataset.prob;
+          tooltip.style.left = (e.clientX + 12) + 'px';
+          tooltip.style.top = (e.clientY - 30) + 'px';
+        });
+        barEl.addEventListener('mouseleave', function () {
+          tooltip.classList.remove('visible');
+          tooltip.style.opacity = '0';
+        });
+      })(i, bar);
+
+      wrappers.push({ bar: bar, valueEl: valueEl });
+    }
+    return wrappers;
+  }
+
+  var unscaledBars = buildBarChart(unscaledChart, 'unscaled');
+  var scaledBars = buildBarChart(scaledChart, 'scaled');
+
+  // --- Update bar heights ---
+  function updateBars(barRefs, probs) {
+    for (var i = 0; i < barRefs.length; i++) {
+      var pct = Math.max(probs[i] * 100, 0.5);
+      barRefs[i].bar.style.height = pct + '%';
+      barRefs[i].bar.dataset.prob = probs[i].toFixed(6);
+      barRefs[i].valueEl.textContent = probs[i].toFixed(3);
+    }
+  }
+
+  // --- Main update ---
+  function update() {
+    var dk = parseInt(dkSlider.value, 10);
+    dkDisplay.textContent = dk;
+
+    // Simulate: raw scores * sqrt(dk) to mimic high-dimensional dot products
+    var simulatedScores = scaleScores(RAW_SCORES, dk);
+
+    var unscaledProbs = softmax(simulatedScores);
+    var scaledProbs = softmax(RAW_SCORES); // scores / sqrt(dk) undoes the scaling
+
+    updateBars(unscaledBars, unscaledProbs);
+    updateBars(scaledBars, scaledProbs);
+
+    // KPIs
+    var maxUnscaled = Math.max.apply(null, unscaledProbs);
+    var maxScaled = Math.max.apply(null, scaledProbs);
+    kpiMaxUnscaled.textContent = maxUnscaled.toFixed(4);
+    kpiMaxScaled.textContent = '\u7F29\u653E: ' + maxScaled.toFixed(4);
+
+    var entUnscaled = entropy(unscaledProbs);
+    var entScaled = entropy(scaledProbs);
+    kpiEntropyUnscaled.textContent = entUnscaled.toFixed(3);
+    kpiEntropyScaled.textContent = '\u7F29\u653E: ' + entScaled.toFixed(3);
+
+    var gradUnscaled = softmaxGradMagnitude(unscaledProbs);
+    var gradScaled = softmaxGradMagnitude(scaledProbs);
+    kpiGradUnscaled.textContent = gradUnscaled.toExponential(2);
+    kpiGradScaled.textContent = '\u7F29\u653E: ' + gradScaled.toExponential(2);
+
+    drawGradientChart(dk);
+  }
+
+  // --- Gradient Canvas Chart ---
+  var canvasCtx = gradientCanvas.getContext('2d');
+  var DPI = window.devicePixelRatio || 1;
+  var chartAnimFrame = null;
+
+  function resizeCanvas() {
+    var rect = gradientCanvas.parentElement.getBoundingClientRect();
+    var w = rect.width;
+    var h = 320;
+    gradientCanvas.width = w * DPI;
+    gradientCanvas.height = h * DPI;
+    gradientCanvas.style.width = w + 'px';
+    gradientCanvas.style.height = h + 'px';
+    canvasCtx.setTransform(DPI, 0, 0, DPI, 0, 0);
+  }
+
+  function drawGradientChart(currentDk) {
+    if (chartAnimFrame) cancelAnimationFrame(chartAnimFrame);
+
+    chartAnimFrame = requestAnimationFrame(function () {
+      resizeCanvas();
+
+      var w = gradientCanvas.width / DPI;
+      var h = gradientCanvas.height / DPI;
+      var pad = { top: 30, right: 30, bottom: 45, left: 70 };
+      var plotW = w - pad.left - pad.right;
+      var plotH = h - pad.top - pad.bottom;
+
+      canvasCtx.clearRect(0, 0, w, h);
+
+      // Precompute data
+      var dkValues = [];
+      var unscaledGrads = [];
+      var scaledGrads = [];
+
+      for (var dk = 1; dk <= 512; dk += 2) {
+        var sim = scaleScores(RAW_SCORES, dk);
+        var uProbs = softmax(sim);
+        var sProbs = softmax(RAW_SCORES);
+        dkValues.push(dk);
+        unscaledGrads.push(softmaxGradMagnitude(uProbs));
+        scaledGrads.push(softmaxGradMagnitude(sProbs));
+      }
+
+      // Y-axis: log scale
+      var minLog = -8;
+      var maxLog = 0;
+
+      function toX(dk) {
+        return pad.left + ((dk - 1) / 511) * plotW;
+      }
+
+      function toY(val) {
+        var logVal = Math.log10(Math.max(val, 1e-10));
+        logVal = Math.max(minLog, Math.min(maxLog, logVal));
+        return pad.top + (1 - (logVal - minLog) / (maxLog - minLog)) * plotH;
+      }
+
+      // Grid lines
+      canvasCtx.strokeStyle = 'rgba(51,65,85,0.4)';
+      canvasCtx.lineWidth = 1;
+      for (var exp = minLog; exp <= maxLog; exp++) {
+        var gy = toY(Math.pow(10, exp));
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(pad.left, gy);
+        canvasCtx.lineTo(pad.left + plotW, gy);
+        canvasCtx.stroke();
+
+        canvasCtx.fillStyle = '#94a3b8';
+        canvasCtx.font = '11px "Segoe UI", sans-serif';
+        canvasCtx.textAlign = 'right';
+        canvasCtx.fillText('10' + superscriptDigit(exp), pad.left - 8, gy + 4);
+      }
+
+      // X-axis labels
+      canvasCtx.textAlign = 'center';
+      var xTicks = [1, 64, 128, 256, 384, 512];
+      for (var t = 0; t < xTicks.length; t++) {
+        var tx = toX(xTicks[t]);
+        canvasCtx.fillStyle = '#94a3b8';
+        canvasCtx.fillText(xTicks[t], tx, h - pad.bottom + 20);
+
+        canvasCtx.strokeStyle = 'rgba(51,65,85,0.25)';
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(tx, pad.top);
+        canvasCtx.lineTo(tx, pad.top + plotH);
+        canvasCtx.stroke();
+      }
+
+      // Axis labels
+      canvasCtx.fillStyle = '#94a3b8';
+      canvasCtx.font = '12px "Segoe UI", "PingFang SC", sans-serif';
+      canvasCtx.textAlign = 'center';
+      canvasCtx.fillText('d\u2096 \u7EF4\u5EA6', pad.left + plotW / 2, h - 4);
+
+      canvasCtx.save();
+      canvasCtx.translate(14, pad.top + plotH / 2);
+      canvasCtx.rotate(-Math.PI / 2);
+      canvasCtx.fillText('\u68AF\u5EA6\u91CF\u7EA7 (log)', 0, 0);
+      canvasCtx.restore();
+
+      // Draw lines
+      function drawLine(data, color, lineW) {
+        canvasCtx.strokeStyle = color;
+        canvasCtx.lineWidth = lineW;
+        canvasCtx.lineJoin = 'round';
+        canvasCtx.beginPath();
+        for (var i = 0; i < dkValues.length; i++) {
+          var x = toX(dkValues[i]);
+          var y = toY(data[i]);
+          if (i === 0) canvasCtx.moveTo(x, y);
+          else canvasCtx.lineTo(x, y);
+        }
+        canvasCtx.stroke();
+      }
+
+      // Glow effect for lines
+      canvasCtx.save();
+      canvasCtx.shadowBlur = 8;
+      canvasCtx.shadowColor = 'rgba(239,68,68,0.4)';
+      drawLine(unscaledGrads, '#ef4444', 2.5);
+      canvasCtx.shadowColor = 'rgba(34,197,94,0.4)';
+      drawLine(scaledGrads, '#22c55e', 2.5);
+      canvasCtx.restore();
+
+      // Current dk indicator
+      var curX = toX(currentDk);
+
+      // Vertical dashed line
+      canvasCtx.setLineDash([5, 4]);
+      canvasCtx.strokeStyle = 'rgba(56,189,248,0.6)';
+      canvasCtx.lineWidth = 1.5;
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(curX, pad.top);
+      canvasCtx.lineTo(curX, pad.top + plotH);
+      canvasCtx.stroke();
+      canvasCtx.setLineDash([]);
+
+      // Dots on lines at current dk
+      var simCur = scaleScores(RAW_SCORES, currentDk);
+      var uGrad = softmaxGradMagnitude(softmax(simCur));
+      var sGrad = softmaxGradMagnitude(softmax(RAW_SCORES));
+
+      function drawDot(x, y, color) {
+        canvasCtx.save();
+        canvasCtx.shadowBlur = 12;
+        canvasCtx.shadowColor = color;
+        canvasCtx.fillStyle = color;
+        canvasCtx.beginPath();
+        canvasCtx.arc(x, y, 5, 0, Math.PI * 2);
+        canvasCtx.fill();
+        canvasCtx.restore();
+
+        canvasCtx.fillStyle = '#0f172a';
+        canvasCtx.beginPath();
+        canvasCtx.arc(x, y, 2, 0, Math.PI * 2);
+        canvasCtx.fill();
+      }
+
+      drawDot(curX, toY(uGrad), '#ef4444');
+      drawDot(curX, toY(sGrad), '#22c55e');
+
+      // dk label
+      canvasCtx.fillStyle = '#38bdf8';
+      canvasCtx.font = 'bold 12px "Segoe UI", sans-serif';
+      canvasCtx.textAlign = 'center';
+      canvasCtx.fillText('d\u2096=' + currentDk, curX, pad.top - 10);
+    });
+  }
+
+  function superscriptDigit(n) {
+    var sups = { '0': '\u2070', '1': '\u00B9', '2': '\u00B2', '3': '\u00B3', '4': '\u2074',
+                 '5': '\u2075', '6': '\u2076', '7': '\u2077', '8': '\u2078', '9': '\u2079' };
+    var str = String(n);
+    var result = '';
+    for (var i = 0; i < str.length; i++) {
+      if (str[i] === '-') result += '\u207B';
+      else result += (sups[str[i]] || str[i]);
+    }
+    return result;
+  }
+
+  // --- Toggle gradient section ---
+  toggleBtn.addEventListener('click', function () {
+    var section = gradientSection;
+    if (section.classList.contains('collapsed')) {
+      section.classList.remove('collapsed');
+      toggleBtn.classList.add('active');
+    } else {
+      section.classList.add('collapsed');
+      toggleBtn.classList.remove('active');
+    }
+  });
+
+  // --- Events ---
+  dkSlider.addEventListener('input', update);
+  window.addEventListener('resize', function () {
+    if (!gradientSection.classList.contains('collapsed')) {
+      drawGradientChart(parseInt(dkSlider.value, 10));
+    }
+  });
+
+  // --- Init ---
+  buildRawScores();
+  update();
+
+  // --- iframe height reporting ---
+  (function(){var sendHeight=function(){if(window.parent===window)return;var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',sendHeight);window.addEventListener('resize',sendHeight);if('ResizeObserver' in window){var o=new ResizeObserver(sendHeight);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(sendHeight);setTimeout(sendHeight,250);setTimeout(sendHeight,1000)})();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM 使用技巧 - 基于 Transformer 原理的交互式可视化</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --purple: #8b5cf6;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 32px;
+}
+
+/* Tab Navigation */
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 6px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.15));
+  color: var(--primary);
+  box-shadow: 0 2px 12px rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.tab-icon {
+  font-size: 1.3rem;
+}
+
+.tab-label {
+  font-size: 0.75rem;
+}
+
+/* Panels */
+.panel {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.panel.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Card */
+.card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.section-title .icon {
+  font-size: 1.2rem;
+}
+
+.description {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+/* Tip Box */
+.tip-box {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(56, 189, 248, 0.08));
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: var(--accent);
+  line-height: 1.7;
+}
+
+.tip-box::before {
+  content: "💡 实用建议：";
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.warning-box {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(239, 68, 68, 0.06));
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--warning);
+  line-height: 1.7;
+}
+
+/* Slider */
+.slider-group {
+  margin: 20px 0;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.slider-value {
+  color: var(--primary);
+  font-weight: 600;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  cursor: pointer;
+  border: none;
+}
+
+/* Canvas */
+canvas {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+}
+
+/* Formula */
+.formula {
+  text-align: center;
+  padding: 16px;
+  margin: 16px 0;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 1.05rem;
+  color: var(--purple);
+  letter-spacing: 0.5px;
+}
+
+/* Token row */
+.token-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  align-items: flex-end;
+}
+
+.token-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.3s ease;
+}
+
+.token-bar {
+  width: 100%;
+  min-width: 28px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease, background 0.3s ease;
+}
+
+.token-text {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.token-weight {
+  font-size: 0.6rem;
+  color: var(--primary);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+
+/* Demo 4 specific */
+.cot-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .cot-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cot-panel {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+}
+
+.cot-panel h4 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  color: var(--text-dim);
+}
+
+.cot-panel.good {
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.cot-panel.bad {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.cot-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 4px;
+  transition: all 0.4s ease;
+  position: relative;
+}
+
+.cot-node.question {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: var(--primary);
+}
+
+.cot-node.step {
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: var(--purple);
+}
+
+.cot-node.answer {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: var(--accent);
+}
+
+.cot-node.active {
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+  transform: scale(1.08);
+}
+
+.cot-arrow {
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  opacity: 0.4;
+  transition: all 0.4s ease;
+}
+
+.cot-arrow.active {
+  opacity: 1;
+  color: var(--primary);
+}
+
+.cot-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 8px 0 16px;
+  min-height: 50px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--primary);
+}
+
+.btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+/* Attention line canvas */
+.attn-canvas-wrap {
+  position: relative;
+  margin: 16px 0;
+}
+
+/* Heatmap */
+.heatmap-grid {
+  display: grid;
+  gap: 2px;
+  margin: 16px 0;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  transition: background 0.5s ease;
+  position: relative;
+}
+
+.heatmap-cell:hover::after {
+  content: attr(data-val);
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  z-index: 10;
+  pointer-events: none;
+  font-family: monospace;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.legend-bar {
+  width: 120px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Distribution bars */
+.dist-bar-container {
+  margin: 16px 0;
+}
+
+.dist-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dist-bar-label {
+  width: 70px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: right;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dist-bar-track {
+  flex: 1;
+  height: 24px;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease, background 0.3s ease;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 0.7rem;
+  color: white;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Temperature indicator */
+.temp-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.temp-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.temp-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* Animation for CoT */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(56, 189, 248, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
+}
+
+.glow-pulse {
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  h1 { font-size: 1.5rem; }
+  .tab-btn { padding: 10px 4px; }
+  .tab-label { font-size: 0.65rem; }
+  .card { padding: 16px; }
+  .formula { font-size: 0.85rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>LLM 使用技巧</h1>
+  <p class="subtitle">基于 Transformer 架构原理的交互式解读</p>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="tab1" onclick="switchTab('tab1')">
+      <span class="tab-icon">📐</span>
+      <span class="tab-label">首尾记忆效应</span>
+    </button>
+    <button class="tab-btn" data-tab="tab2" onclick="switchTab('tab2')">
+      <span class="tab-icon">🌡️</span>
+      <span class="tab-label">温度参数</span>
+    </button>
+    <button class="tab-btn" data-tab="tab3" onclick="switchTab('tab3')">
+      <span class="tab-icon">🔍</span>
+      <span class="tab-label">注意力稀释</span>
+    </button>
+    <button class="tab-btn" data-tab="tab4" onclick="switchTab('tab4')">
+      <span class="tab-icon">🔗</span>
+      <span class="tab-label">CoT 原理</span>
+    </button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Demo 1: Primacy-Recency Effect              -->
+  <!-- ============================================ -->
+  <div id="tab1" class="panel active">
+    <div class="card">
+      <div class="section-title">
+        <span class="icon">📐</span>
+        首尾记忆效应 (Primacy-Recency Effect)
+      </div>
+      <p class="description">
+        在因果注意力（Causal Attention）中，最后一个 token 负责"汇总"前文所有信息来生成下一个词。
+        然而，注意力并非均匀分布——开头和结尾的内容往往获得更高的注意力权重，形成经典的 <strong>U 形曲线</strong>。
+        中间的内容容易被"稀释"而被模型忽略。
+      </p>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>上下文长度（句子数量）</span>
+          <span class="slider-value" id="primacy-len-val">12</span>
+        </div>
+        <input type="range" id="primacy-len" min="6" max="30" value="12" step="1" oninput="updatePrimacy()">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>首尾效应强度</span>
+          <span class="slider-value" id="primacy-strength-val">0.70</span>
+        </div>
+        <input type="range" id="primacy-strength" min="30" max="95" value="70" step="1" oninput="updatePrimacy()">
+      </div>
+
+      <canvas id="primacy-canvas" height="320"></canvas>
+
+      <div class="formula">
+        Attention(last) = softmax(q_last &middot; K<sup>T</sup> / &radic;d_k) &middot; V
+      </div>
+
+      <p class="description" style="margin-top:12px;">
+        上图展示了<strong>最后一个 token</strong> 对前文每个位置的注意力权重分布。
+        可以看到两端（开头 & 结尾）的权重明显更高，中间部分相对较低。
+        拖动滑块增加上下文长度，观察中间部分的注意力如何进一步被稀释。
+      </p>
+
+      <div class="tip-box">
+        把最重要的指令放在提示词的<strong>开头</strong>或<strong>结尾</strong>！中间位置的内容最容易被模型忽略。
+        这对长提示词尤其重要——如果你有一个关键约束，宁可重复写在开头和结尾各一次。
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Demo 2: Temperature Scaling                  -->
+  <!-- ============================================ -->
+  <div id="tab2" class="panel">
+    <div class="card">
+      <div class="section-title">
+        <span class="icon">🌡️</span>
+        温度参数 (Temperature Scaling)
+      </div>
+      <p class="description">
+        Transformer 在生成下一个词时，会对所有候选词计算 logits（原始分数），然后通过 softmax 函数转换为概率分布。
+        <strong>温度参数 T</strong> 控制这个概率分布的"尖锐"程度。温度越低分布越集中，温度越高分布越平坦。
+      </p>
+
+      <div class="formula">
+        P(word_i) = exp(logit_i / T) / &Sigma; exp(logit_j / T)
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>温度 T</span>
+          <span class="slider-value" id="temp-val">1.00</span>
+        </div>
+        <input type="range" id="temp-slider" min="5" max="200" value="100" step="1" oninput="updateTemperature()">
+      </div>
+
+      <div class="temp-indicator" id="temp-indicator">
+        <div>
+          <div class="temp-label" id="temp-mode">默认设置</div>
+          <div class="temp-desc" id="temp-desc">平衡的输出分布</div>
+        </div>
+        <div style="font-size:1.5rem;" id="temp-emoji">⚖️</div>
+      </div>
+
+      <div id="temp-bars" class="dist-bar-container"></div>
+
+      <canvas id="temp-canvas" height="260"></canvas>
+
+      <div class="tip-box">
+        <strong>写代码</strong>时用低温度 (0.1-0.3)，确保输出确定性高、逻辑严谨。<br>
+        <strong>写创意文章</strong>时用中高温度 (0.7-1.0)，让模型输出更多样化。<br>
+        <strong>头脑风暴</strong>时可尝试高温度 (1.2-1.5)，但注意连贯性可能下降。<br>
+        温度超过 1.5 通常会导致输出不可控。
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Demo 3: Context Window & Attention Dilution  -->
+  <!-- ============================================ -->
+  <div id="tab3" class="panel">
+    <div class="card">
+      <div class="section-title">
+        <span class="icon">🔍</span>
+        上下文窗口与注意力稀释 (Attention Dilution)
+      </div>
+      <p class="description">
+        Transformer 的自注意力机制中，每个位置的注意力权重之和恒为 1（softmax 归一化）。
+        这意味着上下文越长，每个 token 平均分到的注意力就越少。
+        这就是所谓的 <strong>"Lost in the Middle"</strong> 现象——长文本中间的信息最容易被遗忘。
+      </p>
+
+      <div class="formula">
+        平均注意力 = 1/N &nbsp;&nbsp;(N = 上下文长度)
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>上下文长度 N</span>
+          <span class="slider-value" id="dilution-len-val">500</span>
+        </div>
+        <input type="range" id="dilution-len" min="0" max="100" value="20" step="1" oninput="updateDilution()">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
+        <div style="text-align:center; padding: 12px; background: rgba(56,189,248,0.08); border-radius: 10px; border: 1px solid rgba(56,189,248,0.2);">
+          <div style="font-size:0.8rem; color:var(--text-dim);">上下文长度</div>
+          <div style="font-size:1.5rem; font-weight:700; color:var(--primary); font-family:monospace;" id="dilution-n-display">500</div>
+        </div>
+        <div style="text-align:center; padding: 12px; background: rgba(245,158,11,0.08); border-radius: 10px; border: 1px solid rgba(245,158,11,0.2);">
+          <div style="font-size:0.8rem; color:var(--text-dim);">平均注意力权重</div>
+          <div style="font-size:1.5rem; font-weight:700; color:var(--warning); font-family:monospace;" id="dilution-avg-display">0.200%</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px; font-size:0.85rem; color:var(--text-dim);">
+        注意力热力图 — 颜色越亮表示注意力越高（U 形分布 + Lost in the Middle）
+      </div>
+      <canvas id="heatmap-canvas" height="200"></canvas>
+
+      <div class="legend">
+        <span>低注意力</span>
+        <div class="legend-bar" style="background: linear-gradient(90deg, #0f172a, #1e40af, #38bdf8, #fbbf24, #ef4444);"></div>
+        <span>高注意力</span>
+      </div>
+
+      <canvas id="dilution-curve-canvas" height="240"></canvas>
+
+      <div class="tip-box">
+        长文本中，把关键信息放在<strong>开头</strong>或<strong>结尾</strong>，不要埋在中间！<br>
+        如果必须放在中间，可以用特殊标记（如 "【重要】"）来吸引模型注意力。<br>
+        上下文从 1K 增长到 100K 时，平均注意力下降了 100 倍。
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Demo 4: Chain-of-Thought                     -->
+  <!-- ============================================ -->
+  <div id="tab4" class="panel">
+    <div class="card">
+      <div class="section-title">
+        <span class="icon">🔗</span>
+        Chain-of-Thought 的注意力原理
+      </div>
+      <p class="description">
+        为什么让模型"一步步思考"效果更好？从注意力机制的角度看，<strong>CoT（思维链）</strong>在问题和答案之间
+        插入了中间推理步骤。每个步骤都为下一步提供了<strong>近距离的上下文</strong>，使注意力不必跨越过远的距离来
+        获取关键信息。这就像在河流中放置"垫脚石"——每一步都让下一步走得更稳。
+      </p>
+
+      <div class="cot-comparison">
+        <!-- Without CoT -->
+        <div class="cot-panel bad">
+          <h4 style="color:var(--danger);">没有 CoT：直接回答</h4>
+          <div class="cot-flow" id="no-cot-flow">
+            <div class="cot-node question" id="nc-q">问题</div>
+            <span class="cot-arrow" id="nc-arrow">&rarr;</span>
+            <div class="cot-node answer" id="nc-a">答案</div>
+          </div>
+          <canvas id="no-cot-canvas" height="100"></canvas>
+          <div style="font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+            注意力必须<strong style="color:var(--danger);">远距离跳跃</strong>，容易丢失关键信息
+          </div>
+        </div>
+
+        <!-- With CoT -->
+        <div class="cot-panel good">
+          <h4 style="color:var(--accent);">使用 CoT：逐步推理</h4>
+          <div class="cot-flow" id="cot-flow">
+            <div class="cot-node question" id="c-q">问题</div>
+            <span class="cot-arrow" id="c-a1">&rarr;</span>
+            <div class="cot-node step" id="c-s1">步骤1</div>
+            <span class="cot-arrow" id="c-a2">&rarr;</span>
+            <div class="cot-node step" id="c-s2">步骤2</div>
+            <span class="cot-arrow" id="c-a3">&rarr;</span>
+            <div class="cot-node step" id="c-s3">步骤3</div>
+            <span class="cot-arrow" id="c-a4">&rarr;</span>
+            <div class="cot-node answer" id="c-a">答案</div>
+          </div>
+          <canvas id="cot-canvas" height="100"></canvas>
+          <div style="font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+            每步推理都提供<strong style="color:var(--accent);">近距离上下文</strong>，注意力更集中
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" id="cot-play-btn" onclick="playCotAnimation()">播放动画</button>
+        <button class="btn" onclick="resetCotAnimation()">重置</button>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <div class="section-title">
+          <span class="icon">📊</span>
+          注意力距离对比
+        </div>
+        <canvas id="cot-distance-canvas" height="260"></canvas>
+        <p class="description" style="margin-top:12px;">
+          左侧：没有 CoT 时，答案必须"远距离"关注问题中的关键信息，注意力容易分散。<br>
+          右侧：使用 CoT 后，每一步只需要关注"近距离"的前一步，信息传递更加可靠。<br>
+          这就是为什么 <strong>"Let's think step by step"</strong> 能显著提升复杂推理任务的准确率。
+        </p>
+      </div>
+
+      <div class="tip-box">
+        让模型"先想后答"——每一步推理都为下一步提供近距离的上下文。<br>
+        <strong>简单任务</strong>：直接提问即可，不需要 CoT。<br>
+        <strong>复杂推理</strong>：使用"请一步步分析"或"Let's think step by step"。<br>
+        <strong>多步计算</strong>：要求模型"先列出已知条件，再逐步推导"。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// Tab Navigation
+// ==========================================
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.panel').forEach(function(panel) {
+    panel.classList.toggle('active', panel.id === tabId);
+  });
+  reportHeight();
+  // Initialize the active panel
+  if (tabId === 'tab1') updatePrimacy();
+  if (tabId === 'tab2') updateTemperature();
+  if (tabId === 'tab3') updateDilution();
+  if (tabId === 'tab4') { drawCotDistanceChart(); resetCotAnimation(); }
+}
+
+// ==========================================
+// Utility: DPR-aware canvas sizing
+// ==========================================
+function setupCanvas(canvas, desiredHeight) {
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  var w = rect.width || canvas.parentElement.offsetWidth || 800;
+  canvas.width = w * dpr;
+  canvas.height = (desiredHeight || 300) * dpr;
+  canvas.style.height = desiredHeight + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx: ctx, w: w, h: desiredHeight };
+}
+
+// ==========================================
+// Demo 1: Primacy-Recency Effect
+// ==========================================
+var primacySentences = [
+  "你是一个专业的翻译助手",
+  "请将以下内容翻译成英文",
+  "保持原文的语气和风格",
+  "注意专业术语的准确性",
+  "今天天气不错适合出门",
+  "我昨天买了一本新书",
+  "这个项目需要更多人手",
+  "下周二有一个重要会议",
+  "数据分析报告已完成",
+  "请检查代码中的错误",
+  "服务器需要升级内存",
+  "客户反馈非常积极",
+  "新功能将在下周发布",
+  "团队合作效率很高",
+  "文档需要及时更新",
+  "安全审查已经通过",
+  "性能优化效果显著",
+  "用户体验持续改善",
+  "测试覆盖率达标",
+  "部署流程已自动化",
+  "监控系统运行正常",
+  "日志分析发现异常",
+  "缓存命中率很高",
+  "网络延迟有所下降",
+  "存储空间即将不足",
+  "备份任务定时执行",
+  "权限配置已更新",
+  "接口文档已同步",
+  "回复时使用中文",
+  "保持简洁专业的风格"
+];
+
+function computePrimacyWeights(n, strength) {
+  var weights = [];
+  var s = strength;
+  for (var i = 0; i < n; i++) {
+    var posRatio = i / (n - 1);
+    // U-shape: high at beginning and end, low in middle
+    var uShape = Math.pow(1 - posRatio, 1.5) * s + Math.pow(posRatio, 2.5) * s * 1.2;
+    // Baseline
+    var baseline = (1 - s) * 0.5;
+    // Add some noise for realism
+    var noise = Math.sin(i * 3.7 + n * 0.3) * 0.03 + Math.cos(i * 2.1) * 0.02;
+    weights.push(Math.max(0.02, uShape + baseline + noise));
+  }
+  // Normalize
+  var sum = weights.reduce(function(a, b) { return a + b; }, 0);
+  return weights.map(function(w) { return w / sum; });
+}
+
+function updatePrimacy() {
+  var n = parseInt(document.getElementById('primacy-len').value);
+  var strength = parseInt(document.getElementById('primacy-strength').value) / 100;
+  document.getElementById('primacy-len-val').textContent = n;
+  document.getElementById('primacy-strength-val').textContent = strength.toFixed(2);
+
+  var weights = computePrimacyWeights(n, strength);
+  drawPrimacyChart(weights, n);
+}
+
+function drawPrimacyChart(weights, n) {
+  var canvas = document.getElementById('primacy-canvas');
+  var s = setupCanvas(canvas, 320);
+  var ctx = s.ctx, w = s.w, h = s.h;
+  var maxW = Math.max.apply(null, weights);
+
+  var padLeft = 50, padRight = 20, padTop = 40, padBottom = 60;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(51,65,85,0.4)';
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i <= 5; i++) {
+    var y = padTop + chartH - (i / 5) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(w - padRight, y);
+    ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText((maxW * i / 5 * 100).toFixed(1) + '%', padLeft - 6, y + 4);
+  }
+
+  // Bars
+  var barW = Math.max(2, (chartW / n) - 2);
+  var gap = (chartW - barW * n) / (n + 1);
+
+  for (var i = 0; i < n; i++) {
+    var x = padLeft + gap + i * (barW + gap);
+    var barH = (weights[i] / maxW) * chartH;
+    var y = padTop + chartH - barH;
+
+    // Color gradient: edges are bright, middle is dim
+    var posRatio = i / (n - 1);
+    var edgeness = Math.pow(1 - 2 * Math.abs(posRatio - 0.5), 1);
+    var r, g, b;
+    if (posRatio < 0.15 || posRatio > 0.85) {
+      r = 56; g = 189; b = 248; // primary blue
+    } else if (posRatio < 0.3 || posRatio > 0.7) {
+      r = 139; g = 92; b = 246; // purple
+    } else {
+      r = 71; g = 85; b = 105; // dim
+    }
+
+    var grad = ctx.createLinearGradient(x, y, x, padTop + chartH);
+    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',0.9)');
+    grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0.3)');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, [3, 3, 0, 0]);
+    ctx.fill();
+
+    // Labels for first, middle, last
+    if (i === 0 || i === n - 1 || i === Math.floor(n / 2)) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.save();
+      ctx.translate(x + barW / 2, padTop + chartH + 8);
+      var label = i === 0 ? '开头' : (i === n - 1 ? '结尾' : '中间');
+      ctx.fillText(label, 0, 10);
+      ctx.fillText('(' + (i + 1) + ')', 0, 22);
+      ctx.restore();
+    }
+  }
+
+  // U-shape overlay curve
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 3]);
+  for (var i = 0; i < n; i++) {
+    var x = padLeft + gap + i * (barW + gap) + barW / 2;
+    var barH = (weights[i] / maxW) * chartH;
+    var y = padTop + chartH - barH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('最后一个 token 对各位置的注意力权重分布 (U 形曲线)', w / 2, 20);
+
+  // Labels
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = '11px sans-serif';
+  var firstX = padLeft + gap + barW / 2;
+  ctx.fillText('高注意力', firstX + 20, padTop + 14);
+  var lastX = padLeft + gap + (n - 1) * (barW + gap) + barW / 2;
+  ctx.fillText('高注意力', lastX - 20, padTop + 14);
+  ctx.fillStyle = '#64748b';
+  var midX = padLeft + gap + Math.floor(n / 2) * (barW + gap) + barW / 2;
+  ctx.fillText('低注意力(稀释)', midX, padTop + 14);
+}
+
+// ==========================================
+// Demo 2: Temperature Scaling
+// ==========================================
+var vocabWords = ["猫", "狗", "鸟", "鱼", "兔", "马", "虎", "龙", "蛇", "鼠"];
+var baseLogits = [3.5, 2.8, 2.1, 1.6, 1.2, 0.9, 0.5, 0.2, -0.3, -0.8];
+
+function softmaxWithTemp(logits, temperature) {
+  var t = Math.max(0.01, temperature);
+  var scaled = logits.map(function(l) { return l / t; });
+  var maxVal = Math.max.apply(null, scaled);
+  var exps = scaled.map(function(s) { return Math.exp(s - maxVal); });
+  var sumExp = exps.reduce(function(a, b) { return a + b; }, 0);
+  return exps.map(function(e) { return e / sumExp; });
+}
+
+function updateTemperature() {
+  var rawVal = parseInt(document.getElementById('temp-slider').value);
+  var temp = rawVal / 100;
+  document.getElementById('temp-val').textContent = temp.toFixed(2);
+
+  var probs = softmaxWithTemp(baseLogits, temp);
+
+  // Update indicator
+  var modeEl = document.getElementById('temp-mode');
+  var descEl = document.getElementById('temp-desc');
+  var emojiEl = document.getElementById('temp-emoji');
+  var indicator = document.getElementById('temp-indicator');
+
+  if (temp < 0.4) {
+    modeEl.textContent = '确定性模式';
+    modeEl.style.color = '#38bdf8';
+    descEl.textContent = '输出高度确定，适合写代码、数学计算';
+    emojiEl.textContent = '🎯';
+    indicator.style.borderColor = 'rgba(56,189,248,0.3)';
+  } else if (temp < 0.8) {
+    modeEl.textContent = '偏确定性';
+    modeEl.style.color = '#22c55e';
+    descEl.textContent = '较确定但有一定多样性';
+    emojiEl.textContent = '✅';
+    indicator.style.borderColor = 'rgba(34,197,94,0.3)';
+  } else if (temp < 1.2) {
+    modeEl.textContent = '默认 / 平衡';
+    modeEl.style.color = '#f59e0b';
+    descEl.textContent = '平衡的输出分布，适合大多数场景';
+    emojiEl.textContent = '⚖️';
+    indicator.style.borderColor = 'rgba(245,158,11,0.3)';
+  } else if (temp < 1.6) {
+    modeEl.textContent = '创造性模式';
+    modeEl.style.color = '#8b5cf6';
+    descEl.textContent = '输出更多样化，适合创意写作';
+    emojiEl.textContent = '🎨';
+    indicator.style.borderColor = 'rgba(139,92,246,0.3)';
+  } else {
+    modeEl.textContent = '高随机性';
+    modeEl.style.color = '#ef4444';
+    descEl.textContent = '输出不可预测，容易不连贯';
+    emojiEl.textContent = '🎲';
+    indicator.style.borderColor = 'rgba(239,68,68,0.3)';
+  }
+
+  // Draw bars
+  drawTempBars(probs);
+  drawTempCurve(temp);
+}
+
+function drawTempBars(probs) {
+  var container = document.getElementById('temp-bars');
+  var maxProb = Math.max.apply(null, probs);
+  var html = '';
+  for (var i = 0; i < vocabWords.length; i++) {
+    var pct = (probs[i] * 100).toFixed(1);
+    var widthPct = (probs[i] / maxProb * 100).toFixed(1);
+    var hue;
+    if (i === 0) hue = '199,89%,56%'; // primary
+    else if (i < 3) hue = '142,71%,45%'; // accent
+    else if (i < 6) hue = '256,58%,66%'; // purple
+    else hue = '215,14%,34%'; // dim
+
+    html += '<div class="dist-bar-row">' +
+      '<div class="dist-bar-label">"' + vocabWords[i] + '"</div>' +
+      '<div class="dist-bar-track">' +
+        '<div class="dist-bar-fill" style="width:' + widthPct + '%; background: hsla(' + hue + ',0.8);">' +
+          (probs[i] > 0.03 ? pct + '%' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function drawTempCurve(temperature) {
+  var canvas = document.getElementById('temp-canvas');
+  var s = setupCanvas(canvas, 260);
+  var ctx = s.ctx, w = s.w, h = s.h;
+
+  var padLeft = 50, padRight = 20, padTop = 35, padBottom = 40;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw curves for multiple temperatures, highlight current
+  var temps = [0.1, 0.5, 1.0, 1.5, 2.0];
+  var colors = ['#38bdf8', '#22c55e', '#f59e0b', '#8b5cf6', '#ef4444'];
+  var labels = ['T=0.1', 'T=0.5', 'T=1.0', 'T=1.5', 'T=2.0'];
+
+  // Grid
+  ctx.strokeStyle = 'rgba(51,65,85,0.3)';
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i <= 4; i++) {
+    var y = padTop + (i / 4) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(w - padRight, y);
+    ctx.stroke();
+  }
+
+  // X axis labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  for (var i = 0; i < vocabWords.length; i++) {
+    var x = padLeft + (i / (vocabWords.length - 1)) * chartW;
+    ctx.fillText('"' + vocabWords[i] + '"', x, h - 8);
+  }
+
+  // Draw reference curves
+  for (var t = 0; t < temps.length; t++) {
+    var probs = softmaxWithTemp(baseLogits, temps[t]);
+    var maxP = 1.0;
+
+    ctx.beginPath();
+    ctx.strokeStyle = colors[t];
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+
+    for (var i = 0; i < probs.length; i++) {
+      var x = padLeft + (i / (probs.length - 1)) * chartW;
+      var y = padTop + chartH - (probs[i] / maxP) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Label
+    var labelX = w - padRight + 2;
+    var lastY = padTop + chartH - (probs[probs.length - 1] / maxP) * chartH;
+    ctx.fillStyle = colors[t];
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+  }
+
+  // Draw current temperature curve (bold)
+  var currentProbs = softmaxWithTemp(baseLogits, temperature);
+  ctx.beginPath();
+  ctx.lineWidth = 3;
+
+  // Pick color based on temperature
+  var curColor;
+  if (temperature < 0.3) curColor = '#38bdf8';
+  else if (temperature < 0.7) curColor = '#22c55e';
+  else if (temperature < 1.2) curColor = '#f59e0b';
+  else if (temperature < 1.6) curColor = '#8b5cf6';
+  else curColor = '#ef4444';
+
+  ctx.strokeStyle = curColor;
+  ctx.shadowColor = curColor;
+  ctx.shadowBlur = 8;
+
+  for (var i = 0; i < currentProbs.length; i++) {
+    var x = padLeft + (i / (currentProbs.length - 1)) * chartW;
+    var y = padTop + chartH - (currentProbs[i] / 1.0) * chartH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Draw dots
+  for (var i = 0; i < currentProbs.length; i++) {
+    var x = padLeft + (i / (currentProbs.length - 1)) * chartW;
+    var y = padTop + chartH - (currentProbs[i] / 1.0) * chartH;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = curColor;
+    ctx.fill();
+  }
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('概率分布曲线 (当前 T=' + temperature.toFixed(2) + '，虚线为参考温度)', w / 2, 18);
+
+  // Y-axis label
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('100%', padLeft - 6, padTop + 4);
+  ctx.fillText('0%', padLeft - 6, padTop + chartH + 4);
+}
+
+// ==========================================
+// Demo 3: Attention Dilution
+// ==========================================
+function mapSliderToN(val) {
+  // Exponential mapping: 0-100 → 100-128000
+  var minLog = Math.log(100);
+  var maxLog = Math.log(128000);
+  return Math.round(Math.exp(minLog + (val / 100) * (maxLog - minLog)));
+}
+
+function updateDilution() {
+  var rawVal = parseInt(document.getElementById('dilution-len').value);
+  var n = mapSliderToN(rawVal);
+  document.getElementById('dilution-len-val').textContent = n.toLocaleString();
+  document.getElementById('dilution-n-display').textContent = n.toLocaleString();
+  var avg = (1 / n * 100);
+  document.getElementById('dilution-avg-display').textContent = avg < 0.001 ? avg.toExponential(2) : avg.toFixed(3) + '%';
+
+  drawDilutionHeatmap(n);
+  drawDilutionCurve(n);
+}
+
+function dilutionAttention(posRatio, n) {
+  // U-shape: high at edges, low in middle; more pronounced with larger n
+  var distFromEdge = Math.min(posRatio, 1 - posRatio);
+  var midPenalty = Math.pow(distFromEdge * 2, 1.5);
+  var base = 1.0 / n;
+  var edge = base * (3 + Math.log10(n));
+  var mid = base * (0.3 + 0.5 / Math.log10(n + 1));
+  return mid + (edge - mid) * (1 - midPenalty);
+}
+
+function drawDilutionHeatmap(n) {
+  var canvas = document.getElementById('heatmap-canvas');
+  var s = setupCanvas(canvas, 200);
+  var ctx = s.ctx, w = s.w, h = s.h;
+
+  ctx.clearRect(0, 0, w, h);
+
+  var cols = Math.min(n, 80);
+  var rows = 5;
+  var padX = 30, padY = 30;
+  var cellW = (w - 2 * padX) / cols;
+  var cellH = (h - 2 * padY) / rows;
+
+  // Compute attention values for one query attending to all keys
+  var attentions = [];
+  for (var c = 0; c < cols; c++) {
+    var posRatio = c / (cols - 1);
+    attentions.push(dilutionAttention(posRatio, n));
+  }
+  var maxAttn = Math.max.apply(null, attentions);
+  var minAttn = Math.min.apply(null, attentions);
+
+  // Draw rows (different query positions)
+  var queryPositions = [0.0, 0.25, 0.5, 0.75, 1.0];
+  var queryLabels = ['开头', '1/4处', '中间', '3/4处', '结尾'];
+
+  for (var r = 0; r < rows; r++) {
+    // Label
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(queryLabels[r], padX - 4, padY + r * cellH + cellH / 2 + 3);
+
+    for (var c = 0; c < cols; c++) {
+      var posRatio = c / (cols - 1);
+      // For each query position, the attention is modulated
+      var queryPos = queryPositions[r];
+      var distToQuery = Math.abs(posRatio - queryPos);
+      var localBoost = Math.exp(-distToQuery * 3) * 0.5;
+      var val = attentions[c] + localBoost * (attentions[c]);
+      var normVal = Math.min(1, (val - minAttn * 0.8) / (maxAttn * 1.5 - minAttn * 0.8));
+
+      // Color: dark blue → blue → cyan → yellow → red
+      var red, green, blue;
+      if (normVal < 0.25) {
+        var t = normVal / 0.25;
+        red = Math.round(15 + t * 15);
+        green = Math.round(23 + t * 41);
+        blue = Math.round(42 + t * 130);
+      } else if (normVal < 0.5) {
+        var t = (normVal - 0.25) / 0.25;
+        red = Math.round(30 + t * 26);
+        green = Math.round(64 + t * 125);
+        blue = Math.round(172 + t * 76);
+      } else if (normVal < 0.75) {
+        var t = (normVal - 0.5) / 0.25;
+        red = Math.round(56 + t * 195);
+        green = Math.round(189 + t * 2);
+        blue = Math.round(248 - t * 224);
+      } else {
+        var t = (normVal - 0.75) / 0.25;
+        red = Math.round(251 - t * 12);
+        green = Math.round(191 - t * 123);
+        blue = Math.round(24 - t * 24);
+      }
+
+      ctx.fillStyle = 'rgb(' + red + ',' + green + ',' + blue + ')';
+      ctx.fillRect(padX + c * cellW, padY + r * cellH, cellW - 1, cellH - 1);
+    }
+  }
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('注意力热力图 (N=' + n.toLocaleString() + ')', w / 2, 16);
+
+  // X-axis labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('开头', padX + 10, h - 6);
+  ctx.fillText('中间', w / 2, h - 6);
+  ctx.fillText('结尾', w - padX - 10, h - 6);
+}
+
+function drawDilutionCurve(n) {
+  var canvas = document.getElementById('dilution-curve-canvas');
+  var s = setupCanvas(canvas, 240);
+  var ctx = s.ctx, w = s.w, h = s.h;
+
+  var padLeft = 55, padRight = 20, padTop = 35, padBottom = 45;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(51,65,85,0.3)';
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i <= 5; i++) {
+    var y = padTop + (i / 5) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(w - padRight, y);
+    ctx.stroke();
+  }
+
+  // Draw multiple N curves for comparison
+  var nValues = [100, 500, 2000, 10000, 50000, 128000];
+  var nColors = ['#38bdf8', '#22c55e', '#f59e0b', '#8b5cf6', '#ef4444', '#94a3b8'];
+  var points = 80;
+
+  // Find global max for scaling
+  var globalMax = 0;
+  for (var ni = 0; ni < nValues.length; ni++) {
+    for (var p = 0; p < points; p++) {
+      var posRatio = p / (points - 1);
+      var val = dilutionAttention(posRatio, nValues[ni]);
+      if (val > globalMax) globalMax = val;
+    }
+  }
+
+  // Draw reference curves
+  for (var ni = 0; ni < nValues.length; ni++) {
+    var isCurrentScale = Math.abs(Math.log(nValues[ni]) - Math.log(n)) < 0.5;
+    ctx.beginPath();
+    ctx.strokeStyle = nColors[ni];
+    ctx.lineWidth = isCurrentScale ? 3 : 1;
+    ctx.globalAlpha = isCurrentScale ? 1 : 0.3;
+    if (!isCurrentScale) ctx.setLineDash([3, 3]);
+
+    for (var p = 0; p < points; p++) {
+      var posRatio = p / (points - 1);
+      var val = dilutionAttention(posRatio, nValues[ni]);
+      var x = padLeft + posRatio * chartW;
+      var y = padTop + chartH - (val / globalMax) * chartH;
+      if (p === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Label
+    if (isCurrentScale || ni % 2 === 0) {
+      var labelY = padTop + chartH - (dilutionAttention(0, nValues[ni]) / globalMax) * chartH;
+      ctx.fillStyle = nColors[ni];
+      ctx.font = (isCurrentScale ? 'bold ' : '') + '9px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('N=' + nValues[ni].toLocaleString(), padLeft + 4, labelY - 4);
+    }
+  }
+
+  // Draw current N curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#38bdf8';
+  ctx.shadowBlur = 6;
+
+  for (var p = 0; p < points; p++) {
+    var posRatio = p / (points - 1);
+    var val = dilutionAttention(posRatio, n);
+    var x = padLeft + posRatio * chartW;
+    var y = padTop + chartH - (val / globalMax) * chartH;
+    if (p === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Fill under current curve
+  ctx.lineTo(padLeft + chartW, padTop + chartH);
+  ctx.lineTo(padLeft, padTop + chartH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(56,189,248,0.08)';
+  ctx.fill();
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('各位置注意力分布 (当前 N=' + n.toLocaleString() + ')', w / 2, 18);
+
+  // X labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('开头', padLeft, h - 8);
+  ctx.fillText('中间', padLeft + chartW / 2, h - 8);
+  ctx.fillText('结尾', padLeft + chartW, h - 8);
+
+  // Y label
+  ctx.textAlign = 'right';
+  ctx.fillText('注意力', padLeft - 6, padTop - 4);
+}
+
+// ==========================================
+// Demo 4: Chain-of-Thought
+// ==========================================
+var cotAnimFrame = 0;
+var cotAnimRunning = false;
+var cotAnimTimer = null;
+
+function resetCotAnimation() {
+  cotAnimRunning = false;
+  cotAnimFrame = 0;
+  if (cotAnimTimer) { clearTimeout(cotAnimTimer); cotAnimTimer = null; }
+
+  // Reset all nodes
+  var allNodes = document.querySelectorAll('.cot-node');
+  allNodes.forEach(function(n) { n.classList.remove('active', 'glow-pulse'); });
+  var allArrows = document.querySelectorAll('.cot-arrow');
+  allArrows.forEach(function(a) { a.classList.remove('active'); });
+
+  drawNoCotAttention(-1);
+  drawCotAttention(-1);
+  drawCotDistanceChart();
+}
+
+function playCotAnimation() {
+  if (cotAnimRunning) return;
+  resetCotAnimation();
+  cotAnimRunning = true;
+
+  var steps = [
+    // No CoT: question highlights, then big jump to answer
+    function() {
+      document.getElementById('nc-q').classList.add('active', 'glow-pulse');
+      drawNoCotAttention(0);
+    },
+    function() {
+      document.getElementById('nc-arrow').classList.add('active');
+    },
+    function() {
+      document.getElementById('nc-q').classList.remove('glow-pulse');
+      document.getElementById('nc-a').classList.add('active', 'glow-pulse');
+      drawNoCotAttention(1);
+    },
+    // CoT: question, step1, step2, step3, answer
+    function() {
+      document.getElementById('c-q').classList.add('active', 'glow-pulse');
+      drawCotAttention(0);
+    },
+    function() {
+      document.getElementById('c-a1').classList.add('active');
+      document.getElementById('c-q').classList.remove('glow-pulse');
+      document.getElementById('c-s1').classList.add('active', 'glow-pulse');
+      drawCotAttention(1);
+    },
+    function() {
+      document.getElementById('c-a2').classList.add('active');
+      document.getElementById('c-s1').classList.remove('glow-pulse');
+      document.getElementById('c-s2').classList.add('active', 'glow-pulse');
+      drawCotAttention(2);
+    },
+    function() {
+      document.getElementById('c-a3').classList.add('active');
+      document.getElementById('c-s2').classList.remove('glow-pulse');
+      document.getElementById('c-s3').classList.add('active', 'glow-pulse');
+      drawCotAttention(3);
+    },
+    function() {
+      document.getElementById('c-a4').classList.add('active');
+      document.getElementById('c-s3').classList.remove('glow-pulse');
+      document.getElementById('c-a').classList.add('active', 'glow-pulse');
+      drawCotAttention(4);
+    }
+  ];
+
+  var i = 0;
+  function nextStep() {
+    if (i < steps.length && cotAnimRunning) {
+      steps[i]();
+      i++;
+      cotAnimTimer = setTimeout(nextStep, 700);
+    } else {
+      cotAnimRunning = false;
+    }
+  }
+  nextStep();
+}
+
+function drawNoCotAttention(step) {
+  var canvas = document.getElementById('no-cot-canvas');
+  var s = setupCanvas(canvas, 100);
+  var ctx = s.ctx, w = s.w, h = s.h;
+  ctx.clearRect(0, 0, w, h);
+
+  var qx = 40, ay = 50, ax = w - 40;
+
+  if (step >= 0) {
+    // Draw attention arc from answer to question
+    ctx.beginPath();
+    ctx.strokeStyle = step >= 1 ? 'rgba(239,68,68,0.7)' : 'rgba(56,189,248,0.3)';
+    ctx.lineWidth = step >= 1 ? 3 : 1;
+    ctx.setLineDash(step >= 1 ? [] : [4, 4]);
+
+    var midX = (qx + ax) / 2;
+    var arcH = 35;
+    ctx.moveTo(qx, ay);
+    ctx.quadraticCurveTo(midX, ay - arcH, ax, ay);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (step >= 1) {
+      // Distance label
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('长距离注意力 (容易丢失)', midX, ay - arcH - 6);
+
+      // Danger indicators
+      ctx.fillStyle = 'rgba(239,68,68,0.2)';
+      ctx.beginPath();
+      ctx.arc(midX, ay - arcH + 5, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('!', midX, ay - arcH + 10);
+    }
+  }
+
+  // Nodes
+  ctx.fillStyle = step >= 0 ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.1)';
+  ctx.beginPath();
+  ctx.arc(qx, ay, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Q', qx, ay + 3);
+
+  ctx.fillStyle = step >= 1 ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.1)';
+  ctx.beginPath();
+  ctx.arc(ax, ay, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.fillText('A', ax, ay + 3);
+}
+
+function drawCotAttention(step) {
+  var canvas = document.getElementById('cot-canvas');
+  var s = setupCanvas(canvas, 100);
+  var ctx = s.ctx, w = s.w, h = s.h;
+  ctx.clearRect(0, 0, w, h);
+
+  var positions = [];
+  var labels = ['Q', 'S1', 'S2', 'S3', 'A'];
+  var colors = ['#38bdf8', '#8b5cf6', '#8b5cf6', '#8b5cf6', '#22c55e'];
+  var numNodes = 5;
+  var startX = 30, endX = w - 30;
+
+  for (var i = 0; i < numNodes; i++) {
+    positions.push(startX + (i / (numNodes - 1)) * (endX - startX));
+  }
+
+  var ay = 55;
+
+  // Draw connections
+  for (var i = 0; i < numNodes - 1; i++) {
+    var isActive = step > i;
+    ctx.beginPath();
+    ctx.strokeStyle = isActive ? 'rgba(34,197,94,0.7)' : 'rgba(51,65,85,0.3)';
+    ctx.lineWidth = isActive ? 2.5 : 1;
+
+    var midX = (positions[i] + positions[i + 1]) / 2;
+    ctx.moveTo(positions[i], ay);
+    ctx.quadraticCurveTo(midX, ay - 18, positions[i + 1], ay);
+    ctx.stroke();
+
+    if (isActive) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('短距离', midX, ay - 20);
+    }
+  }
+
+  // Nodes
+  for (var i = 0; i < numNodes; i++) {
+    var isActive = step >= i;
+    var color = colors[i];
+    ctx.fillStyle = isActive ? color + '44' : color + '11';
+    ctx.beginPath();
+    ctx.arc(positions[i], ay, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (isActive) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = isActive ? color : '#475569';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], positions[i], ay + 3);
+  }
+}
+
+function drawCotDistanceChart() {
+  var canvas = document.getElementById('cot-distance-canvas');
+  var s = setupCanvas(canvas, 260);
+  var ctx = s.ctx, w = s.w, h = s.h;
+
+  var padLeft = 20, padRight = 20, padTop = 40, padBottom = 50;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+  var midX = w / 2;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('注意力距离对比', w / 2, 20);
+
+  // Left half: Without CoT
+  var leftW = chartW / 2 - 10;
+  ctx.fillStyle = 'rgba(239,68,68,0.06)';
+  ctx.fillRect(padLeft, padTop, leftW, chartH);
+  ctx.strokeStyle = 'rgba(239,68,68,0.2)';
+  ctx.strokeRect(padLeft, padTop, leftW, chartH);
+
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('没有 CoT', padLeft + leftW / 2, padTop + 18);
+
+  // Draw attention as bars (distance)
+  var noCotDistances = [{ label: '答案→问题', dist: 100, color: '#ef4444' }];
+  var barY = padTop + 40;
+  var barMaxW = leftW - 40;
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('注意力跨越距离', padLeft + leftW / 2, barY);
+
+  // Big red bar
+  var bx = padLeft + 20;
+  var by = barY + 16;
+  var bw = barMaxW;
+  var bh = 28;
+  var grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+  grad.addColorStop(0, 'rgba(239,68,68,0.2)');
+  grad.addColorStop(1, 'rgba(239,68,68,0.7)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillText('100 tokens 距离', bx + bw / 2, by + bh / 2 + 4);
+
+  // Attention accuracy
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('60%', padLeft + leftW / 2, padTop + chartH - 40);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('信息保留率 (估计)', padLeft + leftW / 2, padTop + chartH - 22);
+
+  // Right half: With CoT
+  var rightX = midX + 10;
+  var rightW = chartW / 2 - 10;
+  ctx.fillStyle = 'rgba(34,197,94,0.06)';
+  ctx.fillRect(rightX, padTop, rightW, chartH);
+  ctx.strokeStyle = 'rgba(34,197,94,0.2)';
+  ctx.strokeRect(rightX, padTop, rightW, chartH);
+
+  ctx.fillStyle = '#22c55e';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('使用 CoT', rightX + rightW / 2, padTop + 18);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('每步注意力距离', rightX + rightW / 2, barY);
+
+  // Multiple small green bars
+  var stepLabels = ['步骤1→问题', '步骤2→步骤1', '步骤3→步骤2', '答案→步骤3'];
+  var stepBarH = 18;
+  var stepGap = 6;
+  var maxStepW = rightW - 40;
+  var stepStartY = barY + 14;
+
+  for (var i = 0; i < stepLabels.length; i++) {
+    var sy = stepStartY + i * (stepBarH + stepGap);
+    var sw = maxStepW * 0.25; // Short distance
+
+    var sGrad = ctx.createLinearGradient(rightX + 20, 0, rightX + 20 + sw, 0);
+    sGrad.addColorStop(0, 'rgba(34,197,94,0.2)');
+    sGrad.addColorStop(1, 'rgba(34,197,94,0.7)');
+    ctx.fillStyle = sGrad;
+    ctx.beginPath();
+    ctx.roundRect(rightX + 20, sy, sw, stepBarH, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(stepLabels[i], rightX + 20 + sw + 6, sy + stepBarH / 2 + 3);
+  }
+
+  // Attention accuracy
+  ctx.fillStyle = '#22c55e';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('95%', rightX + rightW / 2, padTop + chartH - 40);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('信息保留率 (估计)', rightX + rightW / 2, padTop + chartH - 22);
+
+  // VS label
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('VS', midX, padTop + chartH / 2 + 10);
+}
+
+// ==========================================
+// Initialization
+// ==========================================
+function init() {
+  updatePrimacy();
+  updateTemperature();
+  updateDilution();
+  drawCotDistanceChart();
+  resetCotAnimation();
+}
+
+// Handle window resize
+var resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function() {
+    var activePanel = document.querySelector('.panel.active');
+    if (activePanel) {
+      var tabId = activePanel.id;
+      if (tabId === 'tab1') updatePrimacy();
+      if (tabId === 'tab2') updateTemperature();
+      if (tabId === 'tab3') updateDilution();
+      if (tabId === 'tab4') { drawCotDistanceChart(); }
+    }
+    reportHeight();
+  }, 200);
+});
+
+// roundRect polyfill
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+    var r = Array.isArray(radii) ? radii[0] : radii;
+    r = Math.min(r, w / 2, h / 2);
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.arcTo(x + w, y, x + w, y + r, r);
+    this.lineTo(x + w, y + h - r);
+    this.arcTo(x + w, y + h, x + w - r, y + h, r);
+    this.lineTo(x + r, y + h);
+    this.arcTo(x, y + h, x, y + h - r, r);
+    this.lineTo(x, y + r);
+    this.arcTo(x, y, x + r, y, r);
+  };
+}
+
+// Initialize on load
+window.addEventListener('DOMContentLoaded', init);
+
+// ==========================================
+// iframe height reporting
+// ==========================================
+function reportHeight() {
+  var height = document.documentElement.scrollHeight;
+  window.parent.postMessage({ type: 'iframeHeight', height: height }, '*');
+}
+window.addEventListener('load', function() { reportHeight(); setTimeout(reportHeight, 500); });
+new ResizeObserver(reportHeight).observe(document.body);
+</script>
+
+</body>
+</html>

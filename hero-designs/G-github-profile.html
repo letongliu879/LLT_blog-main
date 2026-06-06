@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案G：GitHub档案风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace']
+        }
+      }}
+    }
+  </script>
+  <style>
+    .contribution-cell { width: 10px; height: 10px; border-radius: 2px; }
+    .level-0 { background: #161b22; }
+    .level-1 { background: #0e4429; }
+    .level-2 { background: #006d32; }
+    .level-3 { background: #26a641; }
+    .level-4 { background: #39d353; }
+    .fade-in { animation: fadeIn 0.5s ease both; }
+    .d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.3s} .d4{animation-delay:.4s}
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .card { transition: all 0.2s ease; }
+    .card:hover { border-color: #30363d; }
+  </style>
+</head>
+<body class="bg-[#0d1117] text-gray-200 font-sans min-h-screen">
+  <!-- 导航 -->
+  <nav class="border-b border-[#21262d] bg-[#161b22]">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <svg class="w-8 h-8 text-white" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <div class="flex items-center gap-4 text-sm">
+          <a href="#" class="hover:text-white transition-colors">博客</a>
+          <a href="#" class="hover:text-white transition-colors">项目</a>
+          <a href="#" class="hover:text-white transition-colors">标签</a>
+          <a href="#" class="hover:text-white transition-colors">关于</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <input type="text" placeholder="Search..." class="px-3 py-1.5 bg-[#0d1117] border border-[#30363d] rounded-md text-sm w-64 focus:outline-none focus:border-blue-500">
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <div class="flex gap-8">
+      <!-- 左侧个人信息 -->
+      <aside class="w-72 shrink-0 fade-in d1">
+        <!-- 头像 -->
+        <div class="w-full aspect-square rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-1">
+          <div class="w-full h-full rounded-full bg-[#0d1117] flex items-center justify-center">
+            <span class="text-6xl font-bold text-white">A</span>
+          </div>
+        </div>
+
+        <!-- 名字 -->
+        <div class="mt-4">
+          <h1 class="text-2xl font-bold text-white">Allen Wang</h1>
+          <p class="text-xl text-gray-400">kkkano</p>
+        </div>
+
+        <!-- 简介 -->
+        <p class="mt-4 text-gray-300 leading-relaxed">
+          探索 AI、机器学习与自动化技术。用代码理解世界，用文字记录思考。
+        </p>
+
+        <!-- 按钮 -->
+        <button class="mt-4 w-full py-1.5 border border-[#30363d] rounded-md text-sm font-medium hover:bg-[#21262d] transition-colors">
+          Follow
+        </button>
+
+        <!-- 信息列表 -->
+        <div class="mt-6 space-y-2 text-sm">
+          <div class="flex items-center gap-2 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span>RPA Developer @ Capgemini</span>
+          </div>
+          <div class="flex items-center gap-2 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>China</span>
+          </div>
+          <div class="flex items-center gap-2 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            <a href="#" class="text-blue-400 hover:underline">allenblog.vercel.app</a>
+          </div>
+        </div>
+
+        <!-- 统计 -->
+        <div class="mt-6 flex items-center gap-4 text-sm">
+          <div class="flex items-center gap-1">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5zM11 4a.75.75 0 100 1.5 1.5 1.5 0 01.666 2.844.75.75 0 00-.416.672v.352a.75.75 0 00.574.73c1.2.289 2.162 1.2 2.522 2.372a.75.75 0 101.434-.44 5.01 5.01 0 00-2.56-3.012A3 3 0 0011 4z"/>
+            </svg>
+            <span class="text-gray-300 font-medium">128</span>
+            <span class="text-gray-500">followers</span>
+          </div>
+          <span class="text-gray-600">·</span>
+          <div class="flex items-center gap-1">
+            <span class="text-gray-300 font-medium">64</span>
+            <span class="text-gray-500">following</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右侧内容 -->
+      <div class="flex-1">
+        <!-- 贡献图 -->
+        <div class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117] fade-in d2">
+          <h3 class="text-sm font-medium text-gray-300 mb-3">512 contributions in the last year</h3>
+          <div class="flex gap-1">
+            <!-- 生成贡献图 -->
+            <script>
+              const levels = [0,1,2,3,4];
+              let html = '';
+              for(let week = 0; week < 52; week++) {
+                html += '<div class="flex flex-col gap-1">';
+                for(let day = 0; day < 7; day++) {
+                  const level = levels[Math.floor(Math.random() * levels.length)];
+                  html += `<div class="contribution-cell level-${level}"></div>`;
+                }
+                html += '</div>';
+              }
+              document.write(html);
+            </script>
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-3 text-xs text-gray-500">
+            <span>Less</span>
+            <div class="contribution-cell level-0"></div>
+            <div class="contribution-cell level-1"></div>
+            <div class="contribution-cell level-2"></div>
+            <div class="contribution-cell level-3"></div>
+            <div class="contribution-cell level-4"></div>
+            <span>More</span>
+          </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-3 gap-4 mt-6 fade-in d3">
+          <div class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117]">
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Posts</span>
+            </div>
+            <div class="mt-2 text-3xl font-bold text-white">50+</div>
+          </div>
+          <div class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117]">
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+              </svg>
+              <span>Tags</span>
+            </div>
+            <div class="mt-2 text-3xl font-bold text-white">51</div>
+          </div>
+          <div class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117]">
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              <span>Projects</span>
+            </div>
+            <div class="mt-2 text-3xl font-bold text-white">10+</div>
+          </div>
+        </div>
+
+        <!-- Pinned 文章 -->
+        <div class="mt-6 fade-in d4">
+          <h3 class="text-sm font-medium text-gray-300 mb-3">Pinned posts</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <a href="#" class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117] group">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-400">📝</span>
+                <span class="text-blue-400 font-medium group-hover:underline">深夜胡言：程序员的身份危机</span>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 line-clamp-2">一个程序员在AI时代的身份危机与存在主义思考...</p>
+              <div class="mt-3 flex items-center gap-3 text-xs text-gray-500">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                  随笔
+                </span>
+                <span>⭐ 128</span>
+                <span>59 min read</span>
+              </div>
+            </a>
+            <a href="#" class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117] group">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-400">📝</span>
+                <span class="text-blue-400 font-medium group-hover:underline">LangGraph Reflection Agents</span>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 line-clamp-2">深入解析 LangGraph 反思代理的架构与实现...</p>
+              <div class="mt-3 flex items-center gap-3 text-xs text-gray-500">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                  ML
+                </span>
+                <span>⭐ 96</span>
+                <span>29 min read</span>
+              </div>
+            </a>
+            <a href="#" class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117] group">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-400">📝</span>
+                <span class="text-blue-400 font-medium group-hover:underline">基于深度Q学习的月球着陆</span>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 line-clamp-2">使用 DQN 算法解决 LunarLander 环境...</p>
+              <div class="mt-3 flex items-center gap-3 text-xs text-gray-500">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                  RL
+                </span>
+                <span>⭐ 64</span>
+                <span>15 min read</span>
+              </div>
+            </a>
+            <a href="#" class="card p-4 border border-[#21262d] rounded-lg bg-[#0d1117] group">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-400">📦</span>
+                <span class="text-blue-400 font-medium group-hover:underline">FinSight</span>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 line-clamp-2">Multi-agent 金融研究平台，自动生成投资报告...</p>
+              <div class="mt-3 flex items-center gap-3 text-xs text-gray-500">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  Python
+                </span>
+                <span>⭐ 32</span>
+                <span>🍴 8</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- 技术栈 -->
+        <div class="mt-6 fade-in d4">
+          <h3 class="text-sm font-medium text-gray-300 mb-3">Tech stack</h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">Python</span>
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">TensorFlow</span>
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">PyTorch</span>
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">LangChain</span>
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">React</span>
+            <span class="px-3 py-1 bg-[#21262d] rounded-full text-sm text-gray-300">TypeScript</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

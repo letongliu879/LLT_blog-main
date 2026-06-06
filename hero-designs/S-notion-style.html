@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案S：Notion风格</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+    }
+  </script>
+  <style>
+    .notion-hover { transition: background 0.1s ease; }
+    .notion-hover:hover { background: rgba(0,0,0,0.03); }
+    .dark .notion-hover:hover { background: rgba(255,255,255,0.03); }
+  </style>
+</head>
+<body class="bg-white dark:bg-[#191919] text-[#37352f] dark:text-[#ffffffcf] font-sans transition-colors">
+  <!-- 侧边栏 + 内容布局 -->
+  <div class="flex min-h-screen">
+    <!-- 侧边栏 -->
+    <aside class="w-60 shrink-0 border-r border-[#e5e5e5] dark:border-[#2f2f2f] p-3 bg-[#fbfbfa] dark:bg-[#202020]">
+      <div class="flex items-center gap-2 px-2 py-1.5 mb-4">
+        <div class="w-6 h-6 rounded bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+          A
+        </div>
+        <span class="font-semibold text-sm">Allen's Blog</span>
+      </div>
+
+      <nav class="space-y-0.5">
+        <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded notion-hover text-sm">
+          <span>🏠</span> 首页
+        </a>
+        <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded bg-[#ebebea] dark:bg-[#2f2f2f] text-sm font-medium">
+          <span>📝</span> 博客
+        </a>
+        <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded notion-hover text-sm">
+          <span>🚀</span> 项目
+        </a>
+        <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded notion-hover text-sm">
+          <span>🏷️</span> 标签
+        </a>
+        <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded notion-hover text-sm">
+          <span>👤</span> 关于我
+        </a>
+      </nav>
+
+      <div class="mt-8 px-2">
+        <div class="text-xs text-[#9b9a97] dark:text-[#5a5a5a] mb-2 font-medium">分类</div>
+        <div class="space-y-0.5">
+          <a href="#" class="flex items-center justify-between px-2 py-1 rounded notion-hover text-sm">
+            <span>Machine Learning</span>
+            <span class="text-xs text-[#9b9a97]">24</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-2 py-1 rounded notion-hover text-sm">
+            <span>AI Agents</span>
+            <span class="text-xs text-[#9b9a97]">12</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-2 py-1 rounded notion-hover text-sm">
+            <span>Automation</span>
+            <span class="text-xs text-[#9b9a97]">8</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-2 py-1 rounded notion-hover text-sm">
+            <span>随笔</span>
+            <span class="text-xs text-[#9b9a97]">6</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-auto pt-8 px-2">
+        <button onclick="document.documentElement.classList.toggle('dark')" class="flex items-center gap-2 px-2 py-1.5 rounded notion-hover text-sm w-full">
+          <span class="dark:hidden">🌙</span>
+          <span class="hidden dark:inline">☀️</span>
+          <span class="dark:hidden">深色模式</span>
+          <span class="hidden dark:inline">浅色模式</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="flex-1 overflow-auto">
+      <!-- 顶栏 -->
+      <div class="sticky top-0 z-10 bg-white/80 dark:bg-[#191919]/80 backdrop-blur-sm border-b border-[#e5e5e5] dark:border-[#2f2f2f] px-12 py-2 flex items-center justify-between text-sm">
+        <div class="flex items-center gap-2 text-[#9b9a97]">
+          <span>📝</span>
+          <span>博客</span>
+          <span>/</span>
+          <span>首页</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <button class="px-3 py-1 rounded notion-hover text-[#9b9a97]">分享</button>
+          <button class="px-3 py-1 rounded notion-hover">⋯</button>
+        </div>
+      </div>
+
+      <!-- 页面内容 -->
+      <div class="max-w-3xl mx-auto px-12 py-12">
+        <!-- 图标和标题 -->
+        <div class="mb-8">
+          <div class="text-6xl mb-4">👋</div>
+          <h1 class="text-4xl font-bold mb-2">Hi, I'm Allen Wang</h1>
+          <p class="text-[#9b9a97] dark:text-[#9b9a97]">RPA Developer @ Capgemini · 探索 AI、机器学习与自动化技术</p>
+        </div>
+
+        <!-- 统计 Callout -->
+        <div class="grid grid-cols-4 gap-4 mb-8 p-4 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f]">
+          <div class="text-center">
+            <div class="text-2xl font-bold">50+</div>
+            <div class="text-xs text-[#9b9a97]">文章</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold">51</div>
+            <div class="text-xs text-[#9b9a97]">标签</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold">10+</div>
+            <div class="text-xs text-[#9b9a97]">项目</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold">3+</div>
+            <div class="text-xs text-[#9b9a97]">年经验</div>
+          </div>
+        </div>
+
+        <!-- 分隔线 -->
+        <hr class="border-[#e5e5e5] dark:border-[#2f2f2f] my-8" />
+
+        <!-- 最新文章 -->
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+          <span>📄</span> 最新文章
+        </h2>
+
+        <div class="space-y-2">
+          <a href="#" class="block p-3 -mx-3 rounded-md notion-hover group">
+            <div class="flex items-start gap-3">
+              <span class="text-xl mt-0.5">💭</span>
+              <div class="flex-1">
+                <h3 class="font-medium group-hover:underline">深夜胡言：一个程序员在AI时代的身份危机</h3>
+                <div class="flex items-center gap-3 mt-1 text-sm text-[#9b9a97]">
+                  <span class="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs">随笔</span>
+                  <span>Jan 25, 2026</span>
+                  <span>·</span>
+                  <span>59 min</span>
+                </div>
+              </div>
+            </div>
+          </a>
+          <a href="#" class="block p-3 -mx-3 rounded-md notion-hover group">
+            <div class="flex items-start gap-3">
+              <span class="text-xl mt-0.5">🔄</span>
+              <div class="flex-1">
+                <h3 class="font-medium group-hover:underline">LangGraph Reflection Agents 完全指南</h3>
+                <div class="flex items-center gap-3 mt-1 text-sm text-[#9b9a97]">
+                  <span class="px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs">LangGraph</span>
+                  <span>Jan 22, 2026</span>
+                  <span>·</span>
+                  <span>29 min</span>
+                </div>
+              </div>
+            </div>
+          </a>
+          <a href="#" class="block p-3 -mx-3 rounded-md notion-hover group">
+            <div class="flex items-start gap-3">
+              <span class="text-xl mt-0.5">🚀</span>
+              <div class="flex-1">
+                <h3 class="font-medium group-hover:underline">基于深度Q学习的月球着陆</h3>
+                <div class="flex items-center gap-3 mt-1 text-sm text-[#9b9a97]">
+                  <span class="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs">RL</span>
+                  <span>Jan 18, 2026</span>
+                  <span>·</span>
+                  <span>15 min</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- 分隔线 -->
+        <hr class="border-[#e5e5e5] dark:border-[#2f2f2f] my-8" />
+
+        <!-- 技术栈 -->
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+          <span>🛠️</span> 技术栈
+        </h2>
+        <div class="flex flex-wrap gap-2">
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">🐍 Python</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">🧠 TensorFlow</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">🔥 PyTorch</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">🦜 LangChain</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">⚛️ React</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">📘 TypeScript</span>
+          <span class="px-3 py-1.5 rounded-md bg-[#f7f6f3] dark:bg-[#2f2f2f] text-sm">▲ Next.js</span>
+        </div>
+
+        <!-- 分隔线 -->
+        <hr class="border-[#e5e5e5] dark:border-[#2f2f2f] my-8" />
+
+        <!-- 链接 -->
+        <div class="flex items-center gap-6 text-sm text-[#9b9a97]">
+          <a href="#" class="hover:text-[#37352f] dark:hover:text-white transition-colors flex items-center gap-1">
+            <span>🔗</span> GitHub
+          </a>
+          <a href="#" class="hover:text-[#37352f] dark:hover:text-white transition-colors flex items-center gap-1">
+            <span>💼</span> LinkedIn
+          </a>
+          <a href="#" class="hover:text-[#37352f] dark:hover:text-white transition-colors flex items-center gap-1">
+            <span>📧</span> Email
+          </a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

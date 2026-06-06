@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>协同过滤成本曲面直觉</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --warn: #f59e0b;
+    }
+    body {
+      background: radial-gradient(circle at 18% 10%, #103a63 0%, #020617 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+      padding: 20px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--warn));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(2, 6, 23, 0.66);
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 820px) { .row { grid-template-columns: 1fr; } }
+    label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+    input[type='range'] { width: 100%; accent-color: var(--primary); }
+    .value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>成本地形与梯度下降方向</h1>
+    <p class="sub">
+      用二维参数（简化版）模拟协同过滤损失曲面。移动参数点，观察损失如何变化，以及为什么梯度下降会朝“谷底”移动。
+    </p>
+
+    <section class="panel">
+      <canvas id="surface" width="800" height="380"></canvas>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <label>参数 p1 <span id="p1Val" class="value">0.00</span></label>
+        <input id="p1" type="range" min="-3" max="3" step="0.05" value="0" />
+      </div>
+      <div>
+        <label>参数 p2 <span id="p2Val" class="value">0.00</span></label>
+        <input id="p2" type="range" min="-3" max="3" step="0.05" value="0" />
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('surface');
+    const ctx = canvas.getContext('2d');
+    const p1Input = document.getElementById('p1');
+    const p2Input = document.getElementById('p2');
+    const p1Val = document.getElementById('p1Val');
+    const p2Val = document.getElementById('p2Val');
+
+    function loss(x, y) {
+      return 0.6 * (x - 1.2) ** 2 + 1.1 * (y + 0.8) ** 2 + 0.2 * x * y + 0.8;
+    }
+
+    function sx(x) { return 40 + ((x + 3) / 6) * (canvas.width - 80); }
+    function sy(y) { return canvas.height - 35 - ((y + 3) / 6) * (canvas.height - 70); }
+
+    function drawField() {
+      for (let i = 0; i < 44; i++) {
+        for (let j = 0; j < 24; j++) {
+          const x = -3 + (i / 43) * 6;
+          const y = -3 + (j / 23) * 6;
+          const l = loss(x, y);
+          const t = Math.max(0, Math.min(1, (l - 0.8) / 10));
+          ctx.fillStyle = `rgba(56,189,248,${0.08 + (1 - t) * 0.55})`;
+          const x0 = sx(x) - 6;
+          const y0 = sy(y) - 6;
+          ctx.fillRect(x0, y0, 12, 12);
+        }
+      }
+    }
+
+    function drawCurrent(x, y) {
+      ctx.beginPath();
+      ctx.arc(sx(x), sy(y), 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+
+      const eps = 0.01;
+      const gx = (loss(x + eps, y) - loss(x - eps, y)) / (2 * eps);
+      const gy = (loss(x, y + eps) - loss(x, y - eps)) / (2 * eps);
+      const len = Math.sqrt(gx * gx + gy * gy) || 1;
+      const nx = gx / len;
+      const ny = gy / len;
+
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(sx(x), sy(y));
+      ctx.lineTo(sx(x - nx * 0.6), sy(y - ny * 0.6));
+      ctx.stroke();
+    }
+
+    function update() {
+      const p1 = Number(p1Input.value);
+      const p2 = Number(p2Input.value);
+      p1Val.textContent = p1.toFixed(2);
+      p2Val.textContent = p2.toFixed(2);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawField();
+      drawCurrent(p1, p2);
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    p1Input.addEventListener('input', update);
+    p2Input.addEventListener('input', update);
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

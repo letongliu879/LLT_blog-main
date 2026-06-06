@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MySQL B+Tree 页分裂模拟</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      background: linear-gradient(180deg, #f3f8ff 0%, #eef5ff 100%);
+      color: #0f172a;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    .w {
+      max-width: 1120px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #dbe5f4;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(30, 64, 175, 0.08);
+    }
+
+    h1 {
+      font-size: 1.12rem;
+      color: #1d4ed8;
+      margin: 0 0 8px;
+    }
+
+    p {
+      color: #475569;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0 0 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+      font-weight: 600;
+    }
+
+    button:hover {
+      border-color: #60a5fa;
+      background: #dbeafe;
+      transform: translateY(-1px);
+    }
+
+    .meta {
+      color: #92400e;
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .hint {
+      color: #0369a1;
+      font-weight: 500;
+    }
+
+    .canvas-shell {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #cddcf5;
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(125, 211, 252, 0.24), transparent 42%),
+        radial-gradient(circle at 85% 12%, rgba(147, 197, 253, 0.24), transparent 44%),
+        #f8fbff;
+      scrollbar-color: #93c5fd #e5edff;
+      scrollbar-width: thin;
+    }
+
+    canvas {
+      display: block;
+      min-height: 320px;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="w">
+    <h1>B+Tree 页分裂模拟</h1>
+    <p>
+      点击“插入随机键”后，叶子页超过容量会触发分裂。现在支持在键较多时横向滚动，完整查看所有叶子页。
+    </p>
+    <div class="row">
+      <button id="ins">插入随机键</button>
+      <button id="reset">重置</button>
+      <span id="keys" class="meta"></span>
+      <span id="hint" class="meta hint"></span>
+    </div>
+    <div id="canvasShell" class="canvas-shell">
+      <canvas id="c" width="900" height="320"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const canvasShell = document.getElementById('canvasShell');
+    const ctx = canvas.getContext('2d');
+    const keysEl = document.getElementById('keys');
+    const hintEl = document.getElementById('hint');
+
+    const LEAF_CAPACITY = 4;
+    let keys = [12, 25, 38, 51, 66];
+
+    function leafPages() {
+      const sorted = [...keys].sort((a, b) => a - b);
+      const pages = [];
+      for (let i = 0; i < sorted.length; i += LEAF_CAPACITY) {
+        pages.push(sorted.slice(i, i + LEAF_CAPACITY));
+      }
+      return pages;
+    }
+
+    function drawRoundedRect(x, y, width, height, radius, fill, stroke = null) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+
+      ctx.fillStyle = fill;
+      ctx.fill();
+
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function calcLayout(pages) {
+      ctx.font = '14px "Segoe UI", "Microsoft YaHei", sans-serif';
+
+      const nodes = pages.map((page) => {
+        const text = page.join(', ');
+        const width = Math.max(136, Math.ceil(ctx.measureText(text).width + 36));
+        return { text, width };
+      });
+
+      const gap = 24;
+      const nodesWidth = nodes.reduce((total, node) => total + node.width, 0) + Math.max(0, nodes.length - 1) * gap;
+      const viewWidth = Math.max((canvasShell.clientWidth || 900) - 2, 760);
+      const width = Math.max(viewWidth, nodesWidth + 120);
+      const height = 320;
+      const startX = (width - nodesWidth) / 2;
+
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      return {
+        nodes,
+        gap,
+        width,
+        height,
+        startX,
+        rootX: width / 2 - 78,
+        rootY: 30,
+        rootW: 156,
+        rootH: 42,
+        leafY: 190,
+        leafH: 50,
+        needsScroll: width > viewWidth + 6,
+      };
+    }
+
+    function drawGrid(width, height) {
+      const step = 22;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function render() {
+      const pages = leafPages();
+      const layout = calcLayout(pages);
+
+      ctx.clearRect(0, 0, layout.width, layout.height);
+      drawGrid(layout.width, layout.height);
+      ctx.font = '14px "Segoe UI", "Microsoft YaHei", sans-serif';
+
+      drawRoundedRect(layout.rootX, layout.rootY, layout.rootW, layout.rootH, 8, '#22c55e', '#16a34a');
+      ctx.fillStyle = '#052e16';
+      ctx.font = '600 14px "Segoe UI", "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Root 节点', layout.rootX + layout.rootW / 2, layout.rootY + 27);
+
+      let currentX = layout.startX;
+      ctx.font = '14px "Segoe UI", "Microsoft YaHei", sans-serif';
+
+      layout.nodes.forEach((node) => {
+        const x = currentX;
+        const y = layout.leafY;
+
+        drawRoundedRect(x, y, node.width, layout.leafH, 8, '#7dd3fc', '#38bdf8');
+        ctx.fillStyle = '#0c4a6e';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.text, x + node.width / 2, y + 31);
+
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.58)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(layout.rootX + layout.rootW / 2, layout.rootY + layout.rootH);
+        ctx.lineTo(x + node.width / 2, y);
+        ctx.stroke();
+
+        currentX += node.width + layout.gap;
+      });
+
+      keysEl.textContent = `当前键数量：${keys.length}（叶子页数：${pages.length}）`;
+      hintEl.textContent = layout.needsScroll ? '叶子页较多：可左右滚动查看完整结构。' : '';
+
+      reportHeight();
+    }
+
+    document.getElementById('ins').addEventListener('click', () => {
+      keys.push(Math.floor(Math.random() * 95) + 5);
+      render();
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      keys = [12, 25, 38, 51, 66];
+      render();
+      canvasShell.scrollLeft = 0;
+    });
+
+    function reportHeight() {
+      const body = document.body;
+      const root = document.documentElement;
+      const card = document.querySelector('.w');
+      const bodyStyle = getComputedStyle(body);
+      const bodyPadding = (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0);
+
+      const cardHeight = card ? Math.ceil(card.getBoundingClientRect().height + bodyPadding) : 0;
+      const bodyHeight = Math.max(body.scrollHeight, body.offsetHeight);
+      const rootHeight = Math.max(root.scrollHeight, root.offsetHeight);
+      const viewportHeight = window.innerHeight || root.clientHeight || 0;
+      const rootContentHeight = Math.abs(rootHeight - viewportHeight) <= 24 ? 0 : rootHeight;
+
+      const h = Math.max(cardHeight, bodyHeight, rootContentHeight);
+      window.parent.postMessage({ type: 'iframe-height', height: h }, '*');
+    }
+
+    window.addEventListener('load', () => {
+      render();
+      const ro = new ResizeObserver(() => render());
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      ro.observe(canvasShell);
+      setTimeout(reportHeight, 120);
+      setTimeout(reportHeight, 300);
+    });
+  </script>
+</body>
+</html>

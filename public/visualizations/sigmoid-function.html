@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigmoid 函数可视化</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --accent: #22c55e;
+      --warn: #f59e0b;
+    }
+    body {
+      background: radial-gradient(circle at 20% 20%, #162542 0%, var(--bg) 45%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%);
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.5);
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.65);
+      padding: 14px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(2, 6, 23, 0.55);
+    }
+    .controls { display: grid; gap: 14px; }
+    .item label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .item input[type="range"] { width: 100%; accent-color: var(--primary); }
+    .value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--text);
+    }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .kpi-card {
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.65);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .kpi-card .label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+    .kpi-card .num {
+      font-size: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .hint {
+      margin-top: 12px;
+      color: #cbd5e1;
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sigmoid 函数交互实验</h1>
+    <p class="subtitle">
+      调整线性组合 <strong>z = w·x + b</strong>，观察概率输出 \(\sigma(z)\) 如何变化，并理解为什么逻辑回归在
+      <strong>z=0</strong> 附近最敏感。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <canvas id="chart" width="640" height="380"></canvas>
+      </section>
+
+      <section class="panel controls">
+        <div class="item">
+          <label>输入 x <span id="xVal" class="value">0.0</span></label>
+          <input id="x" type="range" min="-6" max="6" step="0.1" value="0" />
+        </div>
+
+        <div class="item">
+          <label>权重 w <span id="wVal" class="value">1.0</span></label>
+          <input id="w" type="range" min="-4" max="4" step="0.1" value="1" />
+        </div>
+
+        <div class="item">
+          <label>偏置 b <span id="bVal" class="value">0.0</span></label>
+          <input id="b" type="range" min="-6" max="6" step="0.1" value="0" />
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-card">
+            <div class="label">z = w·x + b</div>
+            <div id="zNum" class="num">0.000</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">σ(z)</div>
+            <div id="pNum" class="num">0.500</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">σ'(z)</div>
+            <div id="gNum" class="num">0.250</div>
+          </div>
+        </div>
+
+        <p class="hint">
+          观察：当 |z| 很大时，σ(z) 接近 0 或 1，梯度变小，学习变慢；当 z 接近 0 时，模型最“犹豫”，但可学习性最强。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const chart = document.getElementById('chart');
+    const ctx = chart.getContext('2d');
+
+    const xInput = document.getElementById('x');
+    const wInput = document.getElementById('w');
+    const bInput = document.getElementById('b');
+
+    const xVal = document.getElementById('xVal');
+    const wVal = document.getElementById('wVal');
+    const bVal = document.getElementById('bVal');
+
+    const zNum = document.getElementById('zNum');
+    const pNum = document.getElementById('pNum');
+    const gNum = document.getElementById('gNum');
+
+    const sigmoid = (z) => 1 / (1 + Math.exp(-z));
+
+    function toCanvasX(x, w) {
+      return 56 + ((x + 8) / 16) * w;
+    }
+
+    function toCanvasY(y, h) {
+      return h - 44 - y * (h - 90);
+    }
+
+    function drawAxes(w, h) {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(56, h - 44);
+      ctx.lineTo(w - 20, h - 44);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(56, h - 44);
+      ctx.lineTo(56, 22);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.95)';
+      ctx.font = '12px Segoe UI';
+      ctx.fillText('z', w - 30, h - 48);
+      ctx.fillText('σ(z)', 26, 28);
+
+      for (let t = -8; t <= 8; t += 2) {
+        const px = toCanvasX(t, w - 76);
+        ctx.fillRect(px - 0.5, h - 46, 1, 5);
+        ctx.fillText(String(t), px - 6, h - 28);
+      }
+      for (let t = 0; t <= 1.01; t += 0.25) {
+        const py = toCanvasY(t, h);
+        ctx.fillRect(53, py - 0.5, 5, 1);
+        ctx.fillText(t.toFixed(2), 12, py + 4);
+      }
+    }
+
+    function drawCurve(w, h) {
+      ctx.beginPath();
+      for (let i = 0; i <= 360; i++) {
+        const z = -8 + (i / 360) * 16;
+        const y = sigmoid(z);
+        const px = toCanvasX(z, w - 76);
+        const py = toCanvasY(y, h);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      const midX = toCanvasX(0, w - 76);
+      ctx.moveTo(midX, 22);
+      ctx.lineTo(midX, h - 44);
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawPoint(currentZ, w, h) {
+      const p = sigmoid(currentZ);
+      const px = toCanvasX(currentZ, w - 76);
+      const py = toCanvasY(p, h);
+
+      ctx.beginPath();
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#22c55e';
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function update() {
+      const x = Number(xInput.value);
+      const w = Number(wInput.value);
+      const b = Number(bInput.value);
+      const z = w * x + b;
+      const p = sigmoid(z);
+      const g = p * (1 - p);
+
+      xVal.textContent = x.toFixed(1);
+      wVal.textContent = w.toFixed(1);
+      bVal.textContent = b.toFixed(1);
+      zNum.textContent = z.toFixed(3);
+      pNum.textContent = p.toFixed(3);
+      gNum.textContent = g.toFixed(3);
+
+      const W = chart.width;
+      const H = chart.height;
+      ctx.clearRect(0, 0, W, H);
+
+      drawAxes(W, H);
+      drawCurve(W, H);
+      drawPoint(z, W, H);
+
+      reportHeight();
+    }
+
+    function reportHeight() {
+      const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.postMessage({ type: 'iframe-height', height }, '*');
+    }
+
+    [xInput, wInput, bInput].forEach((el) => el.addEventListener('input', update));
+
+    window.addEventListener('load', () => {
+      update();
+      const ro = new ResizeObserver(reportHeight);
+      ro.observe(document.body);
+      ro.observe(document.documentElement);
+      setTimeout(reportHeight, 120);
+    });
+  </script>
+</body>
+</html>
+

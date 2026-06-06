@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案D：杂志封面风</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Bodoni:ital,wght@0,400;0,700;1,400&family=Archivo:wght@300;400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { display:['Libre Bodoni','serif'], body:['Archivo','Noto Sans SC','sans-serif'] } } }
+    }
+  </script>
+  <style>
+    .reveal { animation: reveal 0.8s ease both; }
+    .r1{animation-delay:.1s} .r2{animation-delay:.2s} .r3{animation-delay:.35s}
+    .r4{animation-delay:.5s} .r5{animation-delay:.65s}
+    @keyframes reveal { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    .marquee { animation: marquee 30s linear infinite; }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .hover-shift { transition: transform 0.3s ease; }
+    .hover-shift:hover { transform: translateX(8px); }
+  </style>
+</head>
+<body class="bg-[#f5f0eb] dark:bg-[#0a0908] text-[#1a1a1a] dark:text-[#ededed] font-body transition-colors duration-500">
+  <div class="min-h-screen flex flex-col">
+    <!-- 跑马灯标签条 -->
+    <div class="overflow-hidden border-b border-black/10 dark:border-white/10 py-2">
+      <div class="marquee flex gap-8 whitespace-nowrap text-xs tracking-[0.3em] uppercase text-black/30 dark:text-white/20">
+        <span>Machine Learning</span><span>·</span><span>Deep Learning</span><span>·</span>
+        <span>Python</span><span>·</span><span>TensorFlow</span><span>·</span>
+        <span>AI Agents</span><span>·</span><span>NLP</span><span>·</span>
+        <span>Reinforcement Learning</span><span>·</span><span>Automation</span><span>·</span>
+        <span>Machine Learning</span><span>·</span><span>Deep Learning</span><span>·</span>
+        <span>Python</span><span>·</span><span>TensorFlow</span><span>·</span>
+        <span>AI Agents</span><span>·</span><span>NLP</span><span>·</span>
+        <span>Reinforcement Learning</span><span>·</span><span>Automation</span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="max-w-6xl w-full mx-auto px-8 py-6 flex justify-between items-baseline">
+      <span class="font-display text-3xl font-bold tracking-tight">AW.</span>
+      <div class="flex items-center gap-8 text-sm font-medium">
+        <a href="#" class="hover:opacity-50 transition-opacity">博客</a>
+        <a href="#" class="hover:opacity-50 transition-opacity">项目</a>
+        <a href="#" class="hover:opacity-50 transition-opacity">标签</a>
+        <a href="#" class="hover:opacity-50 transition-opacity">关于</a>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="hover:opacity-50 transition-opacity">
+          <span class="dark:hidden">●</span><span class="hidden dark:inline">○</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero：杂志封面式 -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-8 flex items-center py-12">
+      <div class="w-full">
+        <!-- 大标题 -->
+        <div class="reveal r1">
+          <p class="text-sm font-medium tracking-[0.3em] uppercase text-black/40 dark:text-white/40 mb-6">Issue No. 50+ — January 2026</p>
+        </div>
+
+        <h1 class="font-display text-[4rem] md:text-[6rem] lg:text-[8rem] leading-[0.85] tracking-tight reveal r2">
+          Allen<br/>Wang
+        </h1>
+
+        <div class="grid grid-cols-12 gap-8 mt-12">
+          <!-- 左侧描述 -->
+          <div class="col-span-12 md:col-span-5 reveal r3">
+            <div class="h-px bg-black/20 dark:bg-white/20 mb-6"></div>
+            <p class="text-lg leading-relaxed text-black/60 dark:text-white/50">
+              关于机器学习、深度学习、AI 与自动化的技术笔记。一个 RPA 开发者的探索日志。
+            </p>
+            <div class="mt-8 flex gap-4">
+              <a href="#" class="px-6 py-3 bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a] text-sm font-semibold tracking-wide hover:opacity-80 transition-opacity">
+                START READING →
+              </a>
+            </div>
+          </div>
+
+          <div class="col-span-12 md:col-span-1"></div>
+
+          <!-- 右侧最新文章 -->
+          <div class="col-span-12 md:col-span-6 reveal r4">
+            <p class="text-xs font-semibold tracking-[0.3em] uppercase text-black/30 dark:text-white/30 mb-6">Featured Stories</p>
+
+            <div class="space-y-0 divide-y divide-black/10 dark:divide-white/10">
+              <a href="#" class="hover-shift flex items-baseline justify-between py-4 group">
+                <div>
+                  <h3 class="font-display text-xl md:text-2xl group-hover:opacity-60 transition-opacity">深夜胡言：程序员的身份危机</h3>
+                  <p class="text-sm text-black/40 dark:text-white/30 mt-1">随笔 · AI · 存在主义</p>
+                </div>
+                <span class="text-xs text-black/30 dark:text-white/20 shrink-0 ml-4">59min</span>
+              </a>
+              <a href="#" class="hover-shift flex items-baseline justify-between py-4 group">
+                <div>
+                  <h3 class="font-display text-xl md:text-2xl group-hover:opacity-60 transition-opacity">LangGraph Reflection Agents</h3>
+                  <p class="text-sm text-black/40 dark:text-white/30 mt-1">Machine Learning · LangGraph</p>
+                </div>
+                <span class="text-xs text-black/30 dark:text-white/20 shrink-0 ml-4">29min</span>
+              </a>
+              <a href="#" class="hover-shift flex items-baseline justify-between py-4 group">
+                <div>
+                  <h3 class="font-display text-xl md:text-2xl group-hover:opacity-60 transition-opacity">深度Q学习的月球着陆</h3>
+                  <p class="text-sm text-black/40 dark:text-white/30 mt-1">Reinforcement Learning · DQN</p>
+                </div>
+                <span class="text-xs text-black/30 dark:text-white/20 shrink-0 ml-4">15min</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-black/10 dark:border-white/10">
+      <div class="max-w-6xl mx-auto px-8 py-4 flex justify-between items-center text-xs text-black/30 dark:text-white/20">
+        <span>© 2026</span>
+        <div class="flex gap-6">
+          <a href="#" class="hover:text-black dark:hover:text-white transition-colors">GitHub</a>
+          <a href="#" class="hover:text-black dark:hover:text-white transition-colors">LinkedIn</a>
+          <a href="#" class="hover:text-black dark:hover:text-white transition-colors">Email</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

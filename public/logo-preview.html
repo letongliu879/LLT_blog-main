@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allen's Blog - Logo & Style Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code { font-family: 'JetBrains Mono', monospace; }
+        .gradient-1 { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
+        .gradient-2 { background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%); }
+        .gradient-3 { background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%); }
+        .gradient-4 { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
+        .gradient-5 { background: linear-gradient(135deg, #1e293b 0%, #475569 100%); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-800">🎨 Allen's Blog 美化方案</h1>
+            <span class="text-sm text-gray-500">2025年12月28日</span>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- 风格画像 -->
+        <section class="mb-12 bg-white rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 你的风格画像</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🧠</span>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">AI & 机器学习专家</h3>
+                            <p class="text-gray-600 text-sm">LangChain、LangGraph、深度学习、强化学习、推荐系统</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">⚙️</span>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">自动化工程师</h3>
+                            <p class="text-gray-600 text-sm">RPA、UiPath、VBA、Selenium、流程自动化</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">💻</span>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">后端开发者</h3>
+                            <p class="text-gray-600 text-sm">Java、SpringBoot、Python、数据库优化</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">📚</span>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">技术学习者</h3>
+                            <p class="text-gray-600 text-sm">分享学习笔记、实验记录、深度技术文章</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 p-4 bg-blue-50 rounded-xl">
+                <p class="text-blue-800"><strong>关键词：</strong>
+                    <span class="inline-block bg-blue-100 px-2 py-1 rounded text-sm mr-2 mb-1">AI Agent</span>
+                    <span class="inline-block bg-blue-100 px-2 py-1 rounded text-sm mr-2 mb-1">机器学习</span>
+                    <span class="inline-block bg-blue-100 px-2 py-1 rounded text-sm mr-2 mb-1">自动化</span>
+                    <span class="inline-block bg-blue-100 px-2 py-1 rounded text-sm mr-2 mb-1">后端开发</span>
+                    <span class="inline-block bg-blue-100 px-2 py-1 rounded text-sm mr-2 mb-1">实践导向</span>
+                </p>
+            </div>
+        </section>
+
+        <!-- Logo 方案 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🎯 Logo 设计方案</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Logo 1: 神经网络 A -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="g1b" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="24" cy="24" r="22" fill="none" stroke="url(#g1)" stroke-width="2" opacity="0.3"/>
+                            <path d="M24 8 L12 38 L16 38 L18 32 L30 32 L32 38 L36 38 L24 8Z M20 28 L24 16 L28 28 Z" fill="url(#g1)"/>
+                            <circle cx="24" cy="20" r="2" fill="url(#g1b)"/>
+                            <circle cx="18" cy="32" r="1.5" fill="url(#g1b)" opacity="0.7"/>
+                            <circle cx="30" cy="32" r="1.5" fill="url(#g1b)" opacity="0.7"/>
+                            <line x1="24" y1="20" x2="18" y2="32" stroke="url(#g1b)" stroke-width="0.8" opacity="0.5"/>
+                            <line x1="24" y1="20" x2="30" y2="32" stroke="url(#g1b)" stroke-width="0.8" opacity="0.5"/>
+                            <path d="M6 18 L2 24 L6 30" fill="none" stroke="url(#g1)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+                            <path d="M42 18 L46 24 L42 30" fill="none" stroke="url(#g1)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 1：神经网络 A</h3>
+                    <p class="text-gray-600 text-sm text-center">字母A + 神经网络节点 + 代码括号</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">AI</span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">代码</span>
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">现代</span>
+                    </div>
+                </div>
+
+                <!-- Logo 2: 电路芯片风格 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- 外框 -->
+                            <rect x="8" y="8" width="32" height="32" rx="4" fill="none" stroke="url(#g2)" stroke-width="2"/>
+                            <!-- A 字母 -->
+                            <path d="M24 14 L16 34 L19 34 L21 29 L27 29 L29 34 L32 34 L24 14Z M22 26 L24 19 L26 26 Z" fill="url(#g2)"/>
+                            <!-- 电路线 -->
+                            <line x1="8" y1="16" x2="4" y2="16" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="8" y1="24" x2="4" y2="24" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="8" y1="32" x2="4" y2="32" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="40" y1="16" x2="44" y2="16" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="40" y1="24" x2="44" y2="24" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="40" y1="32" x2="44" y2="32" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="16" y1="8" x2="16" y2="4" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="24" y1="8" x2="24" y2="4" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="32" y1="8" x2="32" y2="4" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="16" y1="40" x2="16" y2="44" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="24" y1="40" x2="24" y2="44" stroke="url(#g2)" stroke-width="1.5"/>
+                            <line x1="32" y1="40" x2="32" y2="44" stroke="url(#g2)" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 2：芯片电路</h3>
+                    <p class="text-gray-600 text-sm text-center">芯片造型 + 电路引脚 + 工程感</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">工程</span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">硬核</span>
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">极简</span>
+                    </div>
+                </div>
+
+                <!-- Logo 3: 终端风格 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#475569;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- 终端窗口 -->
+                            <rect x="4" y="8" width="40" height="32" rx="4" fill="url(#g3)"/>
+                            <!-- 窗口按钮 -->
+                            <circle cx="10" cy="14" r="2" fill="#ef4444"/>
+                            <circle cx="17" cy="14" r="2" fill="#f59e0b"/>
+                            <circle cx="24" cy="14" r="2" fill="#10b981"/>
+                            <!-- 命令提示符 -->
+                            <text x="10" y="28" fill="#10b981" font-family="monospace" font-size="10" font-weight="bold">$</text>
+                            <text x="18" y="28" fill="#06b6d4" font-family="monospace" font-size="10" font-weight="bold">Allen_</text>
+                            <!-- 光标 -->
+                            <rect x="38" y="21" width="2" height="10" fill="#06b6d4">
+                                <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+                            </rect>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 3：终端窗口</h3>
+                    <p class="text-gray-600 text-sm text-center">命令行风格 + 开发者文化</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-gray-800 text-gray-100 rounded text-xs">极客</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">开发者</span>
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">动感</span>
+                    </div>
+                </div>
+
+                <!-- Logo 4: 几何抽象 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="g4b" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- 三角形组合成 A -->
+                            <polygon points="24,4 4,44 18,44" fill="url(#g4)" opacity="0.9"/>
+                            <polygon points="24,4 44,44 30,44" fill="url(#g4b)" opacity="0.9"/>
+                            <!-- 中间横线 -->
+                            <rect x="14" y="30" width="20" height="4" rx="2" fill="white" opacity="0.9"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 4：几何抽象</h3>
+                    <p class="text-gray-600 text-sm text-center">三角形组合 + 渐变叠加 + 现代感</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">艺术</span>
+                        <span class="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs">时尚</span>
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">大胆</span>
+                    </div>
+                </div>
+
+                <!-- Logo 5: 流程图/Agent 风格 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="g5b" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- 中心节点 A -->
+                            <circle cx="24" cy="24" r="12" fill="url(#g5)" stroke="white" stroke-width="2"/>
+                            <text x="24" y="29" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">A</text>
+                            <!-- 连接节点 -->
+                            <circle cx="8" cy="12" r="5" fill="url(#g5b)"/>
+                            <circle cx="40" cy="12" r="5" fill="url(#g5b)"/>
+                            <circle cx="8" cy="36" r="5" fill="url(#g5b)"/>
+                            <circle cx="40" cy="36" r="5" fill="url(#g5b)"/>
+                            <!-- 连接线 -->
+                            <line x1="13" y1="12" x2="12" y2="17" stroke="#06b6d4" stroke-width="1.5"/>
+                            <line x1="35" y1="12" x2="33" y2="17" stroke="#06b6d4" stroke-width="1.5"/>
+                            <line x1="13" y1="36" x2="15" y2="31" stroke="#06b6d4" stroke-width="1.5"/>
+                            <line x1="35" y1="36" x2="33" y2="31" stroke="#06b6d4" stroke-width="1.5"/>
+                            <!-- 箭头指示 -->
+                            <path d="M8 17 L8 20 L11 18.5 Z" fill="#06b6d4"/>
+                            <path d="M40 17 L40 20 L37 18.5 Z" fill="#06b6d4"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 5：Agent 节点</h3>
+                    <p class="text-gray-600 text-sm text-center">中心节点 + 连接网络 + Agent 概念</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">AI Agent</span>
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">网络</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">连接</span>
+                    </div>
+                </div>
+
+                <!-- Logo 6: 简约字母 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-32 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="80" height="80">
+                            <defs>
+                                <linearGradient id="g6" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                    <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- 圆形背景 -->
+                            <circle cx="24" cy="24" r="22" fill="url(#g6)"/>
+                            <!-- 字母 A -->
+                            <path d="M24 10 L13 38 L18 38 L20 32 L28 32 L30 38 L35 38 L24 10Z M21.5 28 L24 18 L26.5 28 Z" fill="white"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-center mb-2">方案 6：简约圆标</h3>
+                    <p class="text-gray-600 text-sm text-center">三色渐变圆形 + 白色字母 + 高辨识度</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">简约</span>
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">专业</span>
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">通用</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 配色方案 -->
+        <section class="mb-12 bg-white rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🎨 推荐配色方案</h2>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- 配色 1 -->
+                <div class="border rounded-xl p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">方案 A：科技蓝绿（当前）</h3>
+                    <div class="flex gap-2 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-cyan-500"></div>
+                        <div class="w-12 h-12 rounded-lg bg-blue-500"></div>
+                        <div class="w-12 h-12 rounded-lg bg-gray-800"></div>
+                        <div class="w-12 h-12 rounded-lg bg-gray-100 border"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">专业、技术感、适合AI/编程主题</p>
+                    <code class="text-xs text-gray-500 block mt-2">primary: cyan-500 / blue-500</code>
+                </div>
+
+                <!-- 配色 2 -->
+                <div class="border rounded-xl p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">方案 B：紫蓝渐变</h3>
+                    <div class="flex gap-2 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-violet-500"></div>
+                        <div class="w-12 h-12 rounded-lg bg-blue-500"></div>
+                        <div class="w-12 h-12 rounded-lg bg-slate-800"></div>
+                        <div class="w-12 h-12 rounded-lg bg-slate-50 border"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">创意、现代、适合AI/创新主题</p>
+                    <code class="text-xs text-gray-500 block mt-2">primary: violet-500 / blue-500</code>
+                </div>
+
+                <!-- 配色 3 -->
+                <div class="border rounded-xl p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">方案 C：深色极客</h3>
+                    <div class="flex gap-2 mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-emerald-400"></div>
+                        <div class="w-12 h-12 rounded-lg bg-gray-900"></div>
+                        <div class="w-12 h-12 rounded-lg bg-gray-700"></div>
+                        <div class="w-12 h-12 rounded-lg bg-gray-200 border"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">极客、终端风、适合开发者博客</p>
+                    <code class="text-xs text-gray-500 block mt-2">primary: emerald-400 / gray-900</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- 美化建议 -->
+        <section class="mb-12 bg-white rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">✨ 美化建议</h2>
+            
+            <div class="space-y-6">
+                <!-- 建议 1 -->
+                <div class="border-l-4 border-cyan-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">1. 首页 Hero 区域增强</h3>
+                    <p class="text-gray-600 text-sm mb-2">添加动态打字效果和个人标签云，突出你的技术栈</p>
+                    <div class="bg-gray-900 rounded-lg p-4 text-white font-mono text-sm">
+                        <span class="text-cyan-400">Hi, I'm</span> <span class="text-white">Allen</span> 👋<br>
+                        <span class="text-gray-400">></span> <span class="text-emerald-400" id="typing">AI Agent Developer | RPA Engineer | ML Enthusiast</span>
+                        <span class="animate-pulse">|</span>
+                    </div>
+                </div>
+
+                <!-- 建议 2 -->
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">2. 文章卡片悬浮效果</h3>
+                    <p class="text-gray-600 text-sm mb-2">增加悬浮时的渐变边框和阴影动画</p>
+                    <div class="mt-3 p-4 border rounded-lg hover:shadow-lg hover:border-transparent hover:bg-gradient-to-r hover:from-cyan-500/10 hover:to-blue-500/10 transition-all cursor-pointer">
+                        <span class="text-xs text-cyan-600 font-medium">LANGGRAPH · AI-AGENT</span>
+                        <h4 class="font-semibold text-gray-800 mt-1">LangGraph Reflection Agents 完全指南</h4>
+                        <p class="text-sm text-gray-500 mt-1">深入解析 Reflection Agents 技术...</p>
+                    </div>
+                </div>
+
+                <!-- 建议 3 -->
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">3. 代码块美化</h3>
+                    <p class="text-gray-600 text-sm mb-2">添加语言标签、行号、复制按钮</p>
+                    <div class="bg-gray-900 rounded-lg overflow-hidden mt-3">
+                        <div class="flex items-center justify-between px-4 py-2 bg-gray-800">
+                            <span class="text-xs text-gray-400">python</span>
+                            <button class="text-xs text-gray-400 hover:text-white">📋 Copy</button>
+                        </div>
+                        <pre class="p-4 text-sm text-gray-300 overflow-x-auto"><code><span class="text-gray-500">1</span> <span class="text-purple-400">from</span> langchain <span class="text-purple-400">import</span> Agent
+<span class="text-gray-500">2</span> <span class="text-purple-400">from</span> langgraph <span class="text-purple-400">import</span> StateGraph
+<span class="text-gray-500">3</span> 
+<span class="text-gray-500">4</span> agent = Agent(<span class="text-emerald-400">"reflection"</span>)</code></pre>
+                    </div>
+                </div>
+
+                <!-- 建议 4 -->
+                <div class="border-l-4 border-emerald-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">4. 添加阅读进度条</h3>
+                    <p class="text-gray-600 text-sm mb-2">顶部渐变进度条，提升阅读体验</p>
+                    <div class="h-1 bg-gray-200 rounded-full mt-3">
+                        <div class="h-1 w-2/3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- 建议 5 -->
+                <div class="border-l-4 border-orange-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">5. 目录导航增强</h3>
+                    <p class="text-gray-600 text-sm mb-2">侧边栏目录，当前阅读位置高亮</p>
+                    <div class="bg-gray-50 rounded-lg p-4 mt-3 max-w-xs">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase mb-2">目录</h4>
+                        <ul class="space-y-1 text-sm">
+                            <li class="text-gray-400 pl-2">前言</li>
+                            <li class="text-cyan-600 font-medium border-l-2 border-cyan-500 pl-2">什么是 Reflection Agents？</li>
+                            <li class="text-gray-400 pl-4">核心思想</li>
+                            <li class="text-gray-400 pl-4">核心权衡</li>
+                            <li class="text-gray-400 pl-2">三种技术详解</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 建议 6 -->
+                <div class="border-l-4 border-pink-500 pl-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">6. 标签页美化</h3>
+                    <p class="text-gray-600 text-sm mb-2">标签云带权重显示，热门标签更大</p>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <span class="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-lg font-medium">Machine Learning</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-base">LangChain</span>
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-base">AI Agent</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm">Python</span>
+                        <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">RPA</span>
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">MySQL</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 样式预览对比 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🖼️ Header 样式预览</h2>
+            
+            <div class="space-y-6">
+                <!-- 样式 1 -->
+                <div class="rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-white px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="40" height="40">
+                                <defs>
+                                    <linearGradient id="h1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#06b6d4" />
+                                        <stop offset="100%" style="stop-color:#3b82f6" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="24" cy="24" r="22" fill="url(#h1)"/>
+                                <path d="M24 10 L13 38 L18 38 L20 32 L28 32 L30 38 L35 38 L24 10Z M21.5 28 L24 18 L26.5 28 Z" fill="white"/>
+                            </svg>
+                            <span class="text-xl font-bold text-gray-800">Allen's Blog</span>
+                        </div>
+                        <nav class="flex items-center gap-6 text-gray-600">
+                            <a href="#" class="hover:text-cyan-500">Blog</a>
+                            <a href="#" class="hover:text-cyan-500">Tags</a>
+                            <a href="#" class="hover:text-cyan-500">Projects</a>
+                            <a href="#" class="hover:text-cyan-500">About</a>
+                            <span class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">🌙</span>
+                        </nav>
+                    </div>
+                    <div class="bg-gray-100 px-4 py-2 text-center text-sm text-gray-500">样式 A：简约圆标 Logo + 清爽配色</div>
+                </div>
+
+                <!-- 样式 2 -->
+                <div class="rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-gray-900 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="40" height="40">
+                                <defs>
+                                    <linearGradient id="h2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#1e293b" />
+                                        <stop offset="100%" style="stop-color:#475569" />
+                                    </linearGradient>
+                                </defs>
+                                <rect x="4" y="8" width="40" height="32" rx="4" fill="url(#h2)"/>
+                                <circle cx="10" cy="14" r="2" fill="#ef4444"/>
+                                <circle cx="17" cy="14" r="2" fill="#f59e0b"/>
+                                <circle cx="24" cy="14" r="2" fill="#10b981"/>
+                                <text x="10" y="28" fill="#10b981" font-family="monospace" font-size="10" font-weight="bold">$</text>
+                                <text x="18" y="28" fill="#06b6d4" font-family="monospace" font-size="10" font-weight="bold">Allen_</text>
+                            </svg>
+                            <span class="text-xl font-bold text-white">Allen's Blog</span>
+                        </div>
+                        <nav class="flex items-center gap-6 text-gray-400">
+                            <a href="#" class="hover:text-emerald-400">Blog</a>
+                            <a href="#" class="hover:text-emerald-400">Tags</a>
+                            <a href="#" class="hover:text-emerald-400">Projects</a>
+                            <a href="#" class="hover:text-emerald-400">About</a>
+                            <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">☀️</span>
+                        </nav>
+                    </div>
+                    <div class="bg-gray-100 px-4 py-2 text-center text-sm text-gray-500">样式 B：终端风格 Logo + 深色极客主题</div>
+                </div>
+
+                <!-- 样式 3 -->
+                <div class="rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="40" height="40">
+                                <defs>
+                                    <linearGradient id="h3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#8b5cf6" />
+                                        <stop offset="100%" style="stop-color:#ec4899" />
+                                    </linearGradient>
+                                    <linearGradient id="h3b" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#06b6d4" />
+                                        <stop offset="100%" style="stop-color:#8b5cf6" />
+                                    </linearGradient>
+                                </defs>
+                                <polygon points="24,4 4,44 18,44" fill="white" opacity="0.9"/>
+                                <polygon points="24,4 44,44 30,44" fill="white" opacity="0.7"/>
+                                <rect x="14" y="30" width="20" height="4" rx="2" fill="#3b82f6"/>
+                            </svg>
+                            <span class="text-xl font-bold text-white">Allen's Blog</span>
+                        </div>
+                        <nav class="flex items-center gap-6 text-white/80">
+                            <a href="#" class="hover:text-white">Blog</a>
+                            <a href="#" class="hover:text-white">Tags</a>
+                            <a href="#" class="hover:text-white">Projects</a>
+                            <a href="#" class="hover:text-white">About</a>
+                            <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">🌙</span>
+                        </nav>
+                    </div>
+                    <div class="bg-gray-100 px-4 py-2 text-center text-sm text-gray-500">样式 C：渐变 Header + 几何 Logo</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 投票区 -->
+        <section class="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl shadow-lg p-8 text-white">
+            <h2 class="text-2xl font-bold mb-4">📬 选择你喜欢的方案</h2>
+            <p class="mb-6 text-white/80">请告诉我你喜欢哪个 Logo（1-6）和哪个 Header 样式（A/B/C），我会为你实现！</p>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white/10 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2">Logo 选择</h3>
+                    <p class="text-sm text-white/70">1. 神经网络 A | 2. 芯片电路 | 3. 终端窗口</p>
+                    <p class="text-sm text-white/70">4. 几何抽象 | 5. Agent 节点 | 6. 简约圆标</p>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2">Header 样式</h3>
+                    <p class="text-sm text-white/70">A. 简约清爽 | B. 深色极客 | C. 渐变活力</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        Allen's Blog 美化方案 | 2025年12月28日
+    </footer>
+</body>
+</html>

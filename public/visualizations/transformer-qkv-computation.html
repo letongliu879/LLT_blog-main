@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scaled Dot-Product Attention 逐步计算可视化</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(30, 41, 59, 0.7);
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #38bdf8;
+  --accent: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at 20% 20%, #162542 0%, #0f172a 45%);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.85rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+
+/* Card component */
+.card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent), var(--purple));
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.btn:hover {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Step indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.35s ease;
+}
+
+.step-dot.active {
+  background: var(--primary);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+.step-dot.done {
+  background: var(--accent);
+}
+
+.step-label {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-left: 12px;
+}
+
+/* Phase sections */
+.phase {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.5s ease, max-height 0.6s ease, margin 0.4s ease;
+  margin-bottom: 0;
+}
+
+.phase.visible {
+  opacity: 1;
+  max-height: 3000px;
+  margin-bottom: 20px;
+}
+
+.phase-title {
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-title .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.phase-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+}
+
+/* Formula display */
+.formula {
+  text-align: center;
+  font-size: 1.05rem;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  font-family: "Cambria Math", "Times New Roman", serif;
+  color: var(--primary);
+  letter-spacing: 0.5px;
+}
+
+/* Matrix styles */
+.matrix-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.matrix-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.matrix-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.matrix-label.q-color { color: var(--primary); }
+.matrix-label.k-color { color: var(--accent); }
+.matrix-label.v-color { color: var(--purple); }
+.matrix-label.score-color { color: var(--warn); }
+.matrix-label.out-color { color: var(--danger); }
+
+.matrix {
+  display: inline-grid;
+  gap: 3px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+/* bracket decorations */
+.matrix::before,
+.matrix::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+}
+
+.matrix::before { left: 1px; }
+.matrix::after { right: 1px; }
+
+.matrix.q-border::before, .matrix.q-border::after { background: var(--primary); opacity: 0.5; }
+.matrix.k-border::before, .matrix.k-border::after { background: var(--accent); opacity: 0.5; }
+.matrix.v-border::before, .matrix.v-border::after { background: var(--purple); opacity: 0.5; }
+.matrix.score-border::before, .matrix.score-border::after { background: var(--warn); opacity: 0.5; }
+.matrix.out-border::before, .matrix.out-border::after { background: var(--danger); opacity: 0.5; }
+.matrix.x-border::before, .matrix.x-border::after { background: var(--text); opacity: 0.3; }
+
+.cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-weight: 500;
+  transition: all 0.35s ease;
+  cursor: default;
+  position: relative;
+}
+
+.cell:hover {
+  transform: scale(1.15);
+  z-index: 10;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+}
+
+.cell.highlight {
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  transform: scale(1.08);
+}
+
+/* Tooltip */
+.cell .tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  z-index: 100;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.cell:hover .tooltip {
+  display: block;
+}
+
+/* Operator symbol between matrices */
+.op {
+  font-size: 1.4rem;
+  color: var(--muted);
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+/* Token labels */
+.token-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 0;
+  justify-content: center;
+}
+
+.token-tag {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Softmax bar */
+.softmax-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.softmax-bar-container {
+  flex: 1;
+  height: 22px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+.softmax-segment {
+  height: 100%;
+  transition: width 0.8s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.softmax-token {
+  width: 56px;
+  text-align: right;
+  font-size: 0.78rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Animation keyframes */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(56, 189, 248, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.6); }
+}
+
+.animate-in {
+  animation: fadeSlideIn 0.45s ease forwards;
+}
+
+.cell.computing {
+  animation: pulseGlow 0.6s ease infinite;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .container { padding: 20px 12px 36px; }
+  h1 { font-size: 1.4rem; }
+  .cell { width: 34px; height: 34px; font-size: 0.66rem; }
+  .token-tag { height: 34px; font-size: 0.7rem; }
+  .matrix-group { gap: 8px; }
+  .op { font-size: 1.1rem; }
+  .card { padding: 16px; }
+  .controls { gap: 8px; }
+  .btn { padding: 8px 14px; font-size: 0.84rem; }
+  .formula { font-size: 0.9rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Scaled Dot-Product Attention</h1>
+  <p class="subtitle">逐步可视化 Q, K, V 的计算过程与注意力机制</p>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="controls">
+      <button class="btn btn-primary" id="btnPlayAll" onclick="playAll()">&#9654; 播放全部</button>
+      <button class="btn" id="btnNext" onclick="nextStep()">&#9193; 下一步</button>
+      <button class="btn" id="btnReset" onclick="resetAll()">&#8634; 重置</button>
+    </div>
+    <div class="step-indicator">
+      <div class="step-dot" id="dot0"></div>
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+      <div class="step-dot" id="dot4"></div>
+      <div class="step-dot" id="dot5"></div>
+      <span class="step-label" id="stepLabel">等待开始...</span>
+    </div>
+  </div>
+
+  <!-- Phase 1: Input Embeddings -->
+  <div class="card phase" id="phase0">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--primary),var(--accent))">1</span>
+      输入嵌入矩阵 X
+    </div>
+    <p class="phase-desc">4 个词元 ("I", "love", "deep", "learning") 的 6 维嵌入向量，拼成 4x6 矩阵。</p>
+    <div class="matrix-group" id="inputGroup"></div>
+  </div>
+
+  <!-- Phase 2: Linear Projections -->
+  <div class="card phase" id="phase1">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--primary),var(--purple))">2</span>
+      线性投影: Q, K, V
+    </div>
+    <p class="phase-desc">通过三组权重矩阵，将 X 分别投影为 Query, Key, Value (d_k = 3)。</p>
+    <div class="formula">X &middot; W<sub>Q</sub> = Q &emsp;|&emsp; X &middot; W<sub>K</sub> = K &emsp;|&emsp; X &middot; W<sub>V</sub> = V</div>
+    <div id="projectionGroup"></div>
+  </div>
+
+  <!-- Phase 3: Score Computation -->
+  <div class="card phase" id="phase2">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--warn),var(--danger))">3</span>
+      注意力分数计算
+    </div>
+    <p class="phase-desc">Query 与 Key 的转置相乘，得到原始注意力分数矩阵。</p>
+    <div class="formula">Scores = Q &middot; K<sup>T</sup></div>
+    <div class="matrix-group" id="scoreGroup"></div>
+  </div>
+
+  <!-- Phase 4: Scaling -->
+  <div class="card phase" id="phase3">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--warn),var(--accent))">4</span>
+      缩放 (Scaling)
+    </div>
+    <p class="phase-desc">除以 &radic;d<sub>k</sub> 防止点积过大导致 softmax 梯度消失。</p>
+    <div class="formula">Scaled = Scores / &radic;d<sub>k</sub> = Scores / &radic;3 &approx; Scores / 1.732</div>
+    <div class="matrix-group" id="scaledGroup"></div>
+  </div>
+
+  <!-- Phase 5: Softmax -->
+  <div class="card phase" id="phase4">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--accent),var(--primary))">5</span>
+      Softmax 归一化
+    </div>
+    <p class="phase-desc">对每行执行 softmax，将分数转为概率分布（每行求和 = 1）。</p>
+    <div class="formula">Attention Weights = softmax(Scaled, dim=-1)</div>
+    <div id="softmaxGroup"></div>
+  </div>
+
+  <!-- Phase 6: Output -->
+  <div class="card phase" id="phase5">
+    <div class="phase-title">
+      <span class="badge" style="background:linear-gradient(135deg,var(--danger),var(--purple))">6</span>
+      加权输出
+    </div>
+    <p class="phase-desc">用注意力权重对 Value 矩阵加权求和，得到最终输出。</p>
+    <div class="formula">Output = Attention Weights &middot; V</div>
+    <div class="matrix-group" id="outputGroup"></div>
+  </div>
+</div>
+
+<script>
+// =============== DATA ===============
+const tokens = ["I", "love", "deep", "learning"];
+const d_model = 6;
+const d_k = 3;
+
+// Input embeddings X (4x6) - small values for clarity
+const X = [
+  [0.1, 0.5, 0.3, 0.8, 0.2, 0.4],
+  [0.7, 0.2, 0.6, 0.1, 0.9, 0.3],
+  [0.4, 0.8, 0.1, 0.5, 0.7, 0.6],
+  [0.3, 0.6, 0.9, 0.4, 0.2, 0.8]
+];
+
+// Weight matrices (6x3)
+const W_Q = [
+  [0.2, 0.1, 0.4],
+  [0.3, 0.5, 0.2],
+  [0.1, 0.3, 0.6],
+  [0.4, 0.2, 0.1],
+  [0.5, 0.4, 0.3],
+  [0.2, 0.6, 0.5]
+];
+
+const W_K = [
+  [0.3, 0.4, 0.1],
+  [0.1, 0.2, 0.5],
+  [0.4, 0.1, 0.3],
+  [0.2, 0.5, 0.4],
+  [0.6, 0.3, 0.2],
+  [0.1, 0.6, 0.3]
+];
+
+const W_V = [
+  [0.1, 0.3, 0.5],
+  [0.5, 0.1, 0.2],
+  [0.3, 0.4, 0.1],
+  [0.2, 0.6, 0.3],
+  [0.4, 0.2, 0.6],
+  [0.6, 0.5, 0.4]
+];
+
+// =============== MATH ===============
+function matmul(A, B) {
+  const rows = A.length;
+  const cols = B[0].length;
+  const inner = B.length;
+  const C = [];
+  for (let i = 0; i < rows; i++) {
+    C[i] = [];
+    for (let j = 0; j < cols; j++) {
+      let sum = 0;
+      for (let k = 0; k < inner; k++) {
+        sum += A[i][k] * B[k][j];
+      }
+      C[i][j] = sum;
+    }
+  }
+  return C;
+}
+
+function transpose(M) {
+  const rows = M.length;
+  const cols = M[0].length;
+  const T = [];
+  for (let j = 0; j < cols; j++) {
+    T[j] = [];
+    for (let i = 0; i < rows; i++) {
+      T[j][i] = M[i][j];
+    }
+  }
+  return T;
+}
+
+function scaleMatrix(M, factor) {
+  return M.map(function(row) {
+    return row.map(function(v) { return v / factor; });
+  });
+}
+
+function softmaxRows(M) {
+  return M.map(function(row) {
+    var maxVal = Math.max.apply(null, row);
+    var exps = row.map(function(v) { return Math.exp(v - maxVal); });
+    var sum = exps.reduce(function(a, b) { return a + b; }, 0);
+    return exps.map(function(e) { return e / sum; });
+  });
+}
+
+// Compute everything
+var Q = matmul(X, W_Q);
+var K = matmul(X, W_K);
+var V = matmul(X, W_V);
+var KT = transpose(K);
+var scores = matmul(Q, KT);
+var scaleFactor = Math.sqrt(d_k);
+var scaled = scaleMatrix(scores, scaleFactor);
+var attnWeights = softmaxRows(scaled);
+var output = matmul(attnWeights, V);
+
+// =============== RENDERING ===============
+function fmt(v) {
+  return v.toFixed(2);
+}
+
+function cellColor(v, minV, maxV, hue) {
+  var t = maxV === minV ? 0.5 : (v - minV) / (maxV - minV);
+  var alpha = 0.15 + t * 0.65;
+  return "hsla(" + hue + ", 70%, 55%, " + alpha.toFixed(2) + ")";
+}
+
+function matrixMinMax(M) {
+  var flat = [];
+  for (var i = 0; i < M.length; i++) {
+    for (var j = 0; j < M[i].length; j++) {
+      flat.push(M[i][j]);
+    }
+  }
+  return { min: Math.min.apply(null, flat), max: Math.max.apply(null, flat) };
+}
+
+function renderMatrix(M, cssClass, hue, label, rowLabels) {
+  var mm = matrixMinMax(M);
+  var rows = M.length;
+  var cols = M[0].length;
+
+  var wrapper = document.createElement("div");
+  wrapper.className = "matrix-block";
+
+  if (label) {
+    var lbl = document.createElement("div");
+    lbl.className = "matrix-label " + cssClass;
+    lbl.textContent = label;
+    wrapper.appendChild(lbl);
+  }
+
+  var inner = document.createElement("div");
+  inner.style.display = "flex";
+  inner.style.alignItems = "center";
+  inner.style.gap = "3px";
+
+  if (rowLabels) {
+    var labelsDiv = document.createElement("div");
+    labelsDiv.className = "token-labels";
+    for (var i = 0; i < rowLabels.length; i++) {
+      var tag = document.createElement("div");
+      tag.className = "token-tag";
+      tag.textContent = rowLabels[i];
+      labelsDiv.appendChild(tag);
+    }
+    inner.appendChild(labelsDiv);
+  }
+
+  var grid = document.createElement("div");
+  grid.className = "matrix " + cssClass.replace("-color", "-border");
+  grid.style.gridTemplateColumns = "repeat(" + cols + ", 40px)";
+
+  for (var i = 0; i < rows; i++) {
+    for (var j = 0; j < cols; j++) {
+      var cell = document.createElement("div");
+      cell.className = "cell";
+      cell.style.background = cellColor(M[i][j], mm.min, mm.max, hue);
+      cell.textContent = fmt(M[i][j]);
+
+      var tip = document.createElement("span");
+      tip.className = "tooltip";
+      tip.textContent = "[" + i + "," + j + "] = " + M[i][j].toFixed(4);
+      cell.appendChild(tip);
+
+      grid.appendChild(cell);
+    }
+  }
+
+  inner.appendChild(grid);
+  wrapper.appendChild(inner);
+  return wrapper;
+}
+
+function renderOp(symbol) {
+  var span = document.createElement("span");
+  span.className = "op";
+  span.textContent = symbol;
+  return span;
+}
+
+// =============== BUILD PHASES ===============
+function buildPhase0() {
+  var container = document.getElementById("inputGroup");
+  container.innerHTML = "";
+  container.appendChild(renderMatrix(X, "x-color", 200, "X (4x6)", tokens));
+}
+
+function buildPhase1() {
+  var container = document.getElementById("projectionGroup");
+  container.innerHTML = "";
+
+  // Q projection
+  var sec = document.createElement("div");
+  sec.className = "matrix-group animate-in";
+  sec.appendChild(renderMatrix(X, "x-color", 200, "X", tokens));
+  sec.appendChild(renderOp("\u00D7"));
+  sec.appendChild(renderMatrix(W_Q, "q-color", 200, "W_Q (6x3)"));
+  sec.appendChild(renderOp("="));
+  sec.appendChild(renderMatrix(Q, "q-color", 200, "Q (4x3)", tokens));
+  container.appendChild(sec);
+
+  // K projection
+  var sec2 = document.createElement("div");
+  sec2.className = "matrix-group animate-in";
+  sec2.style.animationDelay = "0.2s";
+  sec2.appendChild(renderMatrix(X, "x-color", 200, "X", tokens));
+  sec2.appendChild(renderOp("\u00D7"));
+  sec2.appendChild(renderMatrix(W_K, "k-color", 145, "W_K (6x3)"));
+  sec2.appendChild(renderOp("="));
+  sec2.appendChild(renderMatrix(K, "k-color", 145, "K (4x3)", tokens));
+  container.appendChild(sec2);
+
+  // V projection
+  var sec3 = document.createElement("div");
+  sec3.className = "matrix-group animate-in";
+  sec3.style.animationDelay = "0.4s";
+  sec3.appendChild(renderMatrix(X, "x-color", 200, "X", tokens));
+  sec3.appendChild(renderOp("\u00D7"));
+  sec3.appendChild(renderMatrix(W_V, "v-color", 270, "W_V (6x3)"));
+  sec3.appendChild(renderOp("="));
+  sec3.appendChild(renderMatrix(V, "v-color", 270, "V (4x3)", tokens));
+  container.appendChild(sec3);
+}
+
+function buildPhase2() {
+  var container = document.getElementById("scoreGroup");
+  container.innerHTML = "";
+  container.appendChild(renderMatrix(Q, "q-color", 200, "Q (4x3)", tokens));
+  container.appendChild(renderOp("\u00D7"));
+  container.appendChild(renderMatrix(KT, "k-color", 145, "K\u1D40 (3x4)"));
+  container.appendChild(renderOp("="));
+  container.appendChild(renderMatrix(scores, "score-color", 40, "Scores (4x4)", tokens));
+
+  // Animate computation
+  animateMatrixCells(container, "score-color");
+}
+
+function buildPhase3() {
+  var container = document.getElementById("scaledGroup");
+  container.innerHTML = "";
+
+  container.appendChild(renderMatrix(scores, "score-color", 40, "Scores", tokens));
+  container.appendChild(renderOp("\u00F7"));
+
+  var factorDiv = document.createElement("div");
+  factorDiv.className = "matrix-block";
+  var factorLabel = document.createElement("div");
+  factorLabel.className = "matrix-label score-color";
+  factorLabel.textContent = "\u221A" + d_k + " \u2248 " + scaleFactor.toFixed(3);
+  factorLabel.style.fontSize = "1.1rem";
+  factorLabel.style.padding = "16px 12px";
+  factorLabel.style.background = "rgba(245, 158, 11, 0.12)";
+  factorLabel.style.borderRadius = "10px";
+  factorLabel.style.border = "1px solid rgba(245, 158, 11, 0.3)";
+  factorDiv.appendChild(factorLabel);
+  container.appendChild(factorDiv);
+
+  container.appendChild(renderOp("="));
+  container.appendChild(renderMatrix(scaled, "score-color", 40, "Scaled (4x4)", tokens));
+}
+
+function buildPhase4() {
+  var container = document.getElementById("softmaxGroup");
+  container.innerHTML = "";
+
+  // Matrix view
+  var matGroup = document.createElement("div");
+  matGroup.className = "matrix-group";
+  matGroup.appendChild(renderMatrix(attnWeights, "score-color", 145, "Attention Weights (4x4)", tokens));
+  container.appendChild(matGroup);
+
+  // Bar visualization
+  var barSection = document.createElement("div");
+  barSection.style.marginTop = "18px";
+
+  var barTitle = document.createElement("div");
+  barTitle.style.fontSize = "0.85rem";
+  barTitle.style.color = "var(--muted)";
+  barTitle.style.marginBottom = "10px";
+  barTitle.textContent = "\u6BCF\u884C\u6CE8\u610F\u529B\u5206\u5E03\uFF08\u6982\u7387\u6761\u5F62\u56FE\uFF09:";
+  barSection.appendChild(barTitle);
+
+  var barColors = [
+    "rgba(56, 189, 248, 0.8)",
+    "rgba(34, 197, 94, 0.8)",
+    "rgba(139, 92, 246, 0.8)",
+    "rgba(245, 158, 11, 0.8)"
+  ];
+
+  for (var i = 0; i < 4; i++) {
+    var row = document.createElement("div");
+    row.className = "softmax-row animate-in";
+    row.style.animationDelay = (i * 0.15) + "s";
+
+    var tokenSpan = document.createElement("span");
+    tokenSpan.className = "softmax-token";
+    tokenSpan.textContent = tokens[i];
+    row.appendChild(tokenSpan);
+
+    var barContainer = document.createElement("div");
+    barContainer.className = "softmax-bar-container";
+
+    for (var j = 0; j < 4; j++) {
+      var seg = document.createElement("div");
+      seg.className = "softmax-segment";
+      seg.style.width = "0%";
+      seg.style.background = barColors[j];
+      seg.dataset.width = (attnWeights[i][j] * 100).toFixed(1);
+      seg.textContent = (attnWeights[i][j] * 100).toFixed(1) + "%";
+      barContainer.appendChild(seg);
+    }
+
+    row.appendChild(barContainer);
+    barSection.appendChild(row);
+  }
+
+  container.appendChild(barSection);
+
+  // Animate bars after a small delay
+  requestAnimationFrame(function() {
+    setTimeout(function() {
+      var segs = barSection.querySelectorAll(".softmax-segment");
+      for (var s = 0; s < segs.length; s++) {
+        segs[s].style.width = segs[s].dataset.width + "%";
+      }
+    }, 100);
+  });
+}
+
+function buildPhase5() {
+  var container = document.getElementById("outputGroup");
+  container.innerHTML = "";
+  container.appendChild(renderMatrix(attnWeights, "score-color", 145, "Weights (4x4)", tokens));
+  container.appendChild(renderOp("\u00D7"));
+  container.appendChild(renderMatrix(V, "v-color", 270, "V (4x3)", tokens));
+  container.appendChild(renderOp("="));
+  container.appendChild(renderMatrix(output, "out-color", 0, "Output (4x3)", tokens));
+
+  animateMatrixCells(container, "out-color");
+}
+
+function animateMatrixCells(container, targetClass) {
+  var targetMatrix = container.querySelector("." + targetClass.replace("-color", "-border"));
+  if (!targetMatrix) return;
+  var cells = targetMatrix.querySelectorAll(".cell");
+  for (var i = 0; i < cells.length; i++) {
+    (function(cell, idx) {
+      cell.classList.add("computing");
+      setTimeout(function() {
+        cell.classList.remove("computing");
+        cell.classList.add("highlight");
+        setTimeout(function() {
+          cell.classList.remove("highlight");
+        }, 600);
+      }, idx * 80);
+    })(cells[i], i);
+  }
+}
+
+// =============== STATE MACHINE ===============
+var currentStep = -1;
+var isPlaying = false;
+var playTimer = null;
+var builders = [buildPhase0, buildPhase1, buildPhase2, buildPhase3, buildPhase4, buildPhase5];
+var phaseNames = [
+  "\u8F93\u5165\u5D4C\u5165",
+  "\u7EBF\u6027\u6295\u5F71",
+  "\u5206\u6570\u8BA1\u7B97",
+  "\u7F29\u653E",
+  "Softmax",
+  "\u52A0\u6743\u8F93\u51FA"
+];
+
+function updateUI() {
+  for (var i = 0; i < 6; i++) {
+    var dot = document.getElementById("dot" + i);
+    dot.classList.remove("active", "done");
+    if (i < currentStep) dot.classList.add("done");
+    else if (i === currentStep) dot.classList.add("active");
+  }
+
+  var label = document.getElementById("stepLabel");
+  if (currentStep < 0) {
+    label.textContent = "\u7B49\u5F85\u5F00\u59CB...";
+  } else {
+    label.textContent = "\u7B2C " + (currentStep + 1) + " / 6 \u6B65: " + phaseNames[currentStep];
+  }
+
+  document.getElementById("btnNext").disabled = currentStep >= 5;
+}
+
+function showPhase(idx) {
+  var phase = document.getElementById("phase" + idx);
+  phase.classList.add("visible");
+  builders[idx]();
+}
+
+function nextStep() {
+  if (currentStep >= 5) return;
+  currentStep++;
+  showPhase(currentStep);
+  updateUI();
+
+  // Scroll to the new phase
+  var phase = document.getElementById("phase" + currentStep);
+  setTimeout(function() {
+    phase.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 100);
+}
+
+function playAll() {
+  if (isPlaying) {
+    stopPlaying();
+    return;
+  }
+
+  isPlaying = true;
+  document.getElementById("btnPlayAll").textContent = "\u23F8 \u6682\u505C";
+
+  function tick() {
+    if (currentStep >= 5) {
+      stopPlaying();
+      return;
+    }
+    nextStep();
+    playTimer = setTimeout(tick, 1800);
+  }
+  tick();
+}
+
+function stopPlaying() {
+  isPlaying = false;
+  if (playTimer) clearTimeout(playTimer);
+  playTimer = null;
+  document.getElementById("btnPlayAll").textContent = "\u25B6 \u64AD\u653E\u5168\u90E8";
+}
+
+function resetAll() {
+  stopPlaying();
+  currentStep = -1;
+  for (var i = 0; i < 6; i++) {
+    document.getElementById("phase" + i).classList.remove("visible");
+  }
+  updateUI();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Init
+updateUI();
+
+// =============== IFRAME HEIGHT REPORTING ===============
+(function(){var sendHeight=function(){if(window.parent===window)return;var h=Math.max(document.body.scrollHeight,document.body.offsetHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight);window.parent.postMessage({type:'iframe-height',height:h},'*')};window.addEventListener('load',sendHeight);window.addEventListener('resize',sendHeight);if('ResizeObserver' in window){var o=new ResizeObserver(sendHeight);if(document.body)o.observe(document.body);if(document.documentElement)o.observe(document.documentElement)}requestAnimationFrame(sendHeight);setTimeout(sendHeight,250);setTimeout(sendHeight,1000)})();
+</script>
+</body>
+</html>

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>正则化效果动画</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border: rgba(59, 130, 246, 0.25);
+      --primary: #3b82f6;
+      --accent: #10b981;
+      --lora: #8b5cf6;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --text-sub: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      padding: 20px;
+      min-height: 0;
+    }
+
+    .wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 24px 20px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, var(--primary), var(--accent), var(--lora));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 0.92rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .formula-bar {
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92rem;
+      color: var(--warn);
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+    }
+
+    .section {
+      position: relative;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent), var(--lora));
+      border-radius: 2px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .metric-label {
+      color: var(--text-sub);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .mv-lambda { color: var(--warn); }
+    .mv-train { color: var(--primary); }
+    .mv-val { color: var(--danger); }
+    .mv-status { font-size: 0.92rem; }
+    .st-overfit { color: var(--danger); }
+    .st-good { color: var(--accent); }
+    .st-underfit { color: var(--warn); }
+
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .canvas-shell {
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+      background: rgba(8, 16, 42, 0.9);
+      padding: 8px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-label {
+      color: var(--text-sub);
+      font-size: 0.84rem;
+      min-width: 150px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--warn);
+      font-weight: 600;
+      font-size: 0.84rem;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 6px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+      color: var(--text);
+      padding: 8px 18px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(30, 41, 59, 0.8));
+      border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .insight-box {
+      margin-top: 4px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.84rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+    }
+
+    .insight-box strong { color: var(--text); }
+    .insight-box li { margin-bottom: 4px; }
+    .insight-box ul { padding-left: 18px; margin-top: 6px; }
+
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .wrapper { padding: 16px 12px 14px; }
+      .title { font-size: 1.3rem; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .chart-row { grid-template-columns: 1fr; }
+      .control-label { min-width: 120px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="title">正则化效果动画演示</h1>
+    <p class="subtitle">观察 L2 正则化参数如何约束模型权重、抑制过拟合 -- 拖动滑块或点击播放动画</p>
+
+    <div class="formula-bar">
+      Ridge 回归目标函数: J(w) = MSE(w) + lambda * ||w||^2
+    </div>
+
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Lambda</div>
+        <div class="metric-value mv-lambda" id="metricLambda">0.0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">训练 MSE</div>
+        <div class="metric-value mv-train" id="metricTrain">--</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">验证 MSE</div>
+        <div class="metric-value mv-val" id="metricVal">--</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">模型状态</div>
+        <div class="metric-value mv-status" id="metricStatus">--</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="chart-row">
+        <div class="canvas-shell">
+          <canvas id="fittingCanvas" width="500" height="400"></canvas>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="weightsCanvas" width="500" height="400"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="controls">
+        <div class="control">
+          <div class="control-label">Lambda <span class="control-value" id="lambdaVal">0.0</span></div>
+          <input type="range" id="sliderLambda" min="0" max="10" step="0.1" value="0" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnPlay">播放动画</button>
+        <button class="btn secondary" id="btnPause">暂停</button>
+        <button class="btn secondary" id="btnReset">重置</button>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <strong>观察要点</strong>
+      <ul>
+        <li><strong>lambda = 0</strong>: 无正则化，8 阶多项式过拟合，高阶权重值较大</li>
+        <li><strong>lambda = 0.1 - 1</strong>: 轻度正则化，拟合曲线更平滑，高阶权重被压缩</li>
+        <li><strong>lambda = 1 - 5</strong>: 中度正则化，曲线趋于线性，泛化能力提升</li>
+        <li><strong>lambda > 5</strong>: 过度正则化，权重趋近 0，模型退化为接近常数</li>
+        <li>右图柱状图直观展示每个权重的绝对值，观察高阶项如何随 lambda 增大而衰减</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    /* ---- seeded RNG ---- */
+    let seed = 42;
+    function seededRandom() {
+      seed = (seed * 16807 + 0) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+
+    /* ---- DOM refs ---- */
+    const fittingCanvas = document.getElementById('fittingCanvas');
+    const weightsCanvas = document.getElementById('weightsCanvas');
+    const fCtx = fittingCanvas.getContext('2d');
+    const wCtx = weightsCanvas.getContext('2d');
+
+    const sliderLambda = document.getElementById('sliderLambda');
+    const lambdaValEl  = document.getElementById('lambdaVal');
+
+    const metricLambda = document.getElementById('metricLambda');
+    const metricTrain  = document.getElementById('metricTrain');
+    const metricVal    = document.getElementById('metricVal');
+    const metricStatus = document.getElementById('metricStatus');
+
+    const btnPlay  = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnReset = document.getElementById('btnReset');
+
+    /* ---- constants ---- */
+    const PAD = { left: 58, right: 20, top: 28, bottom: 44 };
+    const DEGREE = 8;
+    const COLORS = {
+      primary: '#3b82f6',
+      accent:  '#10b981',
+      lora:    '#8b5cf6',
+      warn:    '#f59e0b',
+      danger:  '#ef4444',
+      grid:    'rgba(148, 163, 184, 0.12)',
+      axis:    'rgba(148, 163, 184, 0.35)',
+      text:    'rgba(226, 232, 240, 0.8)',
+      textDim: 'rgba(148, 163, 184, 0.6)',
+    };
+
+    /* ---- data generation ---- */
+    function trueFunc(x) {
+      return 0.5 * x * x * x - 2 * x * x + x + 3;
+    }
+
+    seed = 42;
+    const trainX = [];
+    const trainY = [];
+    for (let i = 0; i < 30; i++) {
+      const x = seededRandom() * 4 - 2;
+      const yTrue = trueFunc(x);
+      const yNoisy = yTrue + (seededRandom() - 0.5) * 5;
+      trainX.push(x);
+      trainY.push(yNoisy);
+    }
+
+    seed = 9999;
+    const valX = [];
+    const valY = [];
+    for (let i = 0; i < 40; i++) {
+      const x = seededRandom() * 4 - 2;
+      const yTrue = trueFunc(x);
+      const yNoisy = yTrue + (seededRandom() - 0.5) * 5;
+      valX.push(x);
+      valY.push(yNoisy);
+    }
+
+    /* ---- Ridge regression via normal equation ---- */
+    function ridgeFit(X, y, degree, lambda) {
+      const n = X.length;
+      const m = degree + 1;
+
+      const xtx = Array.from({ length: m }, function () { return new Float64Array(m); });
+      const xty = new Float64Array(m);
+
+      for (let i = 0; i < n; i++) {
+        const row = new Float64Array(m);
+        let v = 1;
+        for (let j = 0; j < m; j++) { row[j] = v; v *= X[i]; }
+        for (let a = 0; a < m; a++) {
+          for (let b = 0; b < m; b++) xtx[a][b] += row[a] * row[b];
+          xty[a] += row[a] * y[i];
+        }
+      }
+
+      /* add lambda to diagonal (skip intercept at j=0) */
+      for (let j = 1; j < m; j++) xtx[j][j] += lambda;
+      xtx[0][0] += 1e-10; /* stability */
+
+      /* Gauss-Jordan */
+      const aug = xtx.map(function (r, i) {
+        const row = new Float64Array(m + 1);
+        row.set(r);
+        row[m] = xty[i];
+        return row;
+      });
+
+      for (let col = 0; col < m; col++) {
+        let maxR = col;
+        for (let r = col + 1; r < m; r++) {
+          if (Math.abs(aug[r][col]) > Math.abs(aug[maxR][col])) maxR = r;
+        }
+        var tmp = aug[col]; aug[col] = aug[maxR]; aug[maxR] = tmp;
+        var pivot = aug[col][col];
+        if (Math.abs(pivot) < 1e-14) continue;
+        for (let j = col; j <= m; j++) aug[col][j] /= pivot;
+        for (let r = 0; r < m; r++) {
+          if (r === col) continue;
+          var factor = aug[r][col];
+          for (let j = col; j <= m; j++) aug[r][j] -= factor * aug[col][j];
+        }
+      }
+
+      const coeffs = new Float64Array(m);
+      for (let i = 0; i < m; i++) coeffs[i] = aug[i][m];
+      return coeffs;
+    }
+
+    function polyPredict(x, coeffs) {
+      let y = 0, v = 1;
+      for (let i = 0; i < coeffs.length; i++) { y += coeffs[i] * v; v *= x; }
+      return y;
+    }
+
+    function mse(X, y, coeffs) {
+      let sum = 0;
+      for (let i = 0; i < X.length; i++) {
+        var d = polyPredict(X[i], coeffs) - y[i];
+        sum += d * d;
+      }
+      return sum / X.length;
+    }
+
+    /* ---- canvas helpers ---- */
+    function plotArea(canvas) {
+      return { x: PAD.left, y: PAD.top, w: canvas.width - PAD.left - PAD.right, h: canvas.height - PAD.top - PAD.bottom };
+    }
+
+    function clearCanvas(ctx, canvas) {
+      ctx.fillStyle = '#0a1128';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGrid(ctx, area, xTicks, yTicks, xMin, xMax, yMin, yMax) {
+      ctx.strokeStyle = COLORS.grid;
+      ctx.lineWidth = 1;
+      for (var i = 0; i < xTicks.length; i++) {
+        var px = area.x + ((xTicks[i] - xMin) / (xMax - xMin)) * area.w;
+        ctx.beginPath(); ctx.moveTo(px, area.y); ctx.lineTo(px, area.y + area.h); ctx.stroke();
+      }
+      for (var i = 0; i < yTicks.length; i++) {
+        var py = area.y + area.h - ((yTicks[i] - yMin) / (yMax - yMin)) * area.h;
+        ctx.beginPath(); ctx.moveTo(area.x, py); ctx.lineTo(area.x + area.w, py); ctx.stroke();
+      }
+    }
+
+    function drawAxes(ctx, area, xLabel, yLabel, xTicks, yTicks, xMin, xMax, yMin, yMax, yDecimals) {
+      ctx.strokeStyle = COLORS.axis;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(area.x, area.y);
+      ctx.lineTo(area.x, area.y + area.h);
+      ctx.lineTo(area.x + area.w, area.y + area.h);
+      ctx.stroke();
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '11px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      for (var i = 0; i < xTicks.length; i++) {
+        var px = area.x + ((xTicks[i] - xMin) / (xMax - xMin)) * area.w;
+        ctx.fillText(String(xTicks[i]), px, area.y + area.h + 16);
+      }
+      var dec = yDecimals !== undefined ? yDecimals : 1;
+      ctx.textAlign = 'right';
+      for (var i = 0; i < yTicks.length; i++) {
+        var py = area.y + area.h - ((yTicks[i] - yMin) / (yMax - yMin)) * area.h;
+        ctx.fillText(yTicks[i].toFixed(dec), area.x - 8, py + 4);
+      }
+
+      ctx.fillStyle = COLORS.textDim;
+      ctx.font = '12px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(xLabel, area.x + area.w / 2, area.y + area.h + 36);
+
+      ctx.save();
+      ctx.translate(14, area.y + area.h / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+    }
+
+    function drawChartTitle(ctx, canvas, text) {
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 13px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, canvas.width / 2, 18);
+    }
+
+    /* ---- render ---- */
+    let animInterval = null;
+    let animLambda = 0;
+
+    function render(lambda) {
+      lambdaValEl.textContent = lambda.toFixed(1);
+      metricLambda.textContent = lambda.toFixed(1);
+
+      var coeffs = ridgeFit(trainX, trainY, DEGREE, lambda);
+      var tMSE = mse(trainX, trainY, coeffs);
+      var vMSE = mse(valX, valY, coeffs);
+
+      metricTrain.textContent = tMSE.toFixed(3);
+      metricVal.textContent   = vMSE.toFixed(3);
+
+      if (lambda < 0.3) {
+        metricStatus.textContent = '过拟合';
+        metricStatus.className = 'metric-value mv-status st-overfit';
+      } else if (lambda <= 3) {
+        metricStatus.textContent = '良好拟合';
+        metricStatus.className = 'metric-value mv-status st-good';
+      } else {
+        metricStatus.textContent = '欠拟合';
+        metricStatus.className = 'metric-value mv-status st-underfit';
+      }
+
+      /* ---- LEFT: fitting chart ---- */
+      clearCanvas(fCtx, fittingCanvas);
+      var areaF = plotArea(fittingCanvas);
+
+      var xMin = -2.2, xMax = 2.2;
+      var allY = trainY.slice();
+      var truePts = [];
+      var predPts = [];
+      for (var x = -2; x <= 2; x += 0.04) {
+        var yt = trueFunc(x);
+        var yp = polyPredict(x, coeffs);
+        truePts.push([x, yt]);
+        predPts.push([x, yp]);
+        allY.push(yt, yp);
+      }
+      var yMinC = Math.max(Math.min.apply(null, allY) - 1, -20);
+      var yMaxC = Math.min(Math.max.apply(null, allY) + 1, 25);
+
+      var yTicks = [];
+      var yStep = Math.max(1, Math.round((yMaxC - yMinC) / 6));
+      for (var t = Math.ceil(yMinC); t <= Math.floor(yMaxC); t += yStep) yTicks.push(t);
+
+      drawGrid(fCtx, areaF, [-2, -1, 0, 1, 2], yTicks, xMin, xMax, yMinC, yMaxC);
+      drawAxes(fCtx, areaF, 'x', 'y', [-2, -1, 0, 1, 2], yTicks, xMin, xMax, yMinC, yMaxC, 0);
+
+      /* true function */
+      fCtx.strokeStyle = COLORS.accent;
+      fCtx.lineWidth = 2.5;
+      fCtx.setLineDash([6, 4]);
+      fCtx.beginPath();
+      for (var i = 0; i < truePts.length; i++) {
+        var px = areaF.x + ((truePts[i][0] - xMin) / (xMax - xMin)) * areaF.w;
+        var py = areaF.y + areaF.h - ((truePts[i][1] - yMinC) / (yMaxC - yMinC)) * areaF.h;
+        if (i === 0) fCtx.moveTo(px, py); else fCtx.lineTo(px, py);
+      }
+      fCtx.stroke();
+      fCtx.setLineDash([]);
+
+      /* prediction line */
+      fCtx.strokeStyle = COLORS.danger;
+      fCtx.lineWidth = 2.5;
+      fCtx.beginPath();
+      for (var i = 0; i < predPts.length; i++) {
+        var px = areaF.x + ((predPts[i][0] - xMin) / (xMax - xMin)) * areaF.w;
+        var py = areaF.y + areaF.h - ((predPts[i][1] - yMinC) / (yMaxC - yMinC)) * areaF.h;
+        py = Math.max(areaF.y, Math.min(areaF.y + areaF.h, py));
+        if (i === 0) fCtx.moveTo(px, py); else fCtx.lineTo(px, py);
+      }
+      fCtx.stroke();
+
+      /* data points */
+      for (var i = 0; i < trainX.length; i++) {
+        var px = areaF.x + ((trainX[i] - xMin) / (xMax - xMin)) * areaF.w;
+        var py = areaF.y + areaF.h - ((trainY[i] - yMinC) / (yMaxC - yMinC)) * areaF.h;
+        fCtx.beginPath();
+        fCtx.arc(px, py, 4, 0, Math.PI * 2);
+        fCtx.fillStyle = COLORS.primary;
+        fCtx.fill();
+      }
+
+      drawChartTitle(fCtx, fittingCanvas, '拟合效果 (lambda = ' + lambda.toFixed(1) + ')');
+
+      /* legend */
+      var lx = areaF.x + areaF.w - 130, ly = areaF.y + 10;
+      fCtx.font = '10px "Segoe UI", sans-serif';
+      var legendItems = [
+        { color: COLORS.primary, label: '训练数据', type: 'dot' },
+        { color: COLORS.accent, label: '真实函数', type: 'dash' },
+        { color: COLORS.danger, label: '拟合曲线', type: 'line' },
+      ];
+      for (var li = 0; li < legendItems.length; li++) {
+        var item = legendItems[li];
+        var yy = ly + li * 16;
+        if (item.type === 'dot') {
+          fCtx.beginPath(); fCtx.arc(lx + 6, yy + 4, 3, 0, Math.PI * 2);
+          fCtx.fillStyle = item.color; fCtx.fill();
+        } else {
+          fCtx.strokeStyle = item.color; fCtx.lineWidth = 2;
+          fCtx.setLineDash(item.type === 'dash' ? [5, 3] : []);
+          fCtx.beginPath(); fCtx.moveTo(lx, yy + 4); fCtx.lineTo(lx + 14, yy + 4); fCtx.stroke();
+          fCtx.setLineDash([]);
+        }
+        fCtx.fillStyle = COLORS.text; fCtx.textAlign = 'left';
+        fCtx.fillText(item.label, lx + 20, yy + 8);
+      }
+
+      /* ---- RIGHT: weight bar chart ---- */
+      clearCanvas(wCtx, weightsCanvas);
+      var areaW = plotArea(weightsCanvas);
+
+      var labels = [];
+      for (var j = 0; j <= DEGREE; j++) labels.push('w' + j);
+
+      var absMax = 0;
+      for (var j = 0; j < coeffs.length; j++) {
+        if (Math.abs(coeffs[j]) > absMax) absMax = Math.abs(coeffs[j]);
+      }
+      absMax = Math.max(absMax * 1.2, 1);
+      var wMin = -absMax, wMax = absMax;
+
+      var wTicks = [];
+      var wStep = Math.max(0.5, Math.round(absMax * 2) / 6);
+      for (var t = Math.ceil(wMin / wStep) * wStep; t <= wMax; t += wStep) {
+        wTicks.push(Math.round(t * 100) / 100);
+      }
+
+      /* draw zero line */
+      var zeroY = areaW.y + areaW.h - ((0 - wMin) / (wMax - wMin)) * areaW.h;
+      wCtx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      wCtx.lineWidth = 1;
+      wCtx.beginPath();
+      wCtx.moveTo(areaW.x, zeroY);
+      wCtx.lineTo(areaW.x + areaW.w, zeroY);
+      wCtx.stroke();
+
+      drawGrid(wCtx, areaW, [], wTicks, 0, labels.length, wMin, wMax);
+
+      /* bars */
+      var barW = areaW.w / labels.length * 0.6;
+      var barGap = areaW.w / labels.length;
+
+      var barColors = [
+        COLORS.primary, COLORS.accent, COLORS.lora, COLORS.warn,
+        COLORS.danger, '#06b6d4', '#ec4899', '#f97316', '#14b8a6'
+      ];
+
+      for (var j = 0; j < coeffs.length; j++) {
+        var val = coeffs[j];
+        if (!isFinite(val)) val = 0;
+        var cx = areaW.x + (j + 0.5) * barGap;
+        var bx = cx - barW / 2;
+        var barTop, barHeight;
+
+        if (val >= 0) {
+          barTop = areaW.y + areaW.h - ((val - wMin) / (wMax - wMin)) * areaW.h;
+          barHeight = zeroY - barTop;
+        } else {
+          barTop = zeroY;
+          barHeight = areaW.y + areaW.h - ((val - wMin) / (wMax - wMin)) * areaW.h - zeroY;
+        }
+
+        var color = barColors[j % barColors.length];
+        wCtx.fillStyle = color;
+        wCtx.globalAlpha = 0.85;
+        wCtx.fillRect(bx, barTop, barW, Math.max(barHeight, 1));
+        wCtx.globalAlpha = 1;
+
+        /* glow effect */
+        wCtx.shadowColor = color;
+        wCtx.shadowBlur = 6;
+        wCtx.fillRect(bx, barTop, barW, Math.max(barHeight, 1));
+        wCtx.shadowBlur = 0;
+
+        /* value label */
+        wCtx.fillStyle = COLORS.text;
+        wCtx.font = '9px ui-monospace, monospace';
+        wCtx.textAlign = 'center';
+        var labelY = val >= 0 ? barTop - 4 : barTop + barHeight + 12;
+        wCtx.fillText(val.toFixed(2), cx, labelY);
+      }
+
+      /* x labels */
+      wCtx.fillStyle = COLORS.text;
+      wCtx.font = '11px "Segoe UI", sans-serif';
+      wCtx.textAlign = 'center';
+      for (var j = 0; j < labels.length; j++) {
+        var cx = areaW.x + (j + 0.5) * barGap;
+        wCtx.fillText(labels[j], cx, areaW.y + areaW.h + 16);
+      }
+
+      /* y axis ticks */
+      wCtx.textAlign = 'right';
+      wCtx.fillStyle = COLORS.text;
+      wCtx.font = '10px "Segoe UI", sans-serif';
+      for (var i = 0; i < wTicks.length; i++) {
+        var py = areaW.y + areaW.h - ((wTicks[i] - wMin) / (wMax - wMin)) * areaW.h;
+        wCtx.fillText(wTicks[i].toFixed(1), areaW.x - 8, py + 4);
+      }
+
+      /* axes lines */
+      wCtx.strokeStyle = COLORS.axis;
+      wCtx.lineWidth = 1;
+      wCtx.beginPath();
+      wCtx.moveTo(areaW.x, areaW.y);
+      wCtx.lineTo(areaW.x, areaW.y + areaW.h);
+      wCtx.lineTo(areaW.x + areaW.w, areaW.y + areaW.h);
+      wCtx.stroke();
+
+      /* axis labels */
+      wCtx.fillStyle = COLORS.textDim;
+      wCtx.font = '12px "Segoe UI", sans-serif';
+      wCtx.textAlign = 'center';
+      wCtx.fillText('权重参数', areaW.x + areaW.w / 2, areaW.y + areaW.h + 36);
+
+      wCtx.save();
+      wCtx.translate(14, areaW.y + areaW.h / 2);
+      wCtx.rotate(-Math.PI / 2);
+      wCtx.fillText('权重值', 0, 0);
+      wCtx.restore();
+
+      drawChartTitle(wCtx, weightsCanvas, '模型权重分布');
+    }
+
+    /* ---- animation ---- */
+    function startAnimation() {
+      if (animInterval) return;
+      animLambda = 0;
+      sliderLambda.value = 0;
+      animInterval = setInterval(function () {
+        animLambda += 0.2;
+        if (animLambda > 10) {
+          stopAnimation();
+          return;
+        }
+        sliderLambda.value = animLambda;
+        render(animLambda);
+      }, 250);
+    }
+
+    function stopAnimation() {
+      if (animInterval) {
+        clearInterval(animInterval);
+        animInterval = null;
+      }
+    }
+
+    function resetAll() {
+      stopAnimation();
+      animLambda = 0;
+      sliderLambda.value = 0;
+      render(0);
+    }
+
+    /* ---- events ---- */
+    sliderLambda.addEventListener('input', function () {
+      stopAnimation();
+      render(parseFloat(sliderLambda.value));
+    });
+
+    btnPlay.addEventListener('click', startAnimation);
+    btnPause.addEventListener('click', stopAnimation);
+    btnReset.addEventListener('click', resetAll);
+
+    /* ---- init ---- */
+    render(0);
+  })();
+  </script>
+
+  <script>
+  (function () {
+    var sendHeight = function () {
+      if (window.parent === window) return;
+      var body = document.body;
+      var root = document.documentElement;
+      var height = Math.max(
+        body ? body.scrollHeight : 0,
+        body ? body.offsetHeight : 0,
+        root ? root.scrollHeight : 0,
+        root ? root.offsetHeight : 0
+      );
+      window.parent.postMessage({ type: 'iframe-height', height: height }, '*');
+    };
+    window.addEventListener('load', sendHeight);
+    window.addEventListener('resize', sendHeight);
+    if ('ResizeObserver' in window) {
+      var observer = new ResizeObserver(sendHeight);
+      if (document.body) observer.observe(document.body);
+      if (document.documentElement) observer.observe(document.documentElement);
+    }
+    requestAnimationFrame(sendHeight);
+    setTimeout(sendHeight, 250);
+    setTimeout(sendHeight, 1000);
+  })();
+  </script>
+</body>
+</html>

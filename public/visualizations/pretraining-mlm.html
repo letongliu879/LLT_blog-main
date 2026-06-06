@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掩码语言模型 (MLM) 预训练可视化</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #253349; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --primary: #3b82f6;
+    --accent: #10b981; --highlight: #f59e0b; --mask-color: #ef4444;
+    --glass: rgba(30,41,59,.72); --speed: 1;
+  }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 0; overflow-x: hidden; padding: 1.5rem 1rem;
+  }
+  /* --- 粒子背景 --- */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particles span {
+    position: absolute; border-radius: 50%; opacity: 0;
+    animation: drift linear infinite;
+  }
+  @keyframes drift {
+    0%   { opacity: 0; transform: translateY(0) scale(0); }
+    10%  { opacity: .5; }
+    90%  { opacity: .5; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(1); }
+  }
+  /* --- 布局 --- */
+  .container { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
+  h1 {
+    text-align: center; font-size: 1.5rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: .3rem;
+  }
+  .subtitle { text-align: center; color: var(--muted); font-size: .8rem; margin-bottom: 1.5rem; }
+  /* --- 玻璃卡片 --- */
+  .card {
+    background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border); border-radius: .75rem;
+    padding: 1.2rem; margin-bottom: 1rem;
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .card:hover { border-color: rgba(59,130,246,.35); box-shadow: 0 0 24px rgba(59,130,246,.08); }
+  .card-label {
+    font-size: .65rem; font-weight: 600; text-transform: uppercase;
+    color: var(--primary); letter-spacing: .08em; margin-bottom: .6rem;
+  }
+  /* --- 句子 token 展示 --- */
+  .token-row {
+    display: flex; flex-wrap: wrap; gap: .45rem; justify-content: center;
+    min-height: 56px; align-items: center; padding: .5rem 0;
+  }
+  .token-box {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 42px; padding: .4rem .6rem; border-radius: .45rem;
+    font-size: .95rem; font-weight: 600; letter-spacing: .02em;
+    border: 1.5px solid var(--border); background: var(--surface);
+    transition: all .4s ease; position: relative; cursor: default;
+  }
+  .token-box.original { border-color: rgba(59,130,246,.4); color: var(--text); }
+  .token-box.masked {
+    border-color: var(--mask-color); color: var(--mask-color);
+    background: rgba(239,68,68,.1);
+    animation: maskGlow 1.5s ease-in-out infinite alternate;
+  }
+  .token-box.random-replace {
+    border-color: var(--highlight); color: var(--highlight);
+    background: rgba(245,158,11,.1);
+    animation: maskGlow 1.5s ease-in-out infinite alternate;
+  }
+  .token-box.keep-original {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(16,185,129,.1);
+  }
+  .token-box.predicted-correct {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(16,185,129,.15);
+    box-shadow: 0 0 12px rgba(16,185,129,.3);
+  }
+  .token-box.predicted-wrong {
+    border-color: var(--mask-color); color: var(--mask-color);
+    background: rgba(239,68,68,.12);
+    box-shadow: 0 0 12px rgba(239,68,68,.2);
+  }
+  .token-box .strategy-tag {
+    position: absolute; top: -10px; right: -6px; font-size: .5rem;
+    padding: 1px 4px; border-radius: 3px; font-weight: 700; white-space: nowrap;
+  }
+  .strategy-tag.mask-tag { background: var(--mask-color); color: #fff; }
+  .strategy-tag.random-tag { background: var(--highlight); color: #000; }
+  .strategy-tag.keep-tag { background: var(--accent); color: #fff; }
+  @keyframes maskGlow {
+    0% { box-shadow: 0 0 4px rgba(239,68,68,.15); }
+    100% { box-shadow: 0 0 16px rgba(239,68,68,.35); }
+  }
+  .token-box.fade-out {
+    opacity: 0; transform: scale(.7) rotateY(90deg);
+    transition: all .35s ease;
+  }
+  .token-box.fade-in {
+    animation: fadeInToken .4s ease forwards;
+  }
+  @keyframes fadeInToken {
+    from { opacity: 0; transform: scale(.7) rotateY(-90deg); }
+    to { opacity: 1; transform: scale(1) rotateY(0); }
+  }
+  /* --- 遮盖策略图例 --- */
+  .legend {
+    display: flex; gap: 1rem; justify-content: center;
+    flex-wrap: wrap; margin-top: .6rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: .3rem; font-size: .7rem; color: var(--muted); }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+  }
+  /* --- 处理动画 --- */
+  .processing-bar {
+    height: 3px; background: var(--surface); border-radius: 2px;
+    overflow: hidden; margin: .8rem 0;
+    opacity: 0; transition: opacity .3s;
+  }
+  .processing-bar.active { opacity: 1; }
+  .processing-bar .fill {
+    height: 100%; width: 0; border-radius: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+    transition: width .1s linear;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  /* --- 微粒处理效果 --- */
+  .process-particles {
+    position: relative; height: 48px; overflow: hidden;
+    margin: .4rem 0; opacity: 0; transition: opacity .3s;
+  }
+  .process-particles.active { opacity: 1; }
+  .process-particles .dot {
+    position: absolute; width: 4px; height: 4px;
+    border-radius: 50%; background: var(--primary);
+    animation: floatDot 1.8s ease-in-out infinite;
+  }
+  @keyframes floatDot {
+    0%, 100% { opacity: 0; transform: translateX(0) translateY(0); }
+    20% { opacity: .8; }
+    80% { opacity: .8; }
+    50% { transform: translateX(var(--dx)) translateY(var(--dy)); }
+  }
+  /* --- 预测结果 --- */
+  .predictions-grid {
+    display: flex; flex-direction: column; gap: .65rem;
+  }
+  .pred-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: .5rem; padding: .65rem .8rem;
+    opacity: 0; transform: translateY(12px);
+    transition: all .4s ease;
+  }
+  .pred-item.visible { opacity: 1; transform: translateY(0); }
+  .pred-header {
+    display: flex; align-items: center; gap: .5rem;
+    margin-bottom: .45rem; font-size: .78rem;
+  }
+  .pred-position {
+    background: var(--primary); color: #fff; padding: 1px 7px;
+    border-radius: 4px; font-size: .65rem; font-weight: 700;
+  }
+  .pred-target { color: var(--muted); font-size: .72rem; }
+  .pred-candidates { display: flex; flex-direction: column; gap: .3rem; }
+  .pred-candidate {
+    display: flex; align-items: center; gap: .5rem; font-size: .75rem;
+  }
+  .pred-candidate .label { min-width: 28px; text-align: center; font-weight: 600; }
+  .pred-candidate .bar-bg {
+    flex: 1; height: 16px; background: var(--surface2);
+    border-radius: 3px; overflow: hidden; position: relative;
+  }
+  .pred-candidate .bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width .6s ease;
+    width: 0;
+  }
+  .pred-candidate .bar-fill.correct { background: linear-gradient(90deg, var(--accent), #34d399); }
+  .pred-candidate .bar-fill.wrong { background: linear-gradient(90deg, #64748b, #94a3b8); }
+  .pred-candidate .bar-fill.top-wrong { background: linear-gradient(90deg, var(--highlight), #fbbf24); }
+  .pred-candidate .score {
+    min-width: 42px; text-align: right; font-size: .68rem;
+    color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  /* --- 统计面板 --- */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: .6rem; margin-bottom: .6rem;
+  }
+  .stat-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: .5rem; padding: .6rem; text-align: center;
+  }
+  .stat-value {
+    font-size: 1.3rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label { font-size: .65rem; color: var(--muted); margin-top: .15rem; }
+  .info-text { font-size: .72rem; color: var(--muted); line-height: 1.6; }
+  /* --- 控制栏 --- */
+  .controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: .6rem; flex-wrap: wrap;
+  }
+  .btn {
+    padding: .45rem 1rem; border: 1px solid var(--border); border-radius: .5rem;
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-size: .78rem; transition: all .25s; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn:active { transform: scale(.96); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.primary:hover { background: #2563eb; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .speed-control {
+    display: flex; align-items: center; gap: .4rem; font-size: .72rem; color: var(--muted);
+  }
+  .speed-control input[type="range"] {
+    width: 80px; accent-color: var(--primary); cursor: pointer;
+  }
+  /* --- 阶段指示器 --- */
+  .phase-indicator {
+    display: flex; justify-content: center; gap: .15rem;
+    margin-bottom: 1rem;
+  }
+  .phase-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: all .3s;
+  }
+  .phase-dot.active { background: var(--primary); box-shadow: 0 0 8px rgba(59,130,246,.5); }
+  .phase-dot.done { background: var(--accent); }
+  .phase-labels {
+    display: flex; justify-content: center; gap: 1.5rem;
+    font-size: .6rem; color: var(--muted); margin-bottom: 1rem;
+  }
+  .phase-labels span { transition: color .3s; }
+  .phase-labels span.active { color: var(--primary); font-weight: 600; }
+  .phase-labels span.done { color: var(--accent); }
+  /* --- 响应式 --- */
+  @media (max-width: 520px) {
+    h1 { font-size: 1.2rem; }
+    .stats-row { grid-template-columns: 1fr; }
+    .token-box { min-width: 34px; padding: .3rem .45rem; font-size: .85rem; }
+    .controls { gap: .4rem; }
+    .btn { padding: .35rem .7rem; font-size: .72rem; }
+  }
+</style>
+</head>
+<body>
+<!-- 粒子背景 -->
+<div class="particles" id="particles"></div>
+
+<div class="container">
+  <h1>掩码语言模型 (MLM) 预训练</h1>
+  <p class="subtitle">BERT 如何通过遮盖和预测来学习语言理解</p>
+
+  <!-- 阶段指示 -->
+  <div class="phase-indicator" id="phaseIndicator">
+    <div class="phase-dot" data-phase="0"></div>
+    <div class="phase-dot" data-phase="1"></div>
+    <div class="phase-dot" data-phase="2"></div>
+    <div class="phase-dot" data-phase="3"></div>
+  </div>
+  <div class="phase-labels" id="phaseLabels">
+    <span data-phase="0">原始句子</span>
+    <span data-phase="1">遮盖词元</span>
+    <span data-phase="2">模型处理</span>
+    <span data-phase="3">输出预测</span>
+  </div>
+
+  <!-- 句子展示 -->
+  <div class="card">
+    <div class="card-label">输入句子</div>
+    <div class="token-row" id="tokenRow"></div>
+    <div class="legend" id="legend" style="display:none;">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--mask-color);"></div>80% 替换为 [MASK]</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--highlight);"></div>10% 替换为随机词元</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent);"></div>10% 保持不变</div>
+    </div>
+  </div>
+
+  <!-- 模型处理 -->
+  <div class="card" id="processCard" style="display:none;">
+    <div class="card-label">Transformer 编码器处理中</div>
+    <div class="process-particles" id="processParticles"></div>
+    <div class="processing-bar" id="processingBar"><div class="fill" id="barFill"></div></div>
+  </div>
+
+  <!-- 预测结果 -->
+  <div class="card" id="predCard" style="display:none;">
+    <div class="card-label">遮盖位置预测结果</div>
+    <div class="predictions-grid" id="predictionsGrid"></div>
+  </div>
+
+  <!-- 统计信息 -->
+  <div class="card">
+    <div class="card-label">训练统计</div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value" id="statRatio">0%</div>
+        <div class="stat-label">遮盖比例</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statCorrect">0/0</div>
+        <div class="stat-label">正确预测</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statPerplexity">--</div>
+        <div class="stat-label">困惑度</div>
+      </div>
+    </div>
+    <div class="info-text">
+      <strong>MLM 目标：</strong>随机遮盖输入中约 15% 的词元，让模型根据上下文预测被遮盖的内容。
+      遮盖策略为：80% 替换为 <span style="color:var(--mask-color)">[MASK]</span>、
+      10% 替换为<span style="color:var(--highlight)">随机词元</span>、
+      10% <span style="color:var(--accent)">保持不变</span>。
+      这种设计迫使模型学习每个位置的深层语义表征，而不只是记忆 [MASK] 标记。
+    </div>
+  </div>
+
+  <!-- 控制栏 -->
+  <div class="card">
+    <div class="controls">
+      <button class="btn primary" id="btnStart" onclick="startAnimation()">开始演示</button>
+      <button class="btn" id="btnRemask" onclick="remask()" disabled>重新遮盖</button>
+      <button class="btn" id="btnNext" onclick="nextSentence()">下一个句子</button>
+      <div class="speed-control">
+        <span>速度</span>
+        <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1"
+               oninput="updateSpeed(this.value)">
+        <span id="speedLabel">1x</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 数据 ==========
+const sentences = [
+  {
+    text: "法国的首都是巴黎",
+    tokens: ["法", "国", "的", "首", "都", "是", "巴", "黎"],
+    predictions: {
+      0: { correct: "法", candidates: [["法", .92], ["中", .04], ["英", .02], ["美", .01]] },
+      1: { correct: "国", candidates: [["国", .89], ["语", .05], ["人", .03], ["王", .02]] },
+      2: { correct: "的", candidates: [["的", .96], ["是", .02], ["和", .01], ["在", .005]] },
+      3: { correct: "首", candidates: [["首", .85], ["省", .06], ["主", .04], ["国", .03]] },
+      4: { correct: "都", candidates: [["都", .88], ["府", .05], ["城", .03], ["市", .02]] },
+      5: { correct: "是", candidates: [["是", .94], ["在", .03], ["有", .015], ["叫", .01]] },
+      6: { correct: "巴", candidates: [["巴", .78], ["北", .10], ["伦", .06], ["东", .04]] },
+      7: { correct: "黎", candidates: [["黎", .82], ["京", .08], ["敦", .05], ["方", .03]] }
+    }
+  },
+  {
+    text: "深度学习改变了自然语言处理",
+    tokens: ["深", "度", "学", "习", "改", "变", "了", "自", "然", "语", "言", "处", "理"],
+    predictions: {
+      0: { correct: "深", candidates: [["深", .88], ["强", .05], ["机", .03], ["迁", .02]] },
+      1: { correct: "度", candidates: [["度", .91], ["层", .04], ["化", .02], ["入", .015]] },
+      2: { correct: "学", candidates: [["学", .93], ["训", .03], ["神", .02], ["算", .01]] },
+      3: { correct: "习", candidates: [["习", .90], ["练", .04], ["经", .03], ["法", .02]] },
+      4: { correct: "改", candidates: [["改", .86], ["转", .06], ["推", .04], ["影", .02]] },
+      5: { correct: "变", candidates: [["变", .89], ["化", .05], ["动", .03], ["进", .02]] },
+      6: { correct: "了", candidates: [["了", .95], ["着", .025], ["过", .015], ["的", .005]] },
+      7: { correct: "自", candidates: [["自", .84], ["计", .07], ["机", .05], ["人", .02]] },
+      8: { correct: "然", candidates: [["然", .91], ["动", .04], ["主", .025], ["身", .015]] },
+      9: { correct: "语", candidates: [["语", .87], ["图", .05], ["文", .04], ["声", .02]] },
+      10: { correct: "言", candidates: [["言", .90], ["音", .04], ["字", .03], ["义", .02]] },
+      11: { correct: "处", candidates: [["处", .85], ["分", .06], ["推", .04], ["生", .03]] },
+      12: { correct: "理", candidates: [["理", .88], ["析", .05], ["成", .03], ["类", .02]] }
+    }
+  },
+  {
+    text: "注意力机制是Transformer的核心",
+    tokens: ["注", "意", "力", "机", "制", "是", "Trans", "able", "的", "核", "心"],
+    predictions: {
+      0: { correct: "注", candidates: [["注", .86], ["自", .06], ["多", .04], ["交", .02]] },
+      1: { correct: "意", candidates: [["意", .90], ["注", .04], ["关", .03], ["在", .02]] },
+      2: { correct: "力", candidates: [["力", .92], ["义", .03], ["图", .025], ["向", .015]] },
+      3: { correct: "机", candidates: [["机", .88], ["模", .05], ["网", .03], ["函", .02]] },
+      4: { correct: "制", candidates: [["制", .91], ["型", .04], ["络", .025], ["数", .015]] },
+      5: { correct: "是", candidates: [["是", .94], ["为", .03], ["作", .015], ["叫", .01]] },
+      6: { correct: "Trans", candidates: [["Trans", .72], ["bert", .12], ["GP", .08], ["RN", .05]] },
+      7: { correct: "able", candidates: [["able", .68], ["former", .15], ["Net", .08], ["NN", .05]] },
+      8: { correct: "的", candidates: [["的", .96], ["之", .02], ["是", .01], ["和", .005]] },
+      9: { correct: "核", candidates: [["核", .83], ["关", .07], ["重", .05], ["基", .03]] },
+      10: { correct: "心", candidates: [["心", .87], ["键", .06], ["要", .035], ["础", .025]] }
+    }
+  },
+  {
+    text: "预训练模型在下游任务上表现优异",
+    tokens: ["预", "训", "练", "模", "型", "在", "下", "游", "任", "务", "上", "表", "现", "优", "异"],
+    predictions: {
+      0: { correct: "预", candidates: [["预", .87], ["自", .05], ["微", .04], ["大", .02]] },
+      1: { correct: "训", candidates: [["训", .91], ["学", .04], ["编", .02], ["生", .02]] },
+      2: { correct: "练", candidates: [["练", .93], ["习", .03], ["码", .02], ["成", .01]] },
+      3: { correct: "模", candidates: [["模", .89], ["网", .04], ["算", .03], ["语", .02]] },
+      4: { correct: "型", candidates: [["型", .92], ["络", .03], ["法", .025], ["言", .015]] },
+      5: { correct: "在", candidates: [["在", .94], ["对", .03], ["于", .015], ["可", .01]] },
+      6: { correct: "下", candidates: [["下", .85], ["各", .06], ["多", .04], ["所", .03]] },
+      7: { correct: "游", candidates: [["游", .88], ["种", .05], ["个", .03], ["有", .02]] },
+      8: { correct: "任", candidates: [["任", .86], ["场", .05], ["应", .04], ["分", .03]] },
+      9: { correct: "务", candidates: [["务", .91], ["景", .04], ["用", .025], ["类", .02]] },
+      10: { correct: "上", candidates: [["上", .93], ["中", .03], ["里", .02], ["都", .01]] },
+      11: { correct: "表", candidates: [["表", .84], ["效", .07], ["性", .04], ["准", .03]] },
+      12: { correct: "现", candidates: [["现", .87], ["果", .05], ["能", .04], ["确", .02]] },
+      13: { correct: "优", candidates: [["优", .82], ["出", .08], ["很", .05], ["非", .03]] },
+      14: { correct: "异", candidates: [["异", .80], ["色", .08], ["好", .06], ["常", .04]] }
+    }
+  }
+];
+
+const randomTokenPool = ["的", "了", "在", "是", "我", "有", "和", "人", "这", "中",
+  "大", "为", "上", "个", "国", "不", "到", "会", "说", "时",
+  "要", "没", "出", "也", "对", "能", "就", "着", "与", "从"];
+
+// ========== 状态 ==========
+let currentIdx = 0;
+let speed = 1;
+let phase = -1;        // -1=idle, 0=original, 1=masking, 2=processing, 3=predictions
+let isRunning = false;
+let maskedPositions = [];  // [{index, strategy: 'mask'|'random'|'keep', randomToken?}]
+let abortController = null;
+
+// ========== 初始化 ==========
+function init() {
+  createParticles();
+  showOriginalTokens();
+}
+
+function createParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['var(--primary)', 'var(--accent)', 'var(--highlight)', 'var(--mask-color)'];
+  for (let i = 0; i < 28; i++) {
+    const span = document.createElement('span');
+    const size = Math.random() * 4 + 2;
+    span.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%; top:${Math.random()*100+100}%;
+      background:${colors[i%colors.length]};
+      animation-duration:${Math.random()*12+8}s;
+      animation-delay:${Math.random()*8}s;
+    `;
+    container.appendChild(span);
+  }
+}
+
+function createProcessParticles() {
+  const container = document.getElementById('processParticles');
+  container.innerHTML = '';
+  for (let i = 0; i < 20; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    const colors = ['var(--primary)', 'var(--accent)', 'var(--highlight)'];
+    dot.style.cssText = `
+      left:${Math.random()*95}%; top:${Math.random()*80}%;
+      background:${colors[i%3]};
+      --dx:${(Math.random()-.5)*60}px; --dy:${(Math.random()-.5)*30}px;
+      animation-delay:${Math.random()*1.5}s;
+      animation-duration:${1+Math.random()}s;
+    `;
+    container.appendChild(dot);
+  }
+}
+
+// ========== 工具函数 ==========
+function delay(ms) {
+  const adjusted = ms / speed;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, adjusted);
+    if (abortController) {
+      abortController.signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    }
+  });
+}
+
+function setPhase(p) {
+  phase = p;
+  document.querySelectorAll('#phaseIndicator .phase-dot').forEach(dot => {
+    const dp = parseInt(dot.dataset.phase);
+    dot.classList.toggle('active', dp === p);
+    dot.classList.toggle('done', dp < p);
+  });
+  document.querySelectorAll('#phaseLabels span').forEach(lbl => {
+    const dp = parseInt(lbl.dataset.phase);
+    lbl.classList.toggle('active', dp === p);
+    lbl.classList.toggle('done', dp < p);
+  });
+}
+
+function updateSpeed(val) {
+  speed = parseFloat(val);
+  document.getElementById('speedLabel').textContent = speed + 'x';
+}
+
+function setButtons(running) {
+  isRunning = running;
+  document.getElementById('btnStart').disabled = running;
+  document.getElementById('btnRemask').disabled = running;
+  document.getElementById('btnNext').disabled = running;
+}
+
+// ========== 显示原始 token ==========
+function showOriginalTokens() {
+  const sent = sentences[currentIdx];
+  const row = document.getElementById('tokenRow');
+  row.innerHTML = '';
+  sent.tokens.forEach((t, i) => {
+    const box = document.createElement('div');
+    box.className = 'token-box original';
+    box.textContent = t;
+    box.dataset.index = i;
+    row.appendChild(box);
+  });
+  document.getElementById('legend').style.display = 'none';
+  document.getElementById('processCard').style.display = 'none';
+  document.getElementById('predCard').style.display = 'none';
+  document.getElementById('statRatio').textContent = '0%';
+  document.getElementById('statCorrect').textContent = '0/0';
+  document.getElementById('statPerplexity').textContent = '--';
+  setPhase(-1);
+}
+
+// ========== 选择遮盖位置 ==========
+function selectMaskPositions() {
+  const sent = sentences[currentIdx];
+  const n = sent.tokens.length;
+  const maskCount = Math.max(1, Math.round(n * 0.15));
+  const indices = [];
+  const pool = Array.from({ length: n }, (_, i) => i);
+  // Shuffle & pick
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const selected = pool.slice(0, maskCount);
+  selected.sort((a, b) => a - b);
+
+  maskedPositions = selected.map((idx, i) => {
+    const r = Math.random();
+    let strategy, randomToken;
+    if (r < 0.8) {
+      strategy = 'mask';
+    } else if (r < 0.9) {
+      strategy = 'random';
+      randomToken = randomTokenPool[Math.floor(Math.random() * randomTokenPool.length)];
+      // Avoid same token
+      if (randomToken === sent.tokens[idx]) {
+        randomToken = randomTokenPool[(randomTokenPool.indexOf(randomToken) + 1) % randomTokenPool.length];
+      }
+    } else {
+      strategy = 'keep';
+    }
+    return { index: idx, strategy, randomToken };
+  });
+
+  // Ensure at least one is 'mask' for demonstration
+  if (!maskedPositions.some(m => m.strategy === 'mask')) {
+    maskedPositions[0].strategy = 'mask';
+    delete maskedPositions[0].randomToken;
+  }
+
+  return maskedPositions;
+}
+
+// ========== 动画主流程 ==========
+async function startAnimation() {
+  if (isRunning) return;
+  abortController = new AbortController();
+  setButtons(true);
+
+  try {
+    // Phase 0: 展示原始句子
+    showOriginalTokens();
+    setPhase(0);
+    await delay(800);
+
+    // Phase 1: 遮盖
+    setPhase(1);
+    selectMaskPositions();
+    await animateMasking();
+    await delay(500);
+
+    // Phase 2: 模型处理
+    setPhase(2);
+    await animateProcessing();
+    await delay(300);
+
+    // Phase 3: 预测
+    setPhase(3);
+    await animatePredictions();
+
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    throw e;
+  } finally {
+    setButtons(false);
+  }
+}
+
+// ========== 遮盖动画 ==========
+async function animateMasking() {
+  const sent = sentences[currentIdx];
+  const row = document.getElementById('tokenRow');
+  const boxes = row.querySelectorAll('.token-box');
+
+  document.getElementById('legend').style.display = 'flex';
+
+  for (const mp of maskedPositions) {
+    const box = boxes[mp.index];
+    box.classList.add('fade-out');
+    await delay(250);
+
+    box.classList.remove('fade-out', 'original');
+    if (mp.strategy === 'mask') {
+      box.textContent = '[M]';
+      box.classList.add('masked', 'fade-in');
+      const tag = document.createElement('span');
+      tag.className = 'strategy-tag mask-tag';
+      tag.textContent = 'MASK';
+      box.appendChild(tag);
+    } else if (mp.strategy === 'random') {
+      box.textContent = mp.randomToken;
+      box.classList.add('random-replace', 'fade-in');
+      const tag = document.createElement('span');
+      tag.className = 'strategy-tag random-tag';
+      tag.textContent = '随机';
+      box.appendChild(tag);
+    } else {
+      box.textContent = sent.tokens[mp.index];
+      box.classList.add('keep-original', 'fade-in');
+      const tag = document.createElement('span');
+      tag.className = 'strategy-tag keep-tag';
+      tag.textContent = '保持';
+      box.appendChild(tag);
+    }
+    await delay(200);
+  }
+
+  // Update mask ratio stat
+  const ratio = ((maskedPositions.length / sent.tokens.length) * 100).toFixed(0);
+  document.getElementById('statRatio').textContent = ratio + '%';
+}
+
+// ========== 处理动画 ==========
+async function animateProcessing() {
+  const card = document.getElementById('processCard');
+  const bar = document.getElementById('processingBar');
+  const fill = document.getElementById('barFill');
+  const particles = document.getElementById('processParticles');
+
+  card.style.display = '';
+  createProcessParticles();
+
+  await delay(100);
+  bar.classList.add('active');
+  particles.classList.add('active');
+
+  const duration = 2000;
+  const steps = 40;
+  const stepTime = duration / steps;
+
+  for (let i = 0; i <= steps; i++) {
+    fill.style.width = (i / steps * 100) + '%';
+    await delay(stepTime);
+  }
+
+  particles.classList.remove('active');
+  bar.classList.remove('active');
+  await delay(200);
+  card.style.display = 'none';
+}
+
+// ========== 预测动画 ==========
+async function animatePredictions() {
+  const sent = sentences[currentIdx];
+  const predCard = document.getElementById('predCard');
+  const grid = document.getElementById('predictionsGrid');
+  predCard.style.display = '';
+  grid.innerHTML = '';
+
+  let correctCount = 0;
+  let totalLogProb = 0;
+
+  for (const mp of maskedPositions) {
+    const preds = sent.predictions[mp.index];
+    const item = document.createElement('div');
+    item.className = 'pred-item';
+
+    const topPred = preds.candidates[0][0];
+    const isCorrect = topPred === preds.correct;
+    if (isCorrect) correctCount++;
+    totalLogProb += Math.log(preds.candidates[0][1]);
+
+    let candHTML = '';
+    preds.candidates.forEach(([token, score], ci) => {
+      const isRight = token === preds.correct;
+      let fillClass = isRight ? 'correct' : (ci === 0 && !isCorrect ? 'top-wrong' : 'wrong');
+      candHTML += `
+        <div class="pred-candidate">
+          <span class="label" style="${isRight ? 'color:var(--accent)' : ''}">${token}</span>
+          <div class="bar-bg"><div class="bar-fill ${fillClass}" data-width="${score*100}"></div></div>
+          <span class="score">${(score*100).toFixed(1)}%</span>
+        </div>`;
+    });
+
+    item.innerHTML = `
+      <div class="pred-header">
+        <span class="pred-position">位置 ${mp.index}</span>
+        <span class="pred-target">正确答案: <strong style="color:var(--accent)">${preds.correct}</strong></span>
+        <span style="font-size:.68rem;color:${isCorrect ? 'var(--accent)' : 'var(--mask-color)'}">
+          ${isCorrect ? '预测正确' : '预测错误'}
+        </span>
+      </div>
+      <div class="pred-candidates">${candHTML}</div>`;
+
+    grid.appendChild(item);
+
+    await delay(150);
+    item.classList.add('visible');
+    await delay(100);
+
+    // Animate bars
+    item.querySelectorAll('.bar-fill').forEach(bar => {
+      requestAnimationFrame(() => { bar.style.width = bar.dataset.width + '%'; });
+    });
+    await delay(400);
+  }
+
+  // Update token boxes with results
+  const boxes = document.getElementById('tokenRow').querySelectorAll('.token-box');
+  for (const mp of maskedPositions) {
+    const box = boxes[mp.index];
+    const preds = sent.predictions[mp.index];
+    const topPred = preds.candidates[0][0];
+    const isCorrect = topPred === preds.correct;
+
+    box.classList.remove('masked', 'random-replace', 'keep-original');
+    box.innerHTML = '';
+    box.textContent = topPred;
+    box.classList.add(isCorrect ? 'predicted-correct' : 'predicted-wrong', 'fade-in');
+    await delay(200);
+  }
+
+  // Stats
+  const perplexity = Math.exp(-totalLogProb / maskedPositions.length).toFixed(1);
+  document.getElementById('statCorrect').textContent = correctCount + '/' + maskedPositions.length;
+  document.getElementById('statPerplexity').textContent = perplexity;
+}
+
+// ========== 控制按钮 ==========
+function remask() {
+  if (isRunning) return;
+  startAnimation();
+}
+
+function nextSentence() {
+  if (isRunning) {
+    if (abortController) abortController.abort();
+    setButtons(false);
+  }
+  currentIdx = (currentIdx + 1) % sentences.length;
+  showOriginalTokens();
+}
+
+// ========== 启动 ==========
+init();
+</script>
+
+<script>
+(function () {
+  const sendHeight = () => {
+    if (window.parent === window) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const height = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      root ? root.scrollHeight : 0,
+      root ? root.offsetHeight : 0
+    );
+    window.parent.postMessage({ type: 'iframe-height', height }, '*');
+  };
+
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(sendHeight);
+    if (document.body) observer.observe(document.body);
+    if (document.documentElement) observer.observe(document.documentElement);
+  }
+
+  requestAnimationFrame(sendHeight);
+  setTimeout(sendHeight, 250);
+  setTimeout(sendHeight, 1000);
+})();
+</script>
+</body>
+</html>
