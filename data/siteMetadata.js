@@ -7,8 +7,8 @@ const siteMetadata = {
     'The purpose of this blog is to share insights and experiences in the field of technology, programming, and personal thoughts.',
   language: 'en-us',
   theme: 'light', // system, dark, light or gradient
-  siteUrl: 'http://localhost:13000',
-  siteRepo: '',
+  siteUrl: 'https://llt-blog.vercel.app',
+  siteRepo: 'https://github.com/letongliu879/LLT_blog-main',
   siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,
   //mastodon: 'https://mastodon.social/@mastodonuser',
