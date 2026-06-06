@@ -66,15 +66,7 @@ const ThemeSwitch = () => {
       <Menu as="div" className="relative inline-block text-left">
         <div className="flex items-center justify-center hover:text-primary-500 dark:hover:text-primary-400 [.gradient_&]:hover:text-pink-500 dark:[.gradient_&]:hover:text-pink-400">
           <MenuButton aria-label="Theme switcher">
-            {mounted ? (
-              resolvedTheme === 'dark' ? (
-                <Moon />
-              ) : (
-                <Sun />
-              )
-            ) : (
-              <Blank />
-            )}
+            {mounted ? resolvedTheme === 'dark' ? <Moon /> : <Sun /> : <Blank />}
           </MenuButton>
         </div>
         <Transition
@@ -119,7 +111,6 @@ const ThemeSwitch = () => {
                     )}
                   </MenuItem>
                 </Radio>
-
               </div>
             </RadioGroup>
           </MenuItems>
